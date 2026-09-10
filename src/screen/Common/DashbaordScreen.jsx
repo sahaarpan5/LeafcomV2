@@ -479,8 +479,8 @@ const DashbaordScreen = () => {
   // ============================================================
   const communicationOptions = [
     { id: 'email', icon: require('../../asset/email.png'), label: 'Email', color: '#6C63FF' },
-    { id: 'whatsapp', icon: require('../../asset/whatsapp.png'), label: 'WhatsApp', color: '#25D366' },
-    { id: 'sms', icon: require('../../asset/message.png'), label: 'SMS', color: '#2196F3' },
+    { id: 'whatsapp', icon: require('../../asset/whats-app.png'), label: 'WhatsApp', color: '#25D366' },
+    { id: 'sms', icon: require('../../asset/messages.png'), label: 'SMS', color: '#2196F3' },
     { id: 'call', icon: require('../../asset/call.png'), label: 'Call', color: '#4CAF50' },
   ];
 
@@ -1240,19 +1240,19 @@ const DashbaordScreen = () => {
           >
 
             <Image
-              source={require('../../asset/chatbubbles.png')} // Update the path as needed
+              source={require('../../asset/chat.png')} // Update the path as needed
               style={{
-                width: 18,
-                height: 18,
+                width: 22,
+                height: 22,
                 resizeMode: 'contain',
-                tintColor: "#6C63FF"
+                
 
 
               }}
             />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.contactIconSmall, { backgroundColor: '#2196F320' }]}
+            style={[styles.contactIconSmall]}
             onPress={() => {
               setEmailTo(item.email || '');
               setActiveTab('email');
@@ -1260,12 +1260,12 @@ const DashbaordScreen = () => {
           >
 
             <Image
-              source={require('../../asset/email.png')} // Update the path as needed
+              source={require('../../asset/mail.png')} // Update the path as needed
               style={{
-                width: 18,
-                height: 18,
+                width: 22,
+                height: 22,
                 resizeMode: 'contain',
-                tintColor: "#2196F3"
+               
 
 
               }}
@@ -1276,12 +1276,12 @@ const DashbaordScreen = () => {
             onPress={() => openModal('dial')}
           >
             <Image
-              source={require('../../asset/call.png')} // Update the path as needed
+              source={require('../../asset/circle-call.png')} // Update the path as needed
               style={{
-                width: 18,
-                height: 18,
+                width: 22,
+                height: 22,
                 resizeMode: 'contain',
-                tintColor: "#4CAF50"
+               
 
 
               }}
@@ -1289,17 +1289,17 @@ const DashbaordScreen = () => {
           </TouchableOpacity>
           {item.hasWhatsApp && (
             <TouchableOpacity
-              style={[styles.contactIconSmall, { backgroundColor: '#25D36620' }]}
+              style={[styles.contactIconSmall]}
               onPress={() => openModal('whatsapp')}
             >
 
               <Image
                 source={require('../../asset/whatsapp.png')} // Update the path as needed
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 22,
+                  height: 22,
                   resizeMode: 'contain',
-                  tintColor: "#25D366"
+                  
 
 
                 }}
@@ -1307,17 +1307,17 @@ const DashbaordScreen = () => {
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            style={[styles.contactIconSmall, { backgroundColor: '#FF980020' }]}
+            style={[styles.contactIconSmall]}
             onPress={() => openModal('message')}
           >
 
             <Image
               source={require('../../asset/message.png')} // Update the path as needed
               style={{
-                width: 18,
-                height: 18,
+                width: 22,
+                height: 22,
                 resizeMode: 'contain',
-                tintColor: "#061453"
+                
 
 
               }}
@@ -1350,7 +1350,7 @@ const DashbaordScreen = () => {
                     width: 28,
                     height: 28,
                     resizeMode: 'contain',
-                    tintColor: iconColor
+                   
                   }}
                 />
                 <Text style={styles.dialModalTitle}>{title}</Text>
@@ -1478,7 +1478,7 @@ const DashbaordScreen = () => {
                       </View>
                       <View style={styles.contactIconsRow}>
                         <TouchableOpacity
-                          style={[styles.contactIconSmall, { backgroundColor: '#6C63FF20' }]}
+                          style={[styles.contactIconSmall]}
                           onPress={() => {
                             setEmailTo(item.email || '');
                             setActiveTab('email');
@@ -1486,29 +1486,29 @@ const DashbaordScreen = () => {
                         >
 
                           <Image
-                            source={require('../../asset/chatbubbles.png')}
+                            source={require('../../asset/chat.png')}
                             style={{
-                              width: 18,
-                              height: 18,
+                              width: 20,
+                              height: 20,
                               resizeMode: 'contain',
-                              tintColor: "#6C63FF"
+                             
                             }}
                           />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.contactIconSmall, { backgroundColor: '#2196F320' }]}
+                          style={[styles.contactIconSmall]}
                           onPress={() => {
                             setEmailTo(item.email || '');
                             setActiveTab('email');
                           }}
                         >
                           <Image
-                            source={require('../../asset/email.png')}
+                            source={require('../../asset/mail.png')}
                             style={{
-                              width: 18,
-                              height: 18,
+                              width: 20,
+                              height: 20,
                               resizeMode: 'contain',
-                              tintColor: "#2196F3"
+                              
                             }}
                           />
                         </TouchableOpacity>
@@ -1517,41 +1517,41 @@ const DashbaordScreen = () => {
                           onPress={() => openModal('dial')}
                         >
                           <Image
-                            source={require('../../asset/call.png')}
+                            source={require('../../asset/circle-call.png')}
                             style={{
-                              width: 18,
-                              height: 18,
+                              width: 20,
+                              height: 20,
                               resizeMode: 'contain',
-                              tintColor: "#4CAF50"
+                              
                             }}
                           />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.contactIconSmall, { backgroundColor: '#25D36620' }]}
+                          style={[styles.contactIconSmall]}
                           onPress={() => openModal('whatsapp')}
                         >
 
                           <Image
                             source={require('../../asset/whatsapp.png')}
                             style={{
-                              width: 18,
-                              height: 18,
+                              width: 20,
+                              height: 20,
                               resizeMode: 'contain',
-                              tintColor: "#25D366"
+                              
                             }}
                           />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.contactIconSmall, { backgroundColor: '#FF980020' }]}
+                          style={[styles.contactIconSmall]}
                           onPress={() => openModal('message')}
                         >
                           <Image
                             source={require('../../asset/message.png')}
                             style={{
-                              width: 18,
-                              height: 18,
+                              width: 20,
+                              height: 20,
                               resizeMode: 'contain',
-                              tintColor: "#061453"
+                              
                             }}
                           />
                         </TouchableOpacity>
@@ -2240,17 +2240,17 @@ const DashbaordScreen = () => {
             >
 
               <Image
-                source={require('../../asset/chatbubbles.png')}
+                source={require('../../asset/chat.png')}
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 24,
+                  height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#6C63FF"
+                 
                 }}
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.userIconSmall, { backgroundColor: '#2196F320' }]}
+              style={[styles.userIconSmall]}
               onPress={() => {
                 setEmailTo(contact?.email || '');
                 setEmailSubject('');
@@ -2259,12 +2259,12 @@ const DashbaordScreen = () => {
               }}
             >
               <Image
-                source={require('../../asset/email.png')}
+                source={require('../../asset/mail.png')}
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 24,
+                  height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#2196F3"
+                 
                 }}
               />
             </TouchableOpacity>
@@ -2273,40 +2273,40 @@ const DashbaordScreen = () => {
               onPress={() => openModal('dial')}
             >
               <Image
-                source={require('../../asset/call.png')}
+                source={require('../../asset/circle-call.png')}
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 24,
+                  height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#4CAF50"
+                 
                 }}
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.userIconSmall, { backgroundColor: '#25D36620' }]}
+              style={[styles.userIconSmall]}
               onPress={() => openModal('whatsapp')}
             >
               <Image
                 source={require('../../asset/whatsapp.png')}
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 24,
+                  height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#25D366"
+                  
                 }}
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.userIconSmall, { backgroundColor: '#FF980020' }]}
+              style={[styles.userIconSmall]}
               onPress={() => openModal('message')}
             >
               <Image
                 source={require('../../asset/message.png')}
                 style={{
-                  width: 18,
-                  height: 18,
+                  width: 24,
+                  height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#061453"
+                 
                 }}
               />
             </TouchableOpacity>
@@ -2999,9 +2999,9 @@ const DashbaordScreen = () => {
                     }}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.callActionBtn, { backgroundColor: '#25D366' }]}>
+                <TouchableOpacity style={[styles.callActionBtn,{ backgroundColor: '#3dd417' }]}>
                   <Image
-                    source={require('../../asset/whatsapp.png')}
+                    source={require('../../asset/whats-app.png')}
                     style={{
                       width: 24,
                       height: 24,
