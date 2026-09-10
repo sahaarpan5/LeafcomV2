@@ -1222,7 +1222,6 @@ const DashbaordScreen = () => {
       </View>
       <View style={styles.contactInfo}>
         <Text style={styles.contactName}>{item.name}</Text>
-        <Text style={styles.contactNumber}>{item.number}</Text>
         <View style={styles.contactTags}>
           <View style={[styles.contactTag, { backgroundColor: '#6C63FF20' }]}>
             <Text style={[styles.contactTagText, { color: '#6C63FF' }]}>{item.type}</Text>
@@ -1243,8 +1242,8 @@ const DashbaordScreen = () => {
             <Image
               source={require('../../asset/chatbubbles.png')} // Update the path as needed
               style={{
-                width: 14,
-                height: 14,
+                width: 18,
+                height: 18,
                 resizeMode: 'contain',
                 tintColor: "#6C63FF"
 
@@ -1263,8 +1262,8 @@ const DashbaordScreen = () => {
             <Image
               source={require('../../asset/email.png')} // Update the path as needed
               style={{
-                width: 14,
-                height: 14,
+                width: 18,
+                height: 18,
                 resizeMode: 'contain',
                 tintColor: "#2196F3"
 
@@ -1279,8 +1278,8 @@ const DashbaordScreen = () => {
             <Image
               source={require('../../asset/call.png')} // Update the path as needed
               style={{
-                width: 14,
-                height: 14,
+                width: 18,
+                height: 18,
                 resizeMode: 'contain',
                 tintColor: "#4CAF50"
 
@@ -1297,8 +1296,8 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/whatsapp.png')} // Update the path as needed
                 style={{
-                  width: 14,
-                  height: 14,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
                   tintColor: "#25D366"
 
@@ -1315,10 +1314,10 @@ const DashbaordScreen = () => {
             <Image
               source={require('../../asset/message.png')} // Update the path as needed
               style={{
-                width: 14,
-                height: 14,
+                width: 18,
+                height: 18,
                 resizeMode: 'contain',
-                tintColor: "#FF9800"
+                tintColor: "#061453"
 
 
               }}
@@ -1467,7 +1466,6 @@ const DashbaordScreen = () => {
                     </View>
                     <View style={styles.whatsappContactInfo}>
                       <Text style={styles.whatsappContactName}>{item.name}</Text>
-                      <Text style={styles.whatsappContactNumber}>{item.number}</Text>
                       <View style={styles.whatsappContactTags}>
                         <View style={[styles.contactTag, { backgroundColor: '#6C63FF20' }]}>
                           <Text style={[styles.contactTagText, { color: '#6C63FF' }]}>{item.type}</Text>
@@ -1490,8 +1488,8 @@ const DashbaordScreen = () => {
                           <Image
                             source={require('../../asset/chatbubbles.png')}
                             style={{
-                              width: 14,
-                              height: 14,
+                              width: 18,
+                              height: 18,
                               resizeMode: 'contain',
                               tintColor: "#6C63FF"
                             }}
@@ -1507,8 +1505,8 @@ const DashbaordScreen = () => {
                           <Image
                             source={require('../../asset/email.png')}
                             style={{
-                              width: 14,
-                              height: 14,
+                              width: 18,
+                              height: 18,
                               resizeMode: 'contain',
                               tintColor: "#2196F3"
                             }}
@@ -1521,8 +1519,8 @@ const DashbaordScreen = () => {
                           <Image
                             source={require('../../asset/call.png')}
                             style={{
-                              width: 14,
-                              height: 14,
+                              width: 18,
+                              height: 18,
                               resizeMode: 'contain',
                               tintColor: "#4CAF50"
                             }}
@@ -1536,8 +1534,8 @@ const DashbaordScreen = () => {
                           <Image
                             source={require('../../asset/whatsapp.png')}
                             style={{
-                              width: 14,
-                              height: 14,
+                              width: 18,
+                              height: 18,
                               resizeMode: 'contain',
                               tintColor: "#25D366"
                             }}
@@ -1550,10 +1548,10 @@ const DashbaordScreen = () => {
                           <Image
                             source={require('../../asset/message.png')}
                             style={{
-                              width: 14,
-                              height: 14,
+                              width: 18,
+                              height: 18,
                               resizeMode: 'contain',
-                              tintColor: "#FF9800"
+                              tintColor: "#061453"
                             }}
                           />
                         </TouchableOpacity>
@@ -2208,8 +2206,8 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/email.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
                   tintColor: "#FF4757"
                 }}
@@ -2221,8 +2219,8 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/checkmark-done.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
                   tintColor: "#4CAF50"
                 }}
@@ -2244,8 +2242,8 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/chatbubbles.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
                   tintColor: "#6C63FF"
                 }}
@@ -2263,8 +2261,8 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/email.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
                   tintColor: "#2196F3"
                 }}
@@ -2277,8 +2275,8 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/call.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
                   tintColor: "#4CAF50"
                 }}
@@ -2291,8 +2289,8 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/whatsapp.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
                   tintColor: "#25D366"
                 }}
@@ -2305,10 +2303,10 @@ const DashbaordScreen = () => {
               <Image
                 source={require('../../asset/message.png')}
                 style={{
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                   resizeMode: 'contain',
-                  tintColor: "#FF9800"
+                  tintColor: "#061453"
                 }}
               />
             </TouchableOpacity>
@@ -3563,27 +3561,7 @@ const DashbaordScreen = () => {
               Dashboard
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.sideNavItem, activeTab === 'directory' && styles.activeSideNav]}
-            onPress={() => {
-              setActiveTab('directory');
-              setShowSideNav(false);
-            }}
-          >
-
-            <Image
-              source={require('../../asset/people.png')}
-              style={{
-                width: 24,
-                height: 24,
-                resizeMode: 'contain',
-                tintColor: activeTab === 'directory' ? '#6C63FF' : '#666'
-              }}
-            />
-            <Text style={[styles.sideNavText, activeTab === 'directory' && styles.activeSideNavText]}>
-              Directory
-            </Text>
-          </TouchableOpacity>
+       
           <TouchableOpacity
             style={styles.sideNavItem}
             onPress={() => {
@@ -3887,7 +3865,7 @@ const DashbaordScreen = () => {
       {renderSignatureModal()}
       {renderAddSignatureModal()}
       {renderContactListModal('WhatsApp Contacts', 'whatsapp', require('../../asset/whatsapp.png'), '#25D366')}
-      {renderContactListModal('Message Contacts', 'message', require('../../asset/message.png'), '#FF9800')}
+      {renderContactListModal('Message Contacts', 'message', require('../../asset/message.png'), '#061453')}
       {renderDashboardModal()}
       {renderEmailHistoryModal()}
       {renderActivityTimeModal()}
@@ -4778,7 +4756,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   unreadIndicatorText: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#FF4757',
     fontWeight: '500',
   },
@@ -4794,7 +4772,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   readIndicatorText: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#4CAF50',
     fontWeight: '500',
   },
@@ -4820,7 +4798,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tagText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
   },
   systemAdminTag: {
@@ -5327,7 +5305,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   contactTagText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '500',
   },
   contactIconsRow: {

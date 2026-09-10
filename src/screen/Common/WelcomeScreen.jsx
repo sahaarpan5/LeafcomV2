@@ -110,7 +110,7 @@ const WelcomeScreen = ({ onFinish }) => {
             onFinish();
           }
         });
-      }, 300);
+      }, 105);
 
       return () => clearTimeout(timer);
     }
