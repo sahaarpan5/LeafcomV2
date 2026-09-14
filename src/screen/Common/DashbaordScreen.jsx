@@ -24,7 +24,7 @@ const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
-const DashbaordScreen = () => {
+const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // STATE MANAGEMENT
   // ============================================================
@@ -2174,6 +2174,7 @@ const DashbaordScreen = () => {
             elevation: 4,
           }
         ]}
+        onPress={()=>navigation.navigate('UserChatPage')}
       >
         <View style={styles.avatarContainer}>
           <Image source={item.avatar} style={styles.avatar} />
