@@ -1432,7 +1432,7 @@ const UserChatPage = ({ navigation, route }) => {
                                             width: 20,
                                             height: 20,
                                             resizeMode: 'contain',
-                                            
+
 
 
 
@@ -3451,7 +3451,7 @@ const UserChatPage = ({ navigation, route }) => {
                         activeOpacity={0.7}
                     >
                         <View style={[styles.actionBtnIcon, { backgroundColor: type.bg }]}>
-                            
+
                             <Image
                                 source={type.icon}
                                 style={{
@@ -3989,7 +3989,7 @@ const UserChatPage = ({ navigation, route }) => {
     const renderInputArea = () => (
         <View style={styles.inputAreaWrapper}>
             <View style={styles.inputArea}>
-                
+
 
                 <View style={styles.inputBox}>
                     <TextInput
@@ -4367,24 +4367,24 @@ const UserChatPage = ({ navigation, route }) => {
                 </View>
             </KeyboardAvoidingView>
 
-            {renderMessageModal()}
-            {renderAnalyticsModal()}
-            {renderTimeFilterModal()}
-            {renderActivityChartFilterModal()}
-            {renderActivityChartCustomDateModal()}
-            {renderCustomDateModal()}
-            {renderEmailMessageModal()}
-            {renderEmailComposeModal()}
-            {renderEmailToPickerModal()}
-            {renderWhatsappComposeModal()}
-            {renderWhatsappTemplatePickerModal()}
-            {renderWhatsappNumberPickerModal()}
-            {renderSmsComposeModal()}
-            {renderSmsSenderPickerModal()}
-            {renderContactModal()}
-            {renderAddContactModal()}
-            {renderReactionPicker()}
-            {renderTranslateModal()}
+            {showMessageModal && renderMessageModal()}
+            {showAnalyticsModal && renderAnalyticsModal()}
+            {showTimeFilterModal && renderTimeFilterModal()}
+            {showActivityChartFilterModal && renderActivityChartFilterModal()}
+            {showActivityChartCustomDateModal && renderActivityChartCustomDateModal()}
+            {showCustomDateModal && renderCustomDateModal()}
+            {showEmailMessageModal && renderEmailMessageModal()}
+            {showEmailComposeModal && renderEmailComposeModal()}
+            {emailToModal && renderEmailToPickerModal()}
+            {showWhatsappComposeModal && renderWhatsappComposeModal()}
+            {whatsappTemplateModal && renderWhatsappTemplatePickerModal()}
+            {whatsappNumberModal && renderWhatsappNumberPickerModal()}
+            {showSmsComposeModal && renderSmsComposeModal()}
+            {smsSenderModal && renderSmsSenderPickerModal()}
+            {showContactModal && renderContactModal()}
+            {showAddContactModal && renderAddContactModal()}
+            {showReactionPicker && renderReactionPicker()}
+            {showTranslateModal && renderTranslateModal()}
 
             {renderDropdownModal({
                 visible: showTypeDropdown,
