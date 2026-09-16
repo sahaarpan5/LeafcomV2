@@ -878,88 +878,91 @@ const DashbaordScreen = ({ navigation }) => {
 
               <View>
                 <View style={styles.titleContainer}>
-                  <Text style={styles.topBarTitle}>
-                    Leaf<Text style={styles.topBarTitleHighlight}>Com</Text>
-                  </Text>
+                  <View style={styles.logoContainer}>
+                    <Image
+                      source={require('../../asset/logo.png')}
+                      style={styles.topBarLogo}
+                      resizeMode="contain"
+                    />
+                  </View>
 
                 </View>
-                <View style={styles.subtitleContainer}>
-                  <TouchableOpacity
-                    style={[styles.headerIconButton, styles.headerIconCall, { height: 50, width: 50 }]}
-                    onPress={() => openModal('dial')}
-                  >
 
-                    <Image
-                      source={require('../../asset/call.png')} // Update the path as needed
-                      style={{
-                        width: 30,
-                        height: 30,
-                        resizeMode: 'contain',
-                        tintColor: "#fff"
-
-
-                      }}
-                    />
-
-                  </TouchableOpacity>
-
-
-                  <TouchableOpacity
-                    style={[styles.headerIconButton, styles.headerIconMessage, { height: 50, width: 50, marginHorizontal: 20 }]}
-                    onPress={() => setShowMessageSidebar(true)}
-                  >
-
-                    <Image
-                      source={require('../../asset/chatbubbles.png')} // Update the path as needed
-                      style={{
-                        width: 30,
-                        height: 30,
-                        resizeMode: 'contain',
-                        tintColor: "#fff"
-
-
-                      }}
-                    />
-
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.headerIconButton, styles.headerIconDashboard, { height: 50, width: 50 }]}
-                    onPress={() => openModal('dashboard')}
-                  >
-
-                    <Image
-                      source={require('../../asset/grid.png')} // Update the path as needed
-                      style={{
-                        width: 30,
-                        height: 30,
-                        resizeMode: 'contain',
-                        tintColor: "#fff"
-
-
-                      }}
-                    />
-                  </TouchableOpacity>
-                </View>
               </View>
             </View>
           </View>
 
           <View style={styles.headerIcons}>
+            <TouchableOpacity
+              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30, marginRight: 8 }]}
+              onPress={() => setShowSideNav(!showSideNav)}
+            >
+
+              <Image
+                source={require('../../asset/user.png')} // Update the path as needed
+                style={{
+                  width: 24,
+                  height: 24,
+                  resizeMode: 'contain',
+                  tintColor: '#FFFFFF'
+
+
+
+                }}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30, marginRight: 8 }]}
+              onPress={() => openModal('dashboard')}
+            >
+
+              <Image
+                source={require('../../asset/grid.png')} // Update the path as needed
+                style={{
+                  width: 24,
+                  height: 24,
+                  resizeMode: 'contain',
+                  tintColor: '#FFFFFF'
+
+
+
+                }}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30, marginRight: 8 }]}
+              onPress={() => setShowSideNav(!showSideNav)}
+            >
+
+              <Image
+                source={require('../../asset/bell.png')} // Update the path as needed
+                style={{
+                  width: 24,
+                  height: 24,
+                  resizeMode: 'contain',
+                  tintColor: '#FFFFFF'
+
+
+
+                }}
+              />
+            </TouchableOpacity>
 
 
 
 
             <TouchableOpacity
-              style={[styles.headerIconButton, styles.headerIconMenu, { height: 50, width: 50 }]}
+              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30 }]}
               onPress={() => setShowSideNav(!showSideNav)}
             >
 
               <Image
                 source={require('../../asset/menu.png')} // Update the path as needed
                 style={{
-                  width: 26,
-                  height: 26,
+                  width: 24,
+                  height: 24,
                   resizeMode: 'contain',
                   tintColor: "#FFF"
 
@@ -1070,9 +1073,15 @@ const DashbaordScreen = ({ navigation }) => {
         visible={showMessageSidebar}
         transparent
         animationType="none"
-        onRequestClose={() => setShowMessageSidebar(false)}
+        onRequestClose={() => {
+          setShowMessageSidebar(false)
+          setActiveTab('directory')
+        }}
       >
-        <TouchableWithoutFeedback onPress={() => setShowMessageSidebar(false)}>
+        <TouchableWithoutFeedback onPress={() => {
+          setShowMessageSidebar(false)
+          setActiveTab('directory')
+        }}>
           <View style={styles.sidebarOverlay}>
             <TouchableWithoutFeedback>
               <Animated.View
@@ -1148,7 +1157,10 @@ const DashbaordScreen = ({ navigation }) => {
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.sidebarHeaderBtn}
-                        onPress={() => setShowMessageSidebar(false)}
+                        onPress={() => {
+                          setShowMessageSidebar(false)
+                          setActiveTab('directory')
+                        }}
                       >
 
                         <Image
@@ -1245,7 +1257,7 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-                
+
 
 
               }}
@@ -1265,7 +1277,7 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-               
+
 
 
               }}
@@ -1281,7 +1293,7 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-               
+
 
 
               }}
@@ -1299,7 +1311,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 22,
                   height: 22,
                   resizeMode: 'contain',
-                  
+
 
 
                 }}
@@ -1317,7 +1329,7 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-                
+
 
 
               }}
@@ -1350,7 +1362,7 @@ const DashbaordScreen = ({ navigation }) => {
                     width: 28,
                     height: 28,
                     resizeMode: 'contain',
-                   
+
                   }}
                 />
                 <Text style={styles.dialModalTitle}>{title}</Text>
@@ -1491,7 +1503,7 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-                             
+
                             }}
                           />
                         </TouchableOpacity>
@@ -1508,7 +1520,7 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-                              
+
                             }}
                           />
                         </TouchableOpacity>
@@ -1522,7 +1534,7 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-                              
+
                             }}
                           />
                         </TouchableOpacity>
@@ -1537,7 +1549,7 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-                              
+
                             }}
                           />
                         </TouchableOpacity>
@@ -1551,7 +1563,7 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-                              
+
                             }}
                           />
                         </TouchableOpacity>
@@ -2117,11 +2129,7 @@ const DashbaordScreen = ({ navigation }) => {
           <Text style={styles.activityMessage}>{item.message}</Text>
           <Text style={styles.activityDateTime}>{item.dateTime}</Text>
         </View>
-        {item.notSeenCount > 0 && (
-          <View style={styles.activityNotSeen}>
-            <Text style={styles.activityNotSeenText}>{item.notSeenCount}</Text>
-          </View>
-        )}
+
       </TouchableOpacity>
     );
   };
@@ -2174,7 +2182,7 @@ const DashbaordScreen = ({ navigation }) => {
             elevation: 4,
           }
         ]}
-        onPress={()=>navigation.navigate('UserChatPage')}
+        onPress={() => navigation.navigate('UserChatPage')}
       >
         <View style={styles.avatarContainer}>
           <Image source={item.avatar} style={styles.avatar} />
@@ -2201,34 +2209,7 @@ const DashbaordScreen = ({ navigation }) => {
               <View style={styles.unreadDot} />
             )}
           </View>
-          {hasUnread ? (
-            <View style={styles.unreadIndicator}>
 
-              <Image
-                source={require('../../asset/email.png')}
-                style={{
-                  width: 18,
-                  height: 18,
-                  resizeMode: 'contain',
-                  tintColor: "#FF4757"
-                }}
-              />
-              <Text style={styles.unreadIndicatorText}>{item.unread} unread message{item.unread > 1 ? 's' : ''}</Text>
-            </View>
-          ) : (
-            <View style={styles.readIndicator}>
-              <Image
-                source={require('../../asset/checkmark-done.png')}
-                style={{
-                  width: 18,
-                  height: 18,
-                  resizeMode: 'contain',
-                  tintColor: "#4CAF50"
-                }}
-              />
-              <Text style={styles.readIndicatorText}>All read</Text>
-            </View>
-          )}
           <View style={styles.userIconsRow}>
             <TouchableOpacity
               style={[styles.userIconSmall, { backgroundColor: '#6C63FF20' }]}
@@ -2246,7 +2227,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                 
+
                 }}
               />
             </TouchableOpacity>
@@ -2265,7 +2246,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                 
+
                 }}
               />
             </TouchableOpacity>
@@ -2279,7 +2260,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                 
+
                 }}
               />
             </TouchableOpacity>
@@ -2293,7 +2274,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  
+
                 }}
               />
             </TouchableOpacity>
@@ -2307,7 +2288,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                 
+
                 }}
               />
             </TouchableOpacity>
@@ -2351,12 +2332,7 @@ const DashbaordScreen = ({ navigation }) => {
         <View style={styles.activityHeaderContainer}>
           <View style={styles.activityCountContainer}>
             <Text style={styles.activityTotalCount}>Total: {totalActivities}</Text>
-            {unreadActivities > 0 && (
-              <View style={styles.activityUnreadContainer}>
-                <View style={styles.activityUnreadDot} />
-                <Text style={styles.activityUnreadText}>{unreadActivities} unread</Text>
-              </View>
-            )}
+
           </View>
         </View>
 
@@ -2413,6 +2389,9 @@ const DashbaordScreen = ({ navigation }) => {
               }}
             />
           </TouchableOpacity>
+
+
+
         </View>
 
         <View style={styles.activitySearchContainer}>
@@ -2911,7 +2890,10 @@ const DashbaordScreen = ({ navigation }) => {
       visible={showDialModal}
       transparent
       animationType="slide"
-      onRequestClose={() => setShowDialModal(false)}
+      onRequestClose={() => {
+        setShowDialModal(false)
+        setActiveTab('directory')
+      }}
     >
       <View style={styles.dialModalContainer}>
         <View style={styles.dialModalContent}>
@@ -2920,7 +2902,10 @@ const DashbaordScreen = ({ navigation }) => {
             <Text style={styles.dialModalSubtitle}>Choose how you want to connect</Text>
             <TouchableOpacity
               style={styles.dialModalClose}
-              onPress={() => setShowDialModal(false)}
+              onPress={() => {
+                setShowDialModal(false)
+                setActiveTab('directory')
+              }}
             >
 
               <Image
@@ -3000,7 +2985,7 @@ const DashbaordScreen = ({ navigation }) => {
                     }}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.callActionBtn,{ backgroundColor: '#3dd417' }]}>
+                <TouchableOpacity style={[styles.callActionBtn, { backgroundColor: '#3dd417' }]}>
                   <Image
                     source={require('../../asset/whats-app.png')}
                     style={{
@@ -3562,7 +3547,7 @@ const DashbaordScreen = ({ navigation }) => {
               Dashboard
             </Text>
           </TouchableOpacity>
-       
+
           <TouchableOpacity
             style={styles.sideNavItem}
             onPress={() => {
@@ -3728,6 +3713,52 @@ const DashbaordScreen = ({ navigation }) => {
             />
             <Text style={[styles.navLabel, activeTab === 'email' && styles.activeNavLabel]}>
               Email
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.navItem, activeTab === 'call' && styles.activeNavItem]}
+            onPress={() => {
+              setActiveTab('call')
+              openModal('dial')
+            }}
+          >
+            <Image
+              source={require('../../asset/call.png')}
+              style={{
+                width: 24,
+                height: 24,
+                resizeMode: 'contain',
+                tintColor: activeTab === 'call' ? '#6C63FF' : '#999'
+              }}
+            />
+            <Text style={[styles.navLabel, activeTab === 'call' && styles.activeNavLabel]}>
+              Dial
+            </Text>
+          </TouchableOpacity>
+
+
+
+
+
+          <TouchableOpacity
+            style={[styles.navItem, activeTab === 'meesages' && styles.activeNavItem]}
+            onPress={() => {
+              setActiveTab('meesages')
+              setShowMessageSidebar(true)
+            }}
+          >
+            <Image
+              source={require('../../asset/chatbubbles.png')}
+              style={{
+                width: 24,
+                height: 24,
+                resizeMode: 'contain',
+                tintColor: activeTab === 'meesages' ? '#6C63FF' : '#999'
+              }}
+            />
+            <Text style={[styles.navLabel, activeTab === 'meesages' && styles.activeNavLabel]}>
+              Messages
             </Text>
           </TouchableOpacity>
         </View>
@@ -4003,14 +4034,14 @@ const styles = StyleSheet.create({
   // ============================================================
   dashboardHeader: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    paddingHorizontal: 20,
+    
     paddingBottom: 12,
     backgroundColor: '#5C4FC9',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     position: 'relative',
     overflow: 'hidden',
-    minHeight: 190,
+    minHeight: 120,
   },
   headerBgContainer: {
     position: 'absolute',
@@ -4088,6 +4119,8 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     flex: 1,
+    width: '100%',
+    backgroundColor: '#FFF'
   },
   logoWrapper: {
     flexDirection: 'row',
@@ -4119,6 +4152,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+
+  },
+  logoContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    marginRight:15,
+
+    // Tight curve on right side
+    borderTopRightRadius: 80,
+    borderBottomRightRadius: 80,
+
+    paddingVertical: 60,
+    paddingHorizontal: 10,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+
+  },
+
+  topBarLogo: {
+    width: 120,
+    height: 50,
+    marginTop:40
   },
   topBarTitle: {
     fontSize: 30,
@@ -4171,18 +4229,19 @@ const styles = StyleSheet.create({
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+    marginRight:20
+
   },
   headerIconButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    
   },
   headerIconCall: {
     backgroundColor: 'rgba(156, 89, 182, 0.62)',

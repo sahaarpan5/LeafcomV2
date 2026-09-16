@@ -7,6 +7,7 @@ import {
   Dimensions,
   StatusBar,
   Easing,
+  Image,
 } from 'react-native';
 
 
@@ -160,6 +161,11 @@ const WelcomeScreen = ({ onFinish }) => {
                 },
               ]}
             />
+            <Image
+              source={require('../../asset/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
 
           </View>
         </Animated.View>
@@ -174,20 +180,12 @@ const WelcomeScreen = ({ onFinish }) => {
             },
           ]}
         >
-          <Text style={styles.title}>
-            Leaf<Text style={styles.titleHighlight}>Com</Text>
-          </Text>
-          <View style={styles.versionBadge}>
-            <Text style={styles.versionText}>v2.0</Text>
-          </View>
+
+
         </Animated.View>
 
         {/* Subtitle */}
-        <Animated.View style={[styles.subtitleContainer, { opacity: subtitleOpacity }]}>
-          <View style={styles.subtitleDot} />
-          <Text style={styles.subtitle}>Communication Hub</Text>
-          <View style={styles.subtitleDot} />
-        </Animated.View>
+
 
         {/* Loading Progress */}
         <View style={styles.progressContainer}>
@@ -322,7 +320,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#FFFFFF',
   },
   logoIconContainer: {
     width: 120,
@@ -348,6 +346,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+
   },
   title: {
     fontSize: 42,
@@ -443,6 +442,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.3)',
     fontSize: 12,
     letterSpacing: 1,
+  },
+  logoImage: {
+    width: 180,
+    height: 70,
   },
 });
 

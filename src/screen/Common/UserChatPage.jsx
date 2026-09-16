@@ -381,7 +381,7 @@ const UserChatPage = ({ navigation, route }) => {
     const messageTypes = [
         {
             id: 'inapp',
-            icon: require('../../asset/chatbubbles.png'),
+            icon: require('../../asset/chat-fill.png'),
             label: 'In-App',
             color: COLORS.primary,
             bg: COLORS.primarySoft,
@@ -397,14 +397,14 @@ const UserChatPage = ({ navigation, route }) => {
             id: 'sms',
             icon: require('../../asset/messages.png'),
             label: 'SMS',
-            color: COLORS.info,
-            bg: COLORS.infoSoft,
+            color: COLORS.danger,
+            bg: COLORS.dangerSoft,
         },
         {
             id: 'email',
             icon: require('../../asset/email.png'),
             label: 'Email',
-            color: COLORS.warning,
+            color: COLORS.received,
             bg: COLORS.warningSoft,
         },
         {
@@ -2005,35 +2005,7 @@ const UserChatPage = ({ navigation, route }) => {
                                     />
                                 </TouchableOpacity>
                             </View>
-                            <TouchableOpacity style={styles.timeFilterBtn} onPress={() => setShowTimeFilterModal(true)} activeOpacity={0.7}>
-
-                                <Image
-                                    source={require('../../asset/calendar.png')} // Update the path as needed
-                                    style={{
-                                        width: 16,
-                                        height: 16,
-                                        resizeMode: 'contain',
-                                        tintColor: COLORS.textInverse
-
-
-
-                                    }}
-                                />
-                                <Text style={styles.timeFilterBtnText}>{timeFilterOptions.find(f => f.id === analysisTimeFilter)?.label || 'This Week'}</Text>
-
-                                <Image
-                                    source={require('../../asset/chevron-down.png')} // Update the path as needed
-                                    style={{
-                                        width: 16,
-                                        height: 16,
-                                        resizeMode: 'contain',
-                                        tintColor: COLORS.textInverse
-
-
-
-                                    }}
-                                />
-                            </TouchableOpacity>
+                           
                         </View>
 
                         <ScrollView style={styles.analyticsScrollView} contentContainerStyle={styles.analyticsScrollContent} showsVerticalScrollIndicator={true}>
@@ -2046,10 +2018,10 @@ const UserChatPage = ({ navigation, route }) => {
                                     <View style={styles.analyticsHeroIcon}>
 
                                         <Image
-                                            source={require('../../asset/chat.png')} // Update the path as needed
+                                            source={require('../../asset/message.png')} // Update the path as needed
                                             style={{
-                                                width: 28,
-                                                height: 28,
+                                                width: 18,
+                                                height: 18,
                                                 resizeMode: 'contain',
 
 
@@ -3384,7 +3356,18 @@ const UserChatPage = ({ navigation, route }) => {
 
                     <View style={styles.senderTextWrap}>
                         <View style={styles.nameRow}>
-                            <Text style={styles.senderName} numberOfLines={1}>{sender.name}</Text>
+
+
+
+                            <View style={styles.senderRow}>
+                                <Text style={styles.senderName} numberOfLines={1}>
+                                    {sender.name}
+                                </Text>
+
+                                <View style={styles.statusBadge}>
+                                    <Text style={styles.statusText}>{sender.status}</Text>
+                                </View>
+                            </View>
 
                             <TouchableOpacity style={styles.contactCardBtn} onPress={() => setShowContactModal(true)} activeOpacity={0.7}>
 
@@ -3424,16 +3407,63 @@ const UserChatPage = ({ navigation, route }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.typeRow}>
-                            <View style={[styles.typeDot, { backgroundColor: getSenderTypeColor(sender.type) }]} />
+                        {/* <View style={styles.typeRow}>
+                           
                             <Text style={styles.senderType}>{sender.type}</Text>
-                            <Text style={styles.statusText}> • {sender.status}</Text>
+
+                        </View> */}
+
+
+                        <View style={styles.typeActionRow}>
+                            {/* User Type */}
+                            <View style={styles.typeRow}>
+                                <Text style={styles.senderType} numberOfLines={1}>
+                                    {sender.type}
+                                </Text>
+                            </View>
+
+                            {/* Action Buttons */}
+                            <View style={styles.actionsRow}>
+                                {messageTypes.slice(0, 4).map((type) => (
+                                    <TouchableOpacity
+                                        key={type.id}
+                                        style={styles.actionBtn}
+                                        onPress={() => {
+                                            if (type.id === 'email') handleOpenEmailCompose();
+                                            else if (type.id === 'whatsapp') handleOpenWhatsappCompose();
+                                            else if (type.id === 'sms') handleOpenSmsCompose();
+                                            else if (type.id === 'call') setShowCallModal(true);
+                                            else {
+                                                setSelectedMessageType(type.id);
+                                                inputRef.current?.focus();
+                                            }
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={[styles.actionBtnIcon, { backgroundColor: type.bg }]}>
+                                            <Image
+                                                source={type.icon}
+                                                style={{
+                                                    width: 15,
+                                                    height: 15,
+                                                    resizeMode: 'contain',
+                                                    tintColor:type.color
+                                                }}
+                                            />
+                                        </View>
+
+                                        {/* <Text style={styles.actionBtnLabel}>
+                                            {type.label}
+                                        </Text> */}
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
                     </View>
                 </View>
             </View>
 
-            <View style={styles.actionsRow}>
+            {/* <View style={styles.actionsRow}>
                 {messageTypes.slice(0, 4).map((type) => (
                     <TouchableOpacity
                         key={type.id}
@@ -3455,8 +3485,8 @@ const UserChatPage = ({ navigation, route }) => {
                             <Image
                                 source={type.icon}
                                 style={{
-                                    width: 18,
-                                    height: 18,
+                                    width: 15,
+                                    height: 15,
                                     resizeMode: 'contain',
                                     tintColor: type.color,
                                 }}
@@ -3465,7 +3495,7 @@ const UserChatPage = ({ navigation, route }) => {
                         <Text style={styles.actionBtnLabel}>{type.label}</Text>
                     </TouchableOpacity>
                 ))}
-            </View>
+            </View> */}
         </View>
     );
 
@@ -4443,7 +4473,7 @@ const styles = StyleSheet.create({
     statusIndicator: { position: 'absolute', bottom: 2, right: 2, width: 12, height: 12, borderRadius: RADIUS.full, borderWidth: 2, borderColor: COLORS.primaryDark },
     senderTextWrap: { flex: 1 },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: 4 },
-    senderName: { fontSize: 18, fontWeight: '700', color: COLORS.textInverse, letterSpacing: -0.3, flex: 1 },
+    senderName: { fontSize: 18, fontWeight: '700', color: COLORS.textInverse, letterSpacing: -0.3 },
 
     contactCardBtn: { width: 30, height: 30, borderRadius: RADIUS.full, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', position: 'relative' },
     contactCardBadge: { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3, borderWidth: 1.5, borderColor: COLORS.primaryDark },
@@ -4453,10 +4483,28 @@ const styles = StyleSheet.create({
     typeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     typeDot: { width: 6, height: 6, borderRadius: RADIUS.full },
     senderType: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
-    statusText: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '400' },
+    senderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        flex: 1
+    },
+
+    statusBadge: {
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 12,
+    },
+
+    statusText: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.9)',
+        fontWeight: '400',
+    },
     actionsRow: { flexDirection: 'row', paddingHorizontal: SPACING.lg, marginTop: SPACING.lg, gap: SPACING.sm, zIndex: 1 },
     actionBtn: { flex: 1, alignItems: 'center', paddingVertical: SPACING.sm, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: RADIUS.lg, gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    actionBtnIcon: { width: 34, height: 34, borderRadius: RADIUS.full, justifyContent: 'center', alignItems: 'center' },
+    actionBtnIcon: { width: 20, height: 20, borderRadius: RADIUS.full, justifyContent: 'center', alignItems: 'center' },
     actionBtnLabel: { fontSize: 10, color: COLORS.textInverse, fontWeight: '600', letterSpacing: 0.2 },
 
     filterIndicator: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primarySoft, paddingHorizontal: SPACING.md, paddingVertical: 6, marginHorizontal: SPACING.lg, marginTop: SPACING.md, borderRadius: RADIUS.full, alignSelf: 'flex-start', gap: 6, borderWidth: 1, borderColor: COLORS.primary + '30' },
@@ -4966,15 +5014,15 @@ const styles = StyleSheet.create({
     analyticsHeroCircle1: { position: 'absolute', width: 120, height: 120, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)', top: -50, right: -30 },
     analyticsHeroCircle2: { position: 'absolute', width: 80, height: 80, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', bottom: -30, left: -20 },
     analyticsHeroContent: { alignItems: 'center', zIndex: 1 },
-    analyticsHeroIcon: { width: 52, height: 52, borderRadius: RADIUS.lg, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.md },
-    analyticsHeroNumber: { fontSize: 52, fontWeight: '800', color: COLORS.textInverse, letterSpacing: -2, lineHeight: 58 },
+    analyticsHeroIcon: { width: 30, height: 30, borderRadius: RADIUS.lg, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 2 },
+    analyticsHeroNumber: { fontSize: 30, fontWeight: '800', color: COLORS.textInverse, letterSpacing: -2, lineHeight: 30 },
     analyticsHeroLabel: { fontSize: 14, color: 'rgba(255,255,255,0.95)', fontWeight: '700', letterSpacing: 0.5, marginTop: 4 },
     analyticsHeroSubLabel: { fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: '500', marginTop: 2 },
 
     analyticsStatsRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.lg },
-    analyticsStatCard: { flex: 1, backgroundColor: COLORS.bgPrimary, borderRadius: RADIUS.lg, padding: SPACING.md, borderLeftWidth: 4 },
-    analyticsStatIcon: { width: 40, height: 40, borderRadius: RADIUS.md, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
-    analyticsStatNumber: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5, marginBottom: 2 },
+    analyticsStatCard: { flex: 1, backgroundColor: COLORS.bgPrimary, borderRadius: RADIUS.lg, padding: 5, borderLeftWidth: 4 },
+    analyticsStatIcon: { width: 30, height: 30, borderRadius: RADIUS.md, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.sm },
+    analyticsStatNumber: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5, marginBottom: 2 },
     analyticsStatLabel: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
     analyticsStatBadge: { marginTop: SPACING.sm, alignSelf: 'flex-start', paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: RADIUS.full },
     analyticsStatBadgeText: { fontSize: 11, fontWeight: '700' },
@@ -5115,6 +5163,55 @@ const styles = StyleSheet.create({
     reactionRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
     reactionEmojiBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
     reactionEmoji: { fontSize: 26 },
+    typeActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    gap: 8,
+},
+
+typeRow: {
+    flexShrink: 1,
+    maxWidth: '35%',
+    flexDirection: 'row',
+    alignItems: 'center',
+},
+
+senderType: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+},
+
+actionsRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+},
+
+actionBtn: {
+    
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+   
+},
+
+actionBtnIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+},
+
+actionBtnLabel: {
+    fontSize: 8,
+    color: COLORS.textInverse,
+    fontWeight: '600',
+    marginTop: 2,
+},
 });
 
 export default UserChatPage;
