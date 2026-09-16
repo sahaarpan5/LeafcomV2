@@ -4041,7 +4041,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
     position: 'relative',
     overflow: 'hidden',
-    minHeight: 120,
+    minHeight: 105,
   },
   headerBgContainer: {
     position: 'absolute',
@@ -4162,8 +4162,8 @@ const styles = StyleSheet.create({
     marginRight:15,
 
     // Tight curve on right side
-    borderTopRightRadius: 80,
-    borderBottomRightRadius: 80,
+    borderTopRightRadius: 120,
+    borderBottomRightRadius: 170,
 
     paddingVertical: 60,
     paddingHorizontal: 10,
