@@ -10,7 +10,6 @@ import {
   Image,
 } from 'react-native';
 
-
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const WelcomeScreen = ({ onFinish }) => {
@@ -25,6 +24,19 @@ const WelcomeScreen = ({ onFinish }) => {
   const progressWidth = useRef(new Animated.Value(0)).current;
   const fadeOut = useRef(new Animated.Value(1)).current;
   const glowPulse = useRef(new Animated.Value(1)).current;
+
+  // Floating icons animation values
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+  const floatAnim3 = useRef(new Animated.Value(0)).current;
+  const iconOpacity = useRef(new Animated.Value(0)).current;
+  const iconScale = useRef(new Animated.Value(0.5)).current;
+
+  // Exit animation values (icons move to bottom of screen and exit)
+  const exitAnim1 = useRef(new Animated.Value(0)).current;
+  const exitAnim2 = useRef(new Animated.Value(0)).current;
+  const exitAnim3 = useRef(new Animated.Value(0)).current;
+  const hasTriggeredExit = useRef(false);
 
   useEffect(() => {
     // Start entrance animations
@@ -57,6 +69,20 @@ const WelcomeScreen = ({ onFinish }) => {
         delay: 300,
         useNativeDriver: true,
       }),
+      // Icon entrance
+      Animated.timing(iconOpacity, {
+        toValue: 1,
+        duration: 800,
+        delay: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(iconScale, {
+        toValue: 1,
+        duration: 800,
+        delay: 600,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.back(1.5)),
+      }),
     ]).start();
 
     // Glow animation
@@ -74,7 +100,59 @@ const WelcomeScreen = ({ onFinish }) => {
           useNativeDriver: true,
           easing: Easing.inOut(Easing.ease),
         }),
-      ])
+      ]),
+    ).start();
+
+    // Floating animations for icons
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim1, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(floatAnim1, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ]),
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim2, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(floatAnim2, {
+          toValue: 0,
+          duration: 2500,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ]),
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim3, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(floatAnim3, {
+          toValue: 0,
+          duration: 3000,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ]),
     ).start();
 
     // Progress
@@ -96,6 +174,34 @@ const WelcomeScreen = ({ onFinish }) => {
     };
   }, []);
 
+  // Trigger exit animation when progress reaches 80%
+  useEffect(() => {
+    if (progress >= 80 && !hasTriggeredExit.current) {
+      hasTriggeredExit.current = true;
+
+      // Animate icons off the bottom of the screen (like going to next page)
+      Animated.parallel([
+        Animated.timing(exitAnim1, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+          easing: Easing.in(Easing.cubic),
+        }),
+        Animated.timing(exitAnim2, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+          easing: Easing.in(Easing.cubic),
+        }),
+        Animated.timing(exitAnim3, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+          easing: Easing.in(Easing.cubic),
+        }),
+      ]).start();
+    }
+  }, [progress]);
 
   useEffect(() => {
     if (progress >= 100) {
@@ -126,6 +232,120 @@ const WelcomeScreen = ({ onFinish }) => {
     }).start();
   }, [progress]);
 
+  // Exit distance - enough to move icons completely off the bottom of the screen
+  const exitDistance = SCREEN_HEIGHT;
+
+  // WhatsApp icon - starts at top-left, exits off bottom
+  const whatsappTransform = {
+    transform: [
+      {
+        translateY: Animated.add(
+          floatAnim1.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -15],
+          }),
+          exitAnim1.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, exitDistance],
+          }),
+        ),
+      },
+      {
+        translateX: exitAnim1.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, SCREEN_WIDTH * 0.25],
+        }),
+      },
+      {
+        scale: Animated.multiply(
+          iconScale,
+          exitAnim1.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 0.5],
+          }),
+        ),
+      },
+    ],
+    opacity: exitAnim1.interpolate({
+      inputRange: [0, 0.8, 1],
+      outputRange: [1, 0.6, 0],
+    }),
+  };
+
+  // Call icon - starts at top-right, exits off bottom
+  const callTransform = {
+    transform: [
+      {
+        translateY: Animated.add(
+          floatAnim2.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -20],
+          }),
+          exitAnim2.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, exitDistance],
+          }),
+        ),
+      },
+      {
+        translateX: exitAnim2.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -SCREEN_WIDTH * 0.15],
+        }),
+      },
+      {
+        scale: Animated.multiply(
+          iconScale,
+          exitAnim2.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 0.5],
+          }),
+        ),
+      },
+    ],
+    opacity: exitAnim2.interpolate({
+      inputRange: [0, 0.8, 1],
+      outputRange: [1, 0.6, 0],
+    }),
+  };
+
+  // Message icon - starts at bottom-right, exits off bottom
+  const messageTransform = {
+    transform: [
+      {
+        translateY: Animated.add(
+          floatAnim3.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -12],
+          }),
+          exitAnim3.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, exitDistance],
+          }),
+        ),
+      },
+      {
+        translateX: exitAnim3.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -SCREEN_WIDTH * 0.2],
+        }),
+      },
+      {
+        scale: Animated.multiply(
+          iconScale,
+          exitAnim3.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 0.5],
+          }),
+        ),
+      },
+    ],
+    opacity: exitAnim3.interpolate({
+      inputRange: [0, 0.8, 1],
+      outputRange: [1, 0.6, 0],
+    }),
+  };
+
   return (
     <Animated.View style={[styles.container, { opacity: fadeOut }]}>
       <StatusBar backgroundColor="#5C4FC9" barStyle="light-content" />
@@ -139,7 +359,71 @@ const WelcomeScreen = ({ onFinish }) => {
         <View style={[styles.bgCircle, styles.bgCircle5]} />
       </View>
 
+      {/* Floating Communication Icons */}
+      <View style={styles.floatingIconsContainer}>
+        {/* WhatsApp Icon - Left Top */}
+        <Animated.View
+          style={[
+            styles.floatingIcon,
+            styles.whatsappIcon,
+            whatsappTransform,
+          ]}
+        >
+          <View style={styles.iconGlowWhatsApp} />
 
+          <Image
+            source={require('../../asset/whats-app.png')}
+            style={{
+              width: 32,
+              height: 32,
+              resizeMode: 'contain',
+              tintColor: '#25D366',
+            }}
+          />
+        </Animated.View>
+
+        {/* Call Icon - Right Top */}
+        <Animated.View
+          style={[
+            styles.floatingIcon,
+            styles.callIcon,
+            callTransform,
+          ]}
+        >
+          <View style={styles.iconGlowCall} />
+
+          <Image
+            source={require('../../asset/call.png')}
+            style={{
+              width: 32,
+              height: 32,
+              resizeMode: 'contain',
+              tintColor: '#25D366',
+            }}
+          />
+        </Animated.View>
+
+        {/* Message Icon - Right Bottom */}
+        <Animated.View
+          style={[
+            styles.floatingIcon,
+            styles.messageIcon,
+            messageTransform,
+          ]}
+        >
+          <View style={styles.iconGlowMessage} />
+
+          <Image
+            source={require('../../asset/chat-fill.png')}
+            style={{
+              width: 32,
+              height: 32,
+              resizeMode: 'contain',
+              tintColor: '#6C63FF',
+            }}
+          />
+        </Animated.View>
+      </View>
 
       <View style={styles.contentContainer}>
         {/* Logo with glow effect */}
@@ -166,7 +450,6 @@ const WelcomeScreen = ({ onFinish }) => {
               style={styles.logoImage}
               resizeMode="contain"
             />
-
           </View>
         </Animated.View>
 
@@ -179,13 +462,7 @@ const WelcomeScreen = ({ onFinish }) => {
               transform: [{ translateY: titleTranslateY }],
             },
           ]}
-        >
-
-
-        </Animated.View>
-
-        {/* Subtitle */}
-
+        ></Animated.View>
 
         {/* Loading Progress */}
         <View style={styles.progressContainer}>
@@ -207,7 +484,7 @@ const WelcomeScreen = ({ onFinish }) => {
 
         {/* Loading dots animation */}
         <View style={styles.loadingDots}>
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2].map(i => (
             <Animated.View
               key={i}
               style={[
@@ -236,6 +513,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#5C4FC9', // Single violet color
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   backgroundContainer: {
     position: 'absolute',
@@ -285,6 +563,69 @@ const styles = StyleSheet.create({
     bottom: 100,
     right: 40,
   },
+
+  // ============================================================
+  // FLOATING ICONS STYLES
+  // ============================================================
+  floatingIconsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 4,
+    overflow: 'hidden',
+  },
+  floatingIcon: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  whatsappIcon: {
+    top: SCREEN_HEIGHT * 0.18,
+    left: SCREEN_WIDTH * 0.1,
+  },
+  callIcon: {
+    top: SCREEN_HEIGHT * 0.22,
+    right: SCREEN_WIDTH * 0.1,
+  },
+  messageIcon: {
+    bottom: SCREEN_HEIGHT * 0.28,
+    right: SCREEN_WIDTH * 0.12,
+  },
+  iconGlowWhatsApp: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(37, 211, 102, 0.15)',
+  },
+  iconGlowCall: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+  },
+  iconGlowMessage: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(108, 99, 255, 0.15)',
+  },
+
   topStrip: {
     position: 'absolute',
     top: 0,
@@ -320,7 +661,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
   },
   logoIconContainer: {
     width: 120,
@@ -346,7 +687,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-
   },
   title: {
     fontSize: 42,

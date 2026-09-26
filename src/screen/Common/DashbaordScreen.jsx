@@ -4186,6 +4186,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.2)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+    fontFamily: 'sans-serif',
   },
   topBarTitleHighlight: {
     fontSize: 30,
@@ -4195,6 +4196,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.2)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+    fontFamily: 'sans-serif',
   },
   titleBadge: {
     backgroundColor: 'rgba(255, 215, 0, 0.25)',
@@ -4208,6 +4210,7 @@ const styles = StyleSheet.create({
     color: '#FFD700',
     fontSize: 9,
     fontWeight: '700',
+    fontFamily: 'sans-serif',
   },
   subtitleContainer: {
     flexDirection: 'row',
@@ -4225,6 +4228,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
     letterSpacing: 0.5,
+    fontFamily: 'sans-serif',
   },
   headerIcons: {
     flexDirection: 'row',
@@ -4275,6 +4279,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 9,
     fontWeight: 'bold',
+    fontFamily: 'sans-serif',
   },
   statsBar: {
     flexDirection: 'row',
@@ -4305,6 +4310,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   statDivider: {
     width: 1,
@@ -4441,6 +4447,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    fontFamily: 'sans-serif',
   },
   sidebarHeaderBadges: {
     flexDirection: 'row',
@@ -4457,6 +4464,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   sidebarUnreadBadge: {
     backgroundColor: '#FF4757',
@@ -4468,6 +4476,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 10,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   sidebarHeaderRight: {
     flexDirection: 'row',
@@ -4491,6 +4500,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   messageList: {
     paddingHorizontal: 16,
@@ -4537,6 +4547,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   messageUserNameUnread: {
     color: '#1a1a1a',
@@ -4545,6 +4556,7 @@ const styles = StyleSheet.create({
   messageTime: {
     fontSize: 12,
     color: '#999',
+    fontFamily: 'sans-serif',
   },
   messageFooter: {
     flexDirection: 'row',
@@ -4556,6 +4568,7 @@ const styles = StyleSheet.create({
     color: '#666',
     flex: 1,
     marginRight: 8,
+    fontFamily: 'sans-serif',
   },
   messageUnreadText: {
     color: '#333',
@@ -4574,6 +4587,7 @@ const styles = StyleSheet.create({
   messageReadText: {
     fontSize: 11,
     color: '#4CAF50',
+    fontFamily: 'sans-serif',
   },
   messageUnreadStatus: {
     flexDirection: 'row',
@@ -4584,6 +4598,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#FF4757',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   messageDeleteBtn: {
     padding: 4,
@@ -4601,12 +4616,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
     marginTop: 16,
+    fontFamily: 'sans-serif',
   },
   emptyMessagesSubtext: {
     fontSize: 14,
     color: '#999',
     marginTop: 4,
     textAlign: 'center',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -4637,6 +4654,7 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 2,
     textAlign: 'center',
+    fontFamily: 'sans-serif',
   },
   activeNavLabel: {
     color: '#6C63FF',
@@ -4662,6 +4680,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 15,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   filterIconsContainer: {
     flexDirection: 'row',
@@ -4693,6 +4712,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   activeFilterLabel: {
     color: '#6C63FF',
@@ -4709,6 +4729,7 @@ const styles = StyleSheet.create({
   countTextSmall: {
     fontSize: 10,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   filterBadge: {
     position: 'absolute',
@@ -4725,6 +4746,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -4777,6 +4799,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
+    fontFamily: 'sans-serif',
   },
   userInfo: {
     flex: 1,
@@ -4792,6 +4815,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginRight: 8,
+    fontFamily: 'sans-serif',
   },
   userNameUnread: {
     color: '#1a1a1a',
@@ -4819,6 +4843,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#FF4757',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   readIndicator: {
     flexDirection: 'row',
@@ -4835,6 +4860,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#4CAF50',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   userIconsRow: {
     flexDirection: 'row',
@@ -4860,6 +4886,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 11,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   systemAdminTag: {
     backgroundColor: '#4CAF5020',
@@ -4909,6 +4936,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -4945,6 +4973,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   filterModalContent: {
     paddingHorizontal: 20,
@@ -4987,6 +5016,7 @@ const styles = StyleSheet.create({
   filterModalItemText: {
     fontSize: 16,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   filterModalItemTextActive: {
     color: '#6C63FF',
@@ -4996,6 +5026,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 1,
+    fontFamily: 'sans-serif',
   },
   countContainer: {
     flexDirection: 'row',
@@ -5011,6 +5042,7 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   expandButton: {
     padding: 4,
@@ -5038,6 +5070,7 @@ const styles = StyleSheet.create({
   childItemText: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5062,6 +5095,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 10,
+    fontFamily: 'sans-serif',
   },
   userTypeGrid: {
     flexDirection: 'row',
@@ -5086,6 +5120,7 @@ const styles = StyleSheet.create({
   userTypeChipText: {
     fontSize: 13,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   userTypeChipTextActive: {
     color: '#6C63FF',
@@ -5111,6 +5146,7 @@ const styles = StyleSheet.create({
   subTypeChipText: {
     fontSize: 12,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   subTypeChipTextActive: {
     color: '#6C63FF',
@@ -5127,6 +5163,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5154,11 +5191,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   dialModalSubtitle: {
     fontSize: 14,
     color: '#999',
     marginTop: 2,
+    fontFamily: 'sans-serif',
   },
   dialModalClose: {
     position: 'absolute',
@@ -5185,6 +5224,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   dialTabTextActive: {
     color: '#6C63FF',
@@ -5215,6 +5255,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   phoneInput: {
     flex: 1,
@@ -5222,6 +5263,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 16,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   dialpadContainer: {
     alignItems: 'center',
@@ -5245,6 +5287,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#333',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   callActions: {
     flexDirection: 'row',
@@ -5283,6 +5326,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 15,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   filterIconBtn: {
     padding: 8,
@@ -5306,6 +5350,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6C63FF',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   contactCountHeader: {
     paddingVertical: 8,
@@ -5314,6 +5359,7 @@ const styles = StyleSheet.create({
   contactCountText: {
     fontSize: 13,
     color: '#999',
+    fontFamily: 'sans-serif',
   },
   contactList: {
     paddingBottom: 20,
@@ -5341,6 +5387,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#6C63FF',
+    fontFamily: 'sans-serif',
   },
   contactInfo: {
     flex: 1,
@@ -5349,10 +5396,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   contactNumber: {
     fontSize: 13,
     color: '#999',
+    fontFamily: 'sans-serif',
   },
   contactTags: {
     flexDirection: 'row',
@@ -5367,6 +5416,7 @@ const styles = StyleSheet.create({
   contactTagText: {
     fontSize: 11,
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   contactIconsRow: {
     flexDirection: 'row',
@@ -5409,6 +5459,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 15,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   whatsappContactCard: {
     flexDirection: 'row',
@@ -5434,6 +5485,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#6C63FF',
+    fontFamily: 'sans-serif',
   },
   whatsappStatusDot: {
     position: 'absolute',
@@ -5453,10 +5505,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   whatsappContactNumber: {
     fontSize: 13,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   whatsappContactTags: {
     flexDirection: 'row',
@@ -5472,6 +5526,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     marginTop: 12,
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5506,11 +5561,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   dashboardOptionDesc: {
     fontSize: 13,
     color: '#999',
     marginTop: 2,
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5528,6 +5585,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 4,
+    fontFamily: 'sans-serif',
   },
   formInput: {
     backgroundColor: '#f8f9fa',
@@ -5538,6 +5596,7 @@ const styles = StyleSheet.create({
     color: '#333',
     borderWidth: 1,
     borderColor: '#e9ecef',
+    fontFamily: 'sans-serif',
   },
   disabledInput: {
     backgroundColor: '#f1f3f5',
@@ -5561,6 +5620,7 @@ const styles = StyleSheet.create({
   signatureSelectorText: {
     fontSize: 14,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   signaturePreview: {
     marginTop: 8,
@@ -5575,10 +5635,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginBottom: 4,
+    fontFamily: 'sans-serif',
   },
   signaturePreviewText: {
     fontSize: 13,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   emailActions: {
     flexDirection: 'row',
@@ -5602,6 +5664,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   historyBtn: {
     backgroundColor: '#f0edff',
@@ -5612,6 +5675,7 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5639,6 +5703,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   historyItemSubject: {
     fontSize: 13,
@@ -5649,6 +5714,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 2,
+    fontFamily: 'sans-serif',
   },
   historyStatus: {
     paddingHorizontal: 12,
@@ -5665,6 +5731,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#fff',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5697,6 +5764,7 @@ const styles = StyleSheet.create({
   communicationFilterText: {
     fontSize: 12,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   communicationFilterTextActive: {
     color: '#fff',
@@ -5732,11 +5800,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   signatureItemPreview: {
     fontSize: 13,
     color: '#666',
     marginTop: 2,
+    fontFamily: 'sans-serif',
   },
   addSignatureButton: {
     flexDirection: 'row',
@@ -5754,6 +5824,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6C63FF',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   addSignatureContainer: {
     padding: 20,
@@ -5776,6 +5847,7 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   saveButton: {
     backgroundColor: '#6C63FF',
@@ -5784,12 +5856,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   htmlHelperText: {
     fontSize: 11,
     color: '#999',
     marginTop: 4,
     fontStyle: 'italic',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5820,11 +5894,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   sideNavEmail: {
     fontSize: 14,
     color: '#999',
     marginTop: 2,
+    fontFamily: 'sans-serif',
   },
   sideNavItem: {
     flexDirection: 'row',
@@ -5841,6 +5917,7 @@ const styles = StyleSheet.create({
   sideNavText: {
     fontSize: 16,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   activeSideNavText: {
     color: '#6C63FF',
@@ -5878,6 +5955,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   activityUnreadContainer: {
     flexDirection: 'row',
@@ -5894,6 +5972,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#FF4757',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   activityFilterContainer: {
     flexDirection: 'row',
@@ -5920,6 +5999,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
     fontWeight: '500',
+    fontFamily: 'sans-serif',
   },
   activityFilterChipTextActive: {
     color: '#fff',
@@ -5940,6 +6020,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 15,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -5987,6 +6068,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 9,
     fontWeight: 'bold',
+    fontFamily: 'sans-serif',
   },
   activityInfo: {
     flex: 1,
@@ -6002,6 +6084,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginRight: 6,
+    fontFamily: 'sans-serif',
   },
   activityTag: {
     paddingHorizontal: 6,
@@ -6011,6 +6094,7 @@ const styles = StyleSheet.create({
   activityTagText: {
     fontSize: 8,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   activitySystemAdminTag: {
     backgroundColor: '#4CAF5020',
@@ -6040,10 +6124,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginBottom: 2,
+    fontFamily: 'sans-serif',
   },
   activityDateTime: {
     fontSize: 11,
     color: '#999',
+    fontFamily: 'sans-serif',
   },
   activityNotSeen: {
     backgroundColor: '#FF4757',
@@ -6057,6 +6143,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
+    fontFamily: 'sans-serif',
   },
   activityFilterOptions: {
     padding: 20,
@@ -6076,6 +6163,7 @@ const styles = StyleSheet.create({
   activityFilterOptionText: {
     fontSize: 16,
     color: '#666',
+    fontFamily: 'sans-serif',
   },
   activityFilterOptionTextActive: {
     color: '#6C63FF',
@@ -6092,11 +6180,13 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
     marginTop: 12,
+    fontFamily: 'sans-serif',
   },
   activityEmptySubtext: {
     fontSize: 14,
     color: '#999',
     marginTop: 4,
+    fontFamily: 'sans-serif',
   },
   resetFiltersEmptyBtn: {
     marginTop: 16,
@@ -6109,6 +6199,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -6139,11 +6230,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   quickFilterModalSubtitle: {
     fontSize: 14,
     color: '#999',
     marginTop: 2,
+    fontFamily: 'sans-serif',
   },
   quickFilterModalClose: {
     padding: 4,
@@ -6164,6 +6257,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
+    fontFamily: 'sans-serif',
   },
   quickFilterSearchContainer: {
     flexDirection: 'row',
@@ -6180,6 +6274,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 14,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   quickFilterGrid: {
     flexDirection: 'row',
@@ -6212,6 +6307,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textTransform: 'uppercase',
     marginBottom: 2,
+    fontFamily: 'sans-serif',
   },
   dropdownTriggerValue: {
     flexDirection: 'row',
@@ -6223,6 +6319,7 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
     marginRight: 8,
+    fontFamily: 'sans-serif',
   },
   dropdownMenuContainer: {
     position: 'absolute',
@@ -6258,6 +6355,7 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 14,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   dropdownItemTextActive: {
     color: '#6C63FF',
@@ -6274,6 +6372,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
     marginBottom: 8,
+    fontFamily: 'sans-serif',
   },
   quickFilterActiveChips: {
     flexDirection: 'row',
@@ -6294,6 +6393,7 @@ const styles = StyleSheet.create({
   quickFilterActiveChipText: {
     fontSize: 12,
     color: '#333',
+    fontFamily: 'sans-serif',
   },
   filterBadgeSmall: {
     position: 'absolute',
@@ -6329,6 +6429,7 @@ const styles = StyleSheet.create({
     color: '#FF4757',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   quickFilterApplyBtn: {
     backgroundColor: '#6C63FF',
@@ -6337,6 +6438,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
   quickSearchIndicator: {
     backgroundColor: '#6C63FF20',
@@ -6349,6 +6451,7 @@ const styles = StyleSheet.create({
     color: '#6C63FF',
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
 });
 
