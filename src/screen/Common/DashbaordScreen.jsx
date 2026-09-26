@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -15,9 +16,9 @@ import {
   Modal,
   Platform,
   TouchableWithoutFeedback,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-
-
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -43,8 +44,11 @@ const DashbaordScreen = ({ navigation }) => {
   const [expandedCategories, setExpandedCategories] = useState({});
 
   // User list states
-  const [userList, setUserList] = useState(initialUsers);
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [userList, setUserList] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingMoreUsers, setIsLoadingMoreUsers] = useState(false);
 
   // Activity Feed states
   const [activityFilter, setActivityFilter] = useState('all');
@@ -53,7 +57,8 @@ const DashbaordScreen = ({ navigation }) => {
   const [showActivityTimeModal, setShowActivityTimeModal] = useState(false);
 
   // Activity Quick Filter states
-  const [showActivityQuickFilterModal, setShowActivityQuickFilterModal] = useState(false);
+  const [showActivityQuickFilterModal, setShowActivityQuickFilterModal] =
+    useState(false);
   const [activityQuickSearch, setActivityQuickSearch] = useState('');
   const [activityReadStatus, setActivityReadStatus] = useState('all');
   const [activityRole, setActivityRole] = useState('all');
@@ -61,6 +66,9 @@ const DashbaordScreen = ({ navigation }) => {
   const [activityChannel, setActivityChannel] = useState('all');
   const [activitySortBy, setActivitySortBy] = useState('newest');
   const [activityMinUnread, setActivityMinUnread] = useState('0');
+
+  const [totalReadCount, setTotalReadCount] = useState(0);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
   // Dropdown states for quick filter
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -116,7 +124,7 @@ const DashbaordScreen = ({ navigation }) => {
       id: '6',
       userName: 'Lisa Anderson',
       userImage: require('../../asset/dummyuser.png'),
-      lastMessage: 'I\'ve reviewed the proposal. Looks good!',
+      lastMessage: "I've reviewed the proposal. Looks good!",
       dateTime: new Date(Date.now() - 1000 * 60 * 60 * 120),
       isRead: true,
       unreadCount: 0,
@@ -160,7 +168,11 @@ const DashbaordScreen = ({ navigation }) => {
   const [emailBody, setEmailBody] = useState('');
   const [selectedSignature, setSelectedSignature] = useState('');
   const [signatures, setSignatures] = useState([
-    { id: '1', name: 'Professional', content: '<p>Best regards,<br/>John Doe<br/>LeafCom Team</p>' },
+    {
+      id: '1',
+      name: 'Professional',
+      content: '<p>Best regards,<br/>John Doe<br/>LeafCom Team</p>',
+    },
     { id: '2', name: 'Casual', content: '<p>Cheers,<br/>John</p>' },
   ]);
   const [signatureName, setSignatureName] = useState('');
@@ -168,9 +180,27 @@ const DashbaordScreen = ({ navigation }) => {
 
   // Email history
   const [emailHistory, setEmailHistory] = useState([
-    { id: '1', to: 'client@example.com', subject: 'Project Update', date: '2024-01-15', status: 'Sent' },
-    { id: '2', to: 'team@example.com', subject: 'Meeting Notes', date: '2024-01-14', status: 'Draft' },
-    { id: '3', to: 'john@example.com', subject: 'Proposal Review', date: '2024-01-13', status: 'Sent' },
+    {
+      id: '1',
+      to: 'client@example.com',
+      subject: 'Project Update',
+      date: '2024-01-15',
+      status: 'Sent',
+    },
+    {
+      id: '2',
+      to: 'team@example.com',
+      subject: 'Meeting Notes',
+      date: '2024-01-14',
+      status: 'Draft',
+    },
+    {
+      id: '3',
+      to: 'john@example.com',
+      subject: 'Proposal Review',
+      date: '2024-01-13',
+      status: 'Sent',
+    },
   ]);
   const [showEmailHistory, setShowEmailHistory] = useState(false);
 
@@ -239,7 +269,10 @@ const DashbaordScreen = ({ navigation }) => {
       userName: 'Sarah Johnson',
       userTag: 'Team',
       message: 'Shared new design files',
-      dateTime: new Date(Date.now() - 3600000).toISOString().replace('T', ' ').slice(0, 16),
+      dateTime: new Date(Date.now() - 3600000)
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 16),
       notSeenCount: 0,
       avatar: require('../../asset/dummyuser.png'),
       type: 'file',
@@ -249,7 +282,10 @@ const DashbaordScreen = ({ navigation }) => {
       userName: 'Michael Brown',
       userTag: 'Client',
       message: 'Approved the budget proposal',
-      dateTime: new Date(Date.now() - 7200000).toISOString().replace('T', ' ').slice(0, 16),
+      dateTime: new Date(Date.now() - 7200000)
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 16),
       notSeenCount: 1,
       avatar: require('../../asset/dummyuser.png'),
       type: 'approval',
@@ -259,7 +295,10 @@ const DashbaordScreen = ({ navigation }) => {
       userName: 'Emily Davis',
       userTag: 'Team',
       message: 'Meeting scheduled for tomorrow',
-      dateTime: new Date(Date.now() - 10800000).toISOString().replace('T', ' ').slice(0, 16),
+      dateTime: new Date(Date.now() - 10800000)
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 16),
       notSeenCount: 5,
       avatar: require('../../asset/dummyuser.png'),
       type: 'meeting',
@@ -269,7 +308,10 @@ const DashbaordScreen = ({ navigation }) => {
       userName: 'Robert Wilson',
       userTag: 'Admin',
       message: 'System maintenance completed',
-      dateTime: new Date(Date.now() - 14400000).toISOString().replace('T', ' ').slice(0, 16),
+      dateTime: new Date(Date.now() - 14400000)
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 16),
       notSeenCount: 0,
       avatar: require('../../asset/dummyuser.png'),
       type: 'system',
@@ -279,7 +321,10 @@ const DashbaordScreen = ({ navigation }) => {
       userName: 'Lisa Anderson',
       userTag: 'Client',
       message: 'Requested new feature implementation',
-      dateTime: new Date(Date.now() - 18000000).toISOString().replace('T', ' ').slice(0, 16),
+      dateTime: new Date(Date.now() - 18000000)
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 16),
       notSeenCount: 2,
       avatar: require('../../asset/dummyuser.png'),
       type: 'request',
@@ -289,7 +334,10 @@ const DashbaordScreen = ({ navigation }) => {
       userName: 'David Martinez',
       userTag: 'Team',
       message: 'Code review completed for sprint 3',
-      dateTime: new Date(Date.now() - 21600000).toISOString().replace('T', ' ').slice(0, 16),
+      dateTime: new Date(Date.now() - 21600000)
+        .toISOString()
+        .replace('T', ' ')
+        .slice(0, 16),
       notSeenCount: 0,
       avatar: require('../../asset/dummyuser.png'),
       type: 'code',
@@ -328,6 +376,10 @@ const DashbaordScreen = ({ navigation }) => {
       }).start();
     }
   }, [showMessageSidebar]);
+
+  useEffect(() => {
+    fetchUsers(1, false);
+  }, []);
 
   // ============================================================
   // CATEGORIES DATA
@@ -434,11 +486,36 @@ const DashbaordScreen = ({ navigation }) => {
   // TIME FILTERS DATA
   // ============================================================
   const timeFilters = [
-    { id: 'recent', name: 'Recent', icon: require('../../asset/time.png'), color: '#6C63FF' },
-    { id: 'today', name: 'Today', icon: require('../../asset/sunny.png'), color: '#FF9800' },
-    { id: 'week', name: 'This Week', icon: require('../../asset/calendar.png'), color: '#4CAF50' },
-    { id: 'month', name: 'This Month', icon: require('../../asset/schedule.png'), color: '#2196F3' },
-    { id: 'unread', name: 'Unread', icon: require('../../asset/email.png'), color: '#FF4757' },
+    {
+      id: 'recent',
+      name: 'Recent',
+      icon: require('../../asset/time.png'),
+      color: '#6C63FF',
+    },
+    {
+      id: 'today',
+      name: 'Today',
+      icon: require('../../asset/sunny.png'),
+      color: '#FF9800',
+    },
+    {
+      id: 'week',
+      name: 'This Week',
+      icon: require('../../asset/calendar.png'),
+      color: '#4CAF50',
+    },
+    {
+      id: 'month',
+      name: 'This Month',
+      icon: require('../../asset/schedule.png'),
+      color: '#2196F3',
+    },
+    {
+      id: 'unread',
+      name: 'Unread',
+      icon: require('../../asset/email.png'),
+      color: '#FF4757',
+    },
   ];
 
   // ============================================================
@@ -471,17 +548,37 @@ const DashbaordScreen = ({ navigation }) => {
     business: ['Enterprise', 'Small Business', 'Startup'],
     individual: ['Premium', 'Standard', 'Basic'],
     team: ['Developers', 'Designers', 'Managers'],
-    all: ['All Users']
+    all: ['All Users'],
   };
 
   // ============================================================
   // COMMUNICATION OPTIONS
   // ============================================================
   const communicationOptions = [
-    { id: 'email', icon: require('../../asset/email.png'), label: 'Email', color: '#6C63FF' },
-    { id: 'whatsapp', icon: require('../../asset/whats-app.png'), label: 'WhatsApp', color: '#25D366' },
-    { id: 'sms', icon: require('../../asset/messages.png'), label: 'SMS', color: '#2196F3' },
-    { id: 'call', icon: require('../../asset/call.png'), label: 'Call', color: '#4CAF50' },
+    {
+      id: 'email',
+      icon: require('../../asset/email.png'),
+      label: 'Email',
+      color: '#6C63FF',
+    },
+    {
+      id: 'whatsapp',
+      icon: require('../../asset/whats-app.png'),
+      label: 'WhatsApp',
+      color: '#25D366',
+    },
+    {
+      id: 'sms',
+      icon: require('../../asset/messages.png'),
+      label: 'SMS',
+      color: '#2196F3',
+    },
+    {
+      id: 'call',
+      icon: require('../../asset/call.png'),
+      label: 'Call',
+      color: '#4CAF50',
+    },
   ];
 
   // ============================================================
@@ -509,14 +606,94 @@ const DashbaordScreen = ({ navigation }) => {
   // CONTACTS DATA
   // ============================================================
   const contacts = [
-    { id: '1', name: 'John Smith', number: '+1 234-567-8901', type: 'business', subType: 'Enterprise', tag: 'Client', hasWhatsApp: true, hasMessage: true, email: 'john@example.com' },
-    { id: '2', name: 'Sarah Johnson', number: '+1 234-567-8902', type: 'individual', subType: 'Premium', tag: 'Team', hasWhatsApp: true, hasMessage: true, email: 'sarah@example.com' },
-    { id: '3', name: 'Michael Brown', number: '+1 234-567-8903', type: 'business', subType: 'Small Business', tag: 'Client', hasWhatsApp: false, hasMessage: true, email: 'michael@example.com' },
-    { id: '4', name: 'Emily Davis', number: '+1 234-567-8904', type: 'individual', subType: 'Standard', tag: 'Team', hasWhatsApp: true, hasMessage: false, email: 'emily@example.com' },
-    { id: '5', name: 'Robert Wilson', number: '+1 234-567-8905', type: 'team', subType: 'Developers', tag: 'Admin', hasWhatsApp: true, hasMessage: true, email: 'robert@example.com' },
-    { id: '6', name: 'Lisa Anderson', number: '+1 234-567-8906', type: 'business', subType: 'Startup', tag: 'Client', hasWhatsApp: false, hasMessage: true, email: 'lisa@example.com' },
-    { id: '7', name: 'David Martinez', number: '+1 234-567-8907', type: 'individual', subType: 'Basic', tag: 'Team', hasWhatsApp: true, hasMessage: true, email: 'david@example.com' },
-    { id: '8', name: 'Jennifer Taylor', number: '+1 234-567-8908', type: 'team', subType: 'Designers', tag: 'Admin', hasWhatsApp: true, hasMessage: false, email: 'jennifer@example.com' },
+    {
+      id: '1',
+      name: 'John Smith',
+      number: '+1 234-567-8901',
+      type: 'business',
+      subType: 'Enterprise',
+      tag: 'Client',
+      hasWhatsApp: true,
+      hasMessage: true,
+      email: 'john@example.com',
+    },
+    {
+      id: '2',
+      name: 'Sarah Johnson',
+      number: '+1 234-567-8902',
+      type: 'individual',
+      subType: 'Premium',
+      tag: 'Team',
+      hasWhatsApp: true,
+      hasMessage: true,
+      email: 'sarah@example.com',
+    },
+    {
+      id: '3',
+      name: 'Michael Brown',
+      number: '+1 234-567-8903',
+      type: 'business',
+      subType: 'Small Business',
+      tag: 'Client',
+      hasWhatsApp: false,
+      hasMessage: true,
+      email: 'michael@example.com',
+    },
+    {
+      id: '4',
+      name: 'Emily Davis',
+      number: '+1 234-567-8904',
+      type: 'individual',
+      subType: 'Standard',
+      tag: 'Team',
+      hasWhatsApp: true,
+      hasMessage: false,
+      email: 'emily@example.com',
+    },
+    {
+      id: '5',
+      name: 'Robert Wilson',
+      number: '+1 234-567-8905',
+      type: 'team',
+      subType: 'Developers',
+      tag: 'Admin',
+      hasWhatsApp: true,
+      hasMessage: true,
+      email: 'robert@example.com',
+    },
+    {
+      id: '6',
+      name: 'Lisa Anderson',
+      number: '+1 234-567-8906',
+      type: 'business',
+      subType: 'Startup',
+      tag: 'Client',
+      hasWhatsApp: false,
+      hasMessage: true,
+      email: 'lisa@example.com',
+    },
+    {
+      id: '7',
+      name: 'David Martinez',
+      number: '+1 234-567-8907',
+      type: 'individual',
+      subType: 'Basic',
+      tag: 'Team',
+      hasWhatsApp: true,
+      hasMessage: true,
+      email: 'david@example.com',
+    },
+    {
+      id: '8',
+      name: 'Jennifer Taylor',
+      number: '+1 234-567-8908',
+      type: 'team',
+      subType: 'Designers',
+      tag: 'Admin',
+      hasWhatsApp: true,
+      hasMessage: false,
+      email: 'jennifer@example.com',
+    },
   ];
 
   // ============================================================
@@ -533,16 +710,16 @@ const DashbaordScreen = ({ navigation }) => {
   // HELPER FUNCTIONS
   // ============================================================
 
-  const toggleCategoryExpand = (categoryId) => {
+  const toggleCategoryExpand = categoryId => {
     setExpandedCategories(prev => ({
       ...prev,
-      [categoryId]: !prev[categoryId]
+      [categoryId]: !prev[categoryId],
     }));
   };
 
-  const loadMoreUsers = () => {
-    setVisibleCount(prev => Math.min(prev + 5, userList.length));
-  };
+  // const loadMoreUsers = () => {
+  //   setVisibleCount(prev => Math.min(prev + 5, userList.length));
+  // };
 
   const getFilteredUsers = () => {
     let filtered = userList;
@@ -551,20 +728,23 @@ const DashbaordScreen = ({ navigation }) => {
       const categoryMap = {
         'System Admin': 'System Admin',
         'Dialer Contact': 'Dialer Contact',
-        'Clients': 'Client',
-        'Team': 'Team',
+        Clients: 'Client',
+        Team: 'Team',
       };
-      filtered = filtered.filter(user => user.tag.includes(categoryMap[selectedCategory] || ''));
+
+      filtered = filtered.filter(user =>
+        user.tag.includes(categoryMap[selectedCategory] || ''),
+      );
     }
 
     if (showUnread) {
       filtered = filtered.filter(user => user.unread > 0);
     }
 
-    return filtered.slice(0, visibleCount);
+    return filtered;
   };
 
-  const getFilteredContacts = (type) => {
+  const getFilteredContacts = type => {
     let filtered = contacts;
 
     if (type === 'whatsapp') {
@@ -581,9 +761,10 @@ const DashbaordScreen = ({ navigation }) => {
     }
 
     if (contactSearch) {
-      filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-        c.number.includes(contactSearch)
+      filtered = filtered.filter(
+        c =>
+          c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+          c.number.includes(contactSearch),
       );
     }
     return filtered;
@@ -593,10 +774,17 @@ const DashbaordScreen = ({ navigation }) => {
     let filtered = [...activityData];
 
     if (activityQuickSearch) {
-      filtered = filtered.filter(item =>
-        item.userName.toLowerCase().includes(activityQuickSearch.toLowerCase()) ||
-        item.message.toLowerCase().includes(activityQuickSearch.toLowerCase()) ||
-        item.userTag.toLowerCase().includes(activityQuickSearch.toLowerCase())
+      filtered = filtered.filter(
+        item =>
+          item.userName
+            .toLowerCase()
+            .includes(activityQuickSearch.toLowerCase()) ||
+          item.message
+            .toLowerCase()
+            .includes(activityQuickSearch.toLowerCase()) ||
+          item.userTag
+            .toLowerCase()
+            .includes(activityQuickSearch.toLowerCase()),
       );
     }
 
@@ -608,14 +796,14 @@ const DashbaordScreen = ({ navigation }) => {
 
     if (activityRole !== 'all') {
       const roleMap = {
-        'admin': ['Admin', 'System Admin'],
-        'client': ['Client'],
-        'team': ['Team'],
-        'system_admin': ['System Admin']
+        admin: ['Admin', 'System Admin'],
+        client: ['Client'],
+        team: ['Team'],
+        system_admin: ['System Admin'],
       };
       const allowedRoles = roleMap[activityRole] || [];
       filtered = filtered.filter(item =>
-        allowedRoles.some(role => item.userTag.includes(role))
+        allowedRoles.some(role => item.userTag.includes(role)),
       );
     }
 
@@ -668,7 +856,8 @@ const DashbaordScreen = ({ navigation }) => {
   const getFilteredActivity = () => {
     let filtered = [...activityData];
 
-    const hasQuickFilters = activityQuickSearch ||
+    const hasQuickFilters =
+      activityQuickSearch ||
       activityReadStatus !== 'all' ||
       activityRole !== 'all' ||
       activityThread !== 'all' ||
@@ -704,9 +893,10 @@ const DashbaordScreen = ({ navigation }) => {
     }
 
     if (activitySearch) {
-      filtered = filtered.filter(item =>
-        item.userName.toLowerCase().includes(activitySearch.toLowerCase()) ||
-        item.message.toLowerCase().includes(activitySearch.toLowerCase())
+      filtered = filtered.filter(
+        item =>
+          item.userName.toLowerCase().includes(activitySearch.toLowerCase()) ||
+          item.message.toLowerCase().includes(activitySearch.toLowerCase()),
       );
     }
 
@@ -729,7 +919,7 @@ const DashbaordScreen = ({ navigation }) => {
     return messages.filter(msg => !msg.isRead).length;
   };
 
-  const getTimeAgo = (date) => {
+  const getTimeAgo = date => {
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -744,7 +934,7 @@ const DashbaordScreen = ({ navigation }) => {
     return `${Math.floor(diffDays / 30)}mo ago`;
   };
 
-  const deleteMessage = (id) => {
+  const deleteMessage = id => {
     setMessages(prev => prev.filter(msg => msg.id !== id));
   };
 
@@ -756,6 +946,158 @@ const DashbaordScreen = ({ navigation }) => {
     alert('Mute toggled');
   };
 
+  const fetchUsers = async (pageNumber = 1, loadMore = false) => {
+    try {
+      if (loadMore) {
+        setIsLoadingMoreUsers(true);
+      } else {
+        setIsLoadingUsers(true);
+      }
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/usersList',
+        {
+          type: 'All',
+          search_text: '',
+          per_page: 10,
+          page: pageNumber,
+          sort_by: 'date_sent_desc',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization:
+              'Bearer 5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0',
+
+            // 'Bearer 5901|p6Hp52iSaC4Q1mwqRCVlzSoJzKCHyyL8ii9QFlqb968d07b6',
+          },
+        },
+      );
+
+      console.log('Users API Response:', response.data);
+      if (response.data?.success) {
+        const apiUsers = response.data?.data || [];
+
+        const formattedUsers = apiUsers.map(item => ({
+          id: String(item.sender_id),
+
+          name: item.user_name || 'Unknown User',
+
+          avatar: item.profile_picture
+            ? { uri: item.profile_picture }
+            : require('../../asset/dummyuser.png'),
+
+          tag: item.user_type_details || item.user_type || '',
+
+          unread: Number(item.total_unread_message_count || 0),
+
+          sender_id: item.sender_id,
+          user_id_other_software: item.user_id_other_software,
+          user_type: item.user_type,
+          user_type_details: item.user_type_details,
+          user_specifics: item.user_specifics,
+          email: item.email,
+          whatsapp_number: item.whatsapp_number,
+          mobile_no: item.mobile_no,
+          main_id: item.main_id,
+          sub_id: item.sub_id,
+          sub_details: item.sub_details,
+          main_details: item.main_details,
+          oldest_unread_date: item.oldest_unread_date,
+          newest_unread_date: item.newest_unread_date,
+          last_message_date: item.last_message_date,
+          brand_name: item.brand_name,
+          office_name: item.office_name,
+        }));
+
+        // Add users to the list
+        if (loadMore) {
+          setUserList(prevUsers => [...prevUsers, ...formattedUsers]);
+        } else {
+          setUserList(formattedUsers);
+        }
+
+        // ============================================================
+        // PAGINATION
+        // ============================================================
+
+        // const pagination = response.data?.pagination;
+
+        // if (pagination) {
+        //   // Total users from API
+        //   setTotalReadCount(Number(response.data?.pagination?.total || 0));
+
+        //   setCurrentPage(pagination.current_page || pageNumber);
+
+        //   setHasMorePages(pagination.has_more_pages || false);
+        // }
+
+        const pagination = response.data?.pagination;
+
+        if (pagination) {
+          console.log('PAGE:', pagination.current_page);
+          console.log('TOTAL:', pagination.total);
+          console.log('NEXT PAGE:', pagination.next_page);
+
+          // Always replace with latest API total
+          setTotalReadCount(Number(pagination.total || 0));
+
+          setCurrentPage(Number(pagination.current_page || pageNumber));
+
+          setCurrentPage(Number(pagination.current_page || pageNumber));
+
+          setHasMorePages(Boolean(pagination.has_more_pages));
+        }
+
+        // ============================================================
+        // TOTAL UNREAD COUNT
+        // ============================================================
+
+        const unreadCount = apiUsers.reduce(
+          (total, item) => total + Number(item.total_unread_message_count || 0),
+          0,
+        );
+
+        if (loadMore) {
+          setTotalUnreadCount(prevCount => prevCount + unreadCount);
+        } else {
+          setTotalUnreadCount(unreadCount);
+        }
+      } else {
+        Alert.alert(
+          'Error',
+          response.data?.message || 'Unable to fetch users.',
+        );
+      }
+    } catch (error) {
+      console.log('Users API Error:', error.response?.data || error.message);
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Something went wrong while fetching users.',
+      );
+    } finally {
+      setIsLoadingUsers(false);
+      setIsLoadingMoreUsers(false);
+    }
+  };
+
+  // ============================================================
+  // LOAD MORE USERS
+  // ============================================================
+
+  const loadMoreUsers = () => {
+    if (isLoadingMoreUsers || !hasMorePages) {
+      return;
+    }
+
+    const nextPage = currentPage + 1;
+
+    console.log('Loading page:', nextPage);
+
+    fetchUsers(nextPage, true);
+  };
   // ============================================================
   // MODAL MANAGEMENT
   // ============================================================
@@ -844,11 +1186,6 @@ const DashbaordScreen = ({ navigation }) => {
     }
   }, [pendingModal]);
 
-  // ============================================================
-  // TOTAL COUNTS FOR DIRECTORY
-  // ============================================================
-  const totalReadCount = categories.reduce((sum, cat) => sum + cat.readCount, 0);
-  const totalUnreadCount = categories.reduce((sum, cat) => sum + cat.unreadCount, 0);
   const filteredUsers = getFilteredUsers();
 
   // ============================================================
@@ -869,13 +1206,9 @@ const DashbaordScreen = ({ navigation }) => {
           <View style={[styles.headerBgCircle, styles.headerBgCircle6]} />
         </View>
 
-
-
-
         <View style={styles.topBarContent}>
           <View style={styles.logoSection}>
             <View style={styles.logoWrapper}>
-
               <View>
                 <View style={styles.titleContainer}>
                   <View style={styles.logoContainer}>
@@ -885,96 +1218,89 @@ const DashbaordScreen = ({ navigation }) => {
                       resizeMode="contain"
                     />
                   </View>
-
                 </View>
-
               </View>
             </View>
           </View>
 
           <View style={styles.headerIcons}>
             <TouchableOpacity
-              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30, marginRight: 8 }]}
+              style={[
+                styles.headerIconButton,
+                styles.headerIconMenu,
+                { height: 30, width: 30, marginRight: 8 },
+              ]}
               onPress={() => setShowSideNav(!showSideNav)}
             >
-
               <Image
-                source={require('../../asset/user.png')} // Update the path as needed
+                source={require('../../asset/user.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: '#FFFFFF'
-
-
-
+                  tintColor: '#FFFFFF',
                 }}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30, marginRight: 8 }]}
+              style={[
+                styles.headerIconButton,
+                styles.headerIconMenu,
+                { height: 30, width: 30, marginRight: 8 },
+              ]}
               onPress={() => openModal('dashboard')}
             >
-
               <Image
-                source={require('../../asset/grid.png')} // Update the path as needed
+                source={require('../../asset/grid.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: '#FFFFFF'
-
-
-
+                  tintColor: '#FFFFFF',
                 }}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30, marginRight: 8 }]}
+              style={[
+                styles.headerIconButton,
+                styles.headerIconMenu,
+                { height: 30, width: 30, marginRight: 8 },
+              ]}
               onPress={() => setShowSideNav(!showSideNav)}
             >
-
               <Image
-                source={require('../../asset/bell.png')} // Update the path as needed
+                source={require('../../asset/bell.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: '#FFFFFF'
-
-
-
+                  tintColor: '#FFFFFF',
                 }}
               />
             </TouchableOpacity>
 
-
-
-
             <TouchableOpacity
-              style={[styles.headerIconButton, styles.headerIconMenu, { height: 30, width: 30 }]}
+              style={[
+                styles.headerIconButton,
+                styles.headerIconMenu,
+                { height: 30, width: 30 },
+              ]}
               onPress={() => setShowSideNav(!showSideNav)}
             >
-
               <Image
-                source={require('../../asset/menu.png')} // Update the path as needed
+                source={require('../../asset/menu.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#FFF"
-
-
+                  tintColor: '#FFF',
                 }}
               />
             </TouchableOpacity>
           </View>
         </View>
-
-
-
       </View>
     );
   };
@@ -994,7 +1320,12 @@ const DashbaordScreen = ({ navigation }) => {
         </View>
         <View style={styles.messageContent}>
           <View style={styles.messageHeader}>
-            <Text style={[styles.messageUserName, !item.isRead && styles.messageUserNameUnread]}>
+            <Text
+              style={[
+                styles.messageUserName,
+                !item.isRead && styles.messageUserNameUnread,
+              ]}
+            >
               {item.userName}
             </Text>
             <Text style={styles.messageTime}>{getTimeAgo(item.dateTime)}</Text>
@@ -1003,7 +1334,7 @@ const DashbaordScreen = ({ navigation }) => {
             <Text
               style={[
                 styles.messageLastText,
-                !item.isRead && styles.messageUnreadText
+                !item.isRead && styles.messageUnreadText,
               ]}
               numberOfLines={1}
             >
@@ -1012,36 +1343,32 @@ const DashbaordScreen = ({ navigation }) => {
             <View style={styles.messageStatusContainer}>
               {item.isRead ? (
                 <View style={styles.messageReadStatus}>
-
                   <Image
-                    source={require('../../asset/checkmark-done.png')} // Update the path as needed
+                    source={require('../../asset/checkmark-done.png')}
                     style={{
                       width: 12,
                       height: 12,
                       resizeMode: 'contain',
-                      tintColor: "#4CAF50"
-
-
+                      tintColor: '#4CAF50',
                     }}
                   />
                   <Text style={styles.messageReadText}>Seen</Text>
                 </View>
               ) : (
                 <View style={styles.messageUnreadStatus}>
-
                   <Image
-                    source={require('../../asset/email.png')} // Update the path as needed
+                    source={require('../../asset/email.png')}
                     style={{
                       width: 12,
                       height: 12,
                       resizeMode: 'contain',
-                      tintColor: "#FF4757"
-
-
+                      tintColor: '#FF4757',
                     }}
                   />
                   <Text style={styles.messageUnreadStatusText}>
-                    {item.unreadCount > 0 ? `${item.unreadCount} new` : 'Unread'}
+                    {item.unreadCount > 0
+                      ? `${item.unreadCount} new`
+                      : 'Unread'}
                   </Text>
                 </View>
               )}
@@ -1049,16 +1376,13 @@ const DashbaordScreen = ({ navigation }) => {
                 style={styles.messageDeleteBtn}
                 onPress={() => deleteMessage(item.id)}
               >
-
                 <Image
-                  source={require('../../asset/close.png')} // Update the path as needed
+                  source={require('../../asset/close.png')}
                   style={{
                     width: 14,
                     height: 14,
                     resizeMode: 'contain',
-                    tintColor: "#999"
-
-
+                    tintColor: '#999',
                   }}
                 />
               </TouchableOpacity>
@@ -1074,47 +1398,52 @@ const DashbaordScreen = ({ navigation }) => {
         transparent
         animationType="none"
         onRequestClose={() => {
-          setShowMessageSidebar(false)
-          setActiveTab('directory')
+          setShowMessageSidebar(false);
+          setActiveTab('directory');
         }}
       >
-        <TouchableWithoutFeedback onPress={() => {
-          setShowMessageSidebar(false)
-          setActiveTab('directory')
-        }}>
+        <TouchableWithoutFeedback
+          onPress={() => {
+            setShowMessageSidebar(false);
+            setActiveTab('directory');
+          }}
+        >
           <View style={styles.sidebarOverlay}>
             <TouchableWithoutFeedback>
               <Animated.View
                 style={[
                   styles.sidebarContainer,
-                  { transform: [{ translateX: sidebarAnim }] }
+                  { transform: [{ translateX: sidebarAnim }] },
                 ]}
               >
                 {/* Colorful Header */}
                 <View style={styles.sidebarHeader}>
                   <View style={styles.sidebarHeaderBgContainer}>
-                    <View style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg1]} />
-                    <View style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg2]} />
-                    <View style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg3]} />
-                    <View style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg4]} />
+                    <View
+                      style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg1]}
+                    />
+                    <View
+                      style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg2]}
+                    />
+                    <View
+                      style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg3]}
+                    />
+                    <View
+                      style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg4]}
+                    />
                   </View>
-
-
 
                   <View style={styles.sidebarHeaderContent}>
                     <View style={styles.sidebarHeaderLeft}>
                       <View style={styles.sidebarTitleContainer}>
                         <View style={styles.sidebarIconWrapper}>
-
                           <Image
-                            source={require('../../asset/chatbubbles.png')} // Update the path as needed
+                            source={require('../../asset/chatbubbles.png')}
                             style={{
                               width: 16,
                               height: 16,
                               resizeMode: 'contain',
-                              tintColor: "#FFF"
-
-
+                              tintColor: '#FFF',
                             }}
                           />
                         </View>
@@ -1122,11 +1451,15 @@ const DashbaordScreen = ({ navigation }) => {
                       </View>
                       <View style={styles.sidebarHeaderBadges}>
                         <View style={styles.sidebarTotalBadge}>
-                          <Text style={styles.sidebarTotalBadgeText}>{totalMessages}</Text>
+                          <Text style={styles.sidebarTotalBadgeText}>
+                            {totalMessages}
+                          </Text>
                         </View>
                         {unreadCount > 0 && (
                           <View style={styles.sidebarUnreadBadge}>
-                            <Text style={styles.sidebarUnreadBadgeText}>{unreadCount} unread</Text>
+                            <Text style={styles.sidebarUnreadBadgeText}>
+                              {unreadCount} unread
+                            </Text>
                           </View>
                         )}
                       </View>
@@ -1136,16 +1469,13 @@ const DashbaordScreen = ({ navigation }) => {
                         style={styles.sidebarHeaderBtn}
                         onPress={toggleMute}
                       >
-
                         <Image
-                          source={require('../../asset/mute.png')} // Update the path as needed
+                          source={require('../../asset/mute.png')}
                           style={{
                             width: 16,
                             height: 16,
                             resizeMode: 'contain',
-                            tintColor: "#FFF"
-
-
+                            tintColor: '#FFF',
                           }}
                         />
                       </TouchableOpacity>
@@ -1153,25 +1483,24 @@ const DashbaordScreen = ({ navigation }) => {
                         style={styles.sidebarClearBtn}
                         onPress={clearAllMessages}
                       >
-                        <Text style={styles.sidebarClearBtnText}>Clear All</Text>
+                        <Text style={styles.sidebarClearBtnText}>
+                          Clear All
+                        </Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.sidebarHeaderBtn}
                         onPress={() => {
-                          setShowMessageSidebar(false)
-                          setActiveTab('directory')
+                          setShowMessageSidebar(false);
+                          setActiveTab('directory');
                         }}
                       >
-
                         <Image
-                          source={require('../../asset/close.png')} // Update the path as needed
+                          source={require('../../asset/close.png')}
                           style={{
                             width: 16,
                             height: 16,
                             resizeMode: 'contain',
-                            tintColor: "#FFF"
-
-
+                            tintColor: '#FFF',
                           }}
                         />
                       </TouchableOpacity>
@@ -1189,20 +1518,19 @@ const DashbaordScreen = ({ navigation }) => {
                   />
                 ) : (
                   <View style={styles.emptyMessagesContainer}>
-
                     <Image
-                      source={require('../../asset/chatbubbles.png')} // Update the path as needed
+                      source={require('../../asset/chatbubbles.png')}
                       style={{
                         width: 60,
                         height: 60,
                         resizeMode: 'contain',
-                        tintColor: "#ddd"
-
-
+                        tintColor: '#ddd',
                       }}
                     />
                     <Text style={styles.emptyMessagesText}>No messages</Text>
-                    <Text style={styles.emptyMessagesSubtext}>Your messages will appear here</Text>
+                    <Text style={styles.emptyMessagesSubtext}>
+                      Your messages will appear here
+                    </Text>
                   </View>
                 )}
               </Animated.View>
@@ -1217,7 +1545,7 @@ const DashbaordScreen = ({ navigation }) => {
   // RENDER FUNCTIONS FOR DIFFERENT SECTIONS
   // ============================================================
 
-  const renderDialpadButton = (num) => (
+  const renderDialpadButton = num => (
     <TouchableOpacity
       key={num}
       style={styles.dialpadButton}
@@ -1236,10 +1564,14 @@ const DashbaordScreen = ({ navigation }) => {
         <Text style={styles.contactName}>{item.name}</Text>
         <View style={styles.contactTags}>
           <View style={[styles.contactTag, { backgroundColor: '#6C63FF20' }]}>
-            <Text style={[styles.contactTagText, { color: '#6C63FF' }]}>{item.type}</Text>
+            <Text style={[styles.contactTagText, { color: '#6C63FF' }]}>
+              {item.type}
+            </Text>
           </View>
           <View style={[styles.contactTag, { backgroundColor: '#4CAF5020' }]}>
-            <Text style={[styles.contactTagText, { color: '#4CAF50' }]}>{item.subType}</Text>
+            <Text style={[styles.contactTagText, { color: '#4CAF50' }]}>
+              {item.subType}
+            </Text>
           </View>
         </View>
         <View style={styles.contactIconsRow}>
@@ -1250,16 +1582,12 @@ const DashbaordScreen = ({ navigation }) => {
               setActiveTab('email');
             }}
           >
-
             <Image
-              source={require('../../asset/chat.png')} // Update the path as needed
+              source={require('../../asset/chat.png')}
               style={{
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-
-
-
               }}
             />
           </TouchableOpacity>
@@ -1270,16 +1598,12 @@ const DashbaordScreen = ({ navigation }) => {
               setActiveTab('email');
             }}
           >
-
             <Image
-              source={require('../../asset/mail.png')} // Update the path as needed
+              source={require('../../asset/mail.png')}
               style={{
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-
-
-
               }}
             />
           </TouchableOpacity>
@@ -1288,14 +1612,11 @@ const DashbaordScreen = ({ navigation }) => {
             onPress={() => openModal('dial')}
           >
             <Image
-              source={require('../../asset/circle-call.png')} // Update the path as needed
+              source={require('../../asset/circle-call.png')}
               style={{
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-
-
-
               }}
             />
           </TouchableOpacity>
@@ -1304,16 +1625,12 @@ const DashbaordScreen = ({ navigation }) => {
               style={[styles.contactIconSmall]}
               onPress={() => openModal('whatsapp')}
             >
-
               <Image
-                source={require('../../asset/whatsapp.png')} // Update the path as needed
+                source={require('../../asset/whatsapp.png')}
                 style={{
                   width: 22,
                   height: 22,
                   resizeMode: 'contain',
-
-
-
                 }}
               />
             </TouchableOpacity>
@@ -1322,16 +1639,12 @@ const DashbaordScreen = ({ navigation }) => {
             style={[styles.contactIconSmall]}
             onPress={() => openModal('message')}
           >
-
             <Image
-              source={require('../../asset/message.png')} // Update the path as needed
+              source={require('../../asset/message.png')}
               style={{
                 width: 22,
                 height: 22,
                 resizeMode: 'contain',
-
-
-
               }}
             />
           </TouchableOpacity>
@@ -1342,8 +1655,10 @@ const DashbaordScreen = ({ navigation }) => {
 
   const renderContactListModal = (title, type, icon, iconColor) => {
     const filteredContacts = getFilteredContacts(type);
-    const isVisible = type === 'whatsapp' ? showWhatsAppModal : showMessageModal;
-    const setVisible = type === 'whatsapp' ? setShowWhatsAppModal : setShowMessageModal;
+    const isVisible =
+      type === 'whatsapp' ? showWhatsAppModal : showMessageModal;
+    const setVisible =
+      type === 'whatsapp' ? setShowWhatsAppModal : setShowMessageModal;
 
     return (
       <Modal
@@ -1362,26 +1677,24 @@ const DashbaordScreen = ({ navigation }) => {
                     width: 28,
                     height: 28,
                     resizeMode: 'contain',
-
                   }}
                 />
                 <Text style={styles.dialModalTitle}>{title}</Text>
               </View>
-              <Text style={styles.dialModalSubtitle}>{filteredContacts.length} contacts available</Text>
+              <Text style={styles.dialModalSubtitle}>
+                {filteredContacts.length} contacts available
+              </Text>
               <TouchableOpacity
                 style={styles.dialModalClose}
                 onPress={() => setVisible(false)}
               >
-
                 <Image
-                  source={require('../../asset/close.png')} // Update the path as needed
+                  source={require('../../asset/close.png')}
                   style={{
                     width: 24,
                     height: 24,
                     resizeMode: 'contain',
-                    tintColor: "#666"
-
-
+                    tintColor: '#666',
                   }}
                 />
               </TouchableOpacity>
@@ -1389,16 +1702,13 @@ const DashbaordScreen = ({ navigation }) => {
 
             <View style={styles.whatsappContainer}>
               <View style={styles.whatsappSearchContainer}>
-
                 <Image
-                  source={require('../../asset/search.png')} // Update the path as needed
+                  source={require('../../asset/search.png')}
                   style={{
                     width: 20,
                     height: 20,
                     resizeMode: 'contain',
-                    tintColor: "#999"
-
-
+                    tintColor: '#999',
                   }}
                 />
                 <TextInput
@@ -1412,16 +1722,13 @@ const DashbaordScreen = ({ navigation }) => {
                   style={styles.filterIconBtn}
                   onPress={() => openModal('contactFilter', type)}
                 >
-
                   <Image
-                    source={require('../../asset/filter.png')} // Update the path as needed
+                    source={require('../../asset/filter.png')}
                     style={{
                       width: 20,
                       height: 20,
                       resizeMode: 'contain',
-                      tintColor: "#6C63FF"
-
-
+                      tintColor: '#6C63FF',
                     }}
                   />
                 </TouchableOpacity>
@@ -1433,17 +1740,19 @@ const DashbaordScreen = ({ navigation }) => {
                     <Text style={styles.activeFilterText}>
                       {userTypes.find(t => t.id === selectedUserType)?.name}
                     </Text>
-                    <TouchableOpacity onPress={() => {
-                      setSelectedUserType('all');
-                      setSelectedSubType('All Users');
-                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedUserType('all');
+                        setSelectedSubType('All Users');
+                      }}
+                    >
                       <Image
                         source={require('../../asset/close.png')}
                         style={{
                           width: 14,
                           height: 14,
                           resizeMode: 'contain',
-                          tintColor: "#666"
+                          tintColor: '#666',
                         }}
                       />
                     </TouchableOpacity>
@@ -1451,15 +1760,19 @@ const DashbaordScreen = ({ navigation }) => {
                 )}
                 {selectedSubType !== 'All Users' && (
                   <View style={styles.activeFilterChip}>
-                    <Text style={styles.activeFilterText}>{selectedSubType}</Text>
-                    <TouchableOpacity onPress={() => setSelectedSubType('All Users')}>
+                    <Text style={styles.activeFilterText}>
+                      {selectedSubType}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSelectedSubType('All Users')}
+                    >
                       <Image
                         source={require('../../asset/close.png')}
                         style={{
                           width: 14,
                           height: 14,
                           resizeMode: 'contain',
-                          tintColor: "#666"
+                          tintColor: '#666',
                         }}
                       />
                     </TouchableOpacity>
@@ -1473,17 +1786,43 @@ const DashbaordScreen = ({ navigation }) => {
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.whatsappContactCard}>
                     <View style={styles.whatsappContactAvatar}>
-                      <Text style={styles.whatsappContactAvatarText}>{item.name.charAt(0)}</Text>
+                      <Text style={styles.whatsappContactAvatarText}>
+                        {item.name.charAt(0)}
+                      </Text>
                       <View style={styles.whatsappStatusDot} />
                     </View>
                     <View style={styles.whatsappContactInfo}>
-                      <Text style={styles.whatsappContactName}>{item.name}</Text>
+                      <Text style={styles.whatsappContactName}>
+                        {item.name}
+                      </Text>
                       <View style={styles.whatsappContactTags}>
-                        <View style={[styles.contactTag, { backgroundColor: '#6C63FF20' }]}>
-                          <Text style={[styles.contactTagText, { color: '#6C63FF' }]}>{item.type}</Text>
+                        <View
+                          style={[
+                            styles.contactTag,
+                            { backgroundColor: '#6C63FF20' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.contactTagText,
+                              { color: '#6C63FF' },
+                            ]}
+                          >
+                            {item.type}
+                          </Text>
                         </View>
-                        <View style={[styles.contactTag, { backgroundColor: iconColor + '20' }]}>
-                          <Text style={[styles.contactTagText, { color: iconColor }]}>
+                        <View
+                          style={[
+                            styles.contactTag,
+                            { backgroundColor: iconColor + '20' },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.contactTagText,
+                              { color: iconColor },
+                            ]}
+                          >
                             {type === 'whatsapp' ? 'WhatsApp' : 'Message'}
                           </Text>
                         </View>
@@ -1496,14 +1835,12 @@ const DashbaordScreen = ({ navigation }) => {
                             setActiveTab('email');
                           }}
                         >
-
                           <Image
                             source={require('../../asset/chat.png')}
                             style={{
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-
                             }}
                           />
                         </TouchableOpacity>
@@ -1520,12 +1857,14 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-
                             }}
                           />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[styles.contactIconSmall, { backgroundColor: '#4CAF5020' }]}
+                          style={[
+                            styles.contactIconSmall,
+                            { backgroundColor: '#4CAF5020' },
+                          ]}
                           onPress={() => openModal('dial')}
                         >
                           <Image
@@ -1534,7 +1873,6 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-
                             }}
                           />
                         </TouchableOpacity>
@@ -1542,14 +1880,12 @@ const DashbaordScreen = ({ navigation }) => {
                           style={[styles.contactIconSmall]}
                           onPress={() => openModal('whatsapp')}
                         >
-
                           <Image
                             source={require('../../asset/whatsapp.png')}
                             style={{
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-
                             }}
                           />
                         </TouchableOpacity>
@@ -1563,7 +1899,6 @@ const DashbaordScreen = ({ navigation }) => {
                               width: 20,
                               height: 20,
                               resizeMode: 'contain',
-
                             }}
                           />
                         </TouchableOpacity>
@@ -1582,7 +1917,9 @@ const DashbaordScreen = ({ navigation }) => {
                         tintColor: iconColor + '40',
                       }}
                     />
-                    <Text style={styles.whatsappEmptyText}>No contacts found</Text>
+                    <Text style={styles.whatsappEmptyText}>
+                      No contacts found
+                    </Text>
                   </View>
                 }
               />
@@ -1604,19 +1941,20 @@ const DashbaordScreen = ({ navigation }) => {
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Time Filter</Text>
-            <Text style={styles.dialModalSubtitle}>Filter activities by time</Text>
+            <Text style={styles.dialModalSubtitle}>
+              Filter activities by time
+            </Text>
             <TouchableOpacity
               style={styles.dialModalClose}
               onPress={() => setShowActivityTimeModal(false)}
             >
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -1628,28 +1966,31 @@ const DashbaordScreen = ({ navigation }) => {
                 key={filter.id}
                 style={[
                   styles.activityFilterOption,
-                  activityTimeFilter === filter.id && styles.activityFilterOptionActive
+                  activityTimeFilter === filter.id &&
+                    styles.activityFilterOptionActive,
                 ]}
                 onPress={() => {
                   setActivityTimeFilter(filter.id);
                   setShowActivityTimeModal(false);
                 }}
               >
-                <Text style={[
-                  styles.activityFilterOptionText,
-                  activityTimeFilter === filter.id && styles.activityFilterOptionTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.activityFilterOptionText,
+                    activityTimeFilter === filter.id &&
+                      styles.activityFilterOptionTextActive,
+                  ]}
+                >
                   {filter.label}
                 </Text>
                 {activityTimeFilter === filter.id && (
-
                   <Image
                     source={require('../../asset/checkmark-circle.png')}
                     style={{
                       width: 24,
                       height: 24,
                       resizeMode: 'contain',
-                      tintColor: "#6C63FF"
+                      tintColor: '#6C63FF',
                     }}
                   />
                 )}
@@ -1706,28 +2047,30 @@ const DashbaordScreen = ({ navigation }) => {
                     key={option.id}
                     style={[
                       styles.dropdownItem,
-                      selectedId === option.id && styles.dropdownItemActive
+                      selectedId === option.id && styles.dropdownItemActive,
                     ]}
                     onPress={() => {
                       onSelect(option.id);
                       setActiveDropdown(null);
                     }}
                   >
-                    <Text style={[
-                      styles.dropdownItemText,
-                      selectedId === option.id && styles.dropdownItemTextActive
-                    ]}>
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        selectedId === option.id &&
+                          styles.dropdownItemTextActive,
+                      ]}
+                    >
                       {option.label}
                     </Text>
                     {selectedId === option.id && (
-
                       <Image
                         source={require('../../asset/checkmark.png')}
                         style={{
                           width: 18,
                           height: 18,
                           resizeMode: 'contain',
-                          tintColor: "#6C63FF"
+                          tintColor: '#6C63FF',
                         }}
                       />
                     )}
@@ -1757,7 +2100,9 @@ const DashbaordScreen = ({ navigation }) => {
             <View style={styles.quickFilterModalHeader}>
               <View>
                 <Text style={styles.quickFilterModalTitle}>Quick Filter</Text>
-                <Text style={styles.quickFilterModalSubtitle}>Advanced activity filters</Text>
+                <Text style={styles.quickFilterModalSubtitle}>
+                  Advanced activity filters
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.quickFilterModalClose}
@@ -1766,14 +2111,13 @@ const DashbaordScreen = ({ navigation }) => {
                   setActiveDropdown(null);
                 }}
               >
-
                 <Image
                   source={require('../../asset/close.png')}
                   style={{
                     width: 28,
                     height: 28,
                     resizeMode: 'contain',
-                    tintColor: "#333"
+                    tintColor: '#333',
                   }}
                 />
               </TouchableOpacity>
@@ -1788,14 +2132,13 @@ const DashbaordScreen = ({ navigation }) => {
               <View style={styles.quickFilterGroup}>
                 <Text style={styles.quickFilterGroupLabel}>Search</Text>
                 <View style={styles.quickFilterSearchContainer}>
-
                   <Image
                     source={require('../../asset/search.png')}
                     style={{
                       width: 20,
                       height: 20,
                       resizeMode: 'contain',
-                      tintColor: "#999"
+                      tintColor: '#999',
                     }}
                   />
                   <TextInput
@@ -1806,15 +2149,16 @@ const DashbaordScreen = ({ navigation }) => {
                     onChangeText={setActivityQuickSearch}
                   />
                   {activityQuickSearch.length > 0 && (
-                    <TouchableOpacity onPress={() => setActivityQuickSearch('')}>
-
+                    <TouchableOpacity
+                      onPress={() => setActivityQuickSearch('')}
+                    >
                       <Image
                         source={require('../../asset/close-circle.png')}
                         style={{
                           width: 20,
                           height: 20,
                           resizeMode: 'contain',
-                          tintColor: "#999"
+                          tintColor: '#999',
                         }}
                       />
                     </TouchableOpacity>
@@ -1829,7 +2173,7 @@ const DashbaordScreen = ({ navigation }) => {
                     activityReadStatus,
                     setActivityReadStatus,
                     'Read',
-                    'read'
+                    'read',
                   )}
                 </View>
 
@@ -1839,7 +2183,7 @@ const DashbaordScreen = ({ navigation }) => {
                     activityRole,
                     setActivityRole,
                     'Role',
-                    'role'
+                    'role',
                   )}
                 </View>
 
@@ -1849,7 +2193,7 @@ const DashbaordScreen = ({ navigation }) => {
                     activityThread,
                     setActivityThread,
                     'Thread',
-                    'thread'
+                    'thread',
                   )}
                 </View>
 
@@ -1859,7 +2203,7 @@ const DashbaordScreen = ({ navigation }) => {
                     activityChannel,
                     setActivityChannel,
                     'Channel',
-                    'channel'
+                    'channel',
                   )}
                 </View>
 
@@ -1869,7 +2213,7 @@ const DashbaordScreen = ({ navigation }) => {
                     activitySortBy,
                     setActivitySortBy,
                     'Sort',
-                    'sort'
+                    'sort',
                   )}
                 </View>
 
@@ -1879,155 +2223,196 @@ const DashbaordScreen = ({ navigation }) => {
                     activityMinUnread,
                     setActivityMinUnread,
                     'Min. Unread',
-                    'minunread'
+                    'minunread',
                   )}
                 </View>
               </View>
 
-              {(
-                activityQuickSearch ||
+              {(activityQuickSearch ||
                 activityReadStatus !== 'all' ||
                 activityRole !== 'all' ||
                 activityThread !== 'all' ||
                 activityChannel !== 'all' ||
                 activityMinUnread !== '0' ||
-                activitySortBy !== 'newest'
-              ) && (
-                  <View style={styles.quickFilterActiveSummary}>
-                    <Text style={styles.quickFilterActiveTitle}>Active Filters:</Text>
-                    <View style={styles.quickFilterActiveChips}>
-                      {activityQuickSearch && (
-                        <View style={styles.quickFilterActiveChip}>
-                          <Text style={styles.quickFilterActiveChipText}>Search: {activityQuickSearch}</Text>
-                          <TouchableOpacity onPress={() => setActivityQuickSearch('')}>
-
-                            <Image
-                              source={require('../../asset/close.png')}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                resizeMode: 'contain',
-                                tintColor: "#666"
-                              }}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {activityReadStatus !== 'all' && (
-                        <View style={styles.quickFilterActiveChip}>
-                          <Text style={styles.quickFilterActiveChipText}>
-                            Read: {readStatusOptions.find(o => o.id === activityReadStatus)?.label}
-                          </Text>
-                          <TouchableOpacity onPress={() => setActivityReadStatus('all')}>
-                            <Image
-                              source={require('../../asset/close.png')}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                resizeMode: 'contain',
-                                tintColor: "#666"
-                              }}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {activityRole !== 'all' && (
-                        <View style={styles.quickFilterActiveChip}>
-                          <Text style={styles.quickFilterActiveChipText}>
-                            Role: {roleOptions.find(o => o.id === activityRole)?.label}
-                          </Text>
-                          <TouchableOpacity onPress={() => setActivityRole('all')}>
-                            <Image
-                              source={require('../../asset/close.png')}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                resizeMode: 'contain',
-                                tintColor: "#666"
-                              }}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {activityThread !== 'all' && (
-                        <View style={styles.quickFilterActiveChip}>
-                          <Text style={styles.quickFilterActiveChipText}>
-                            Thread: {threadOptions.find(o => o.id === activityThread)?.label}
-                          </Text>
-                          <TouchableOpacity onPress={() => setActivityThread('all')}>
-                            <Image
-                              source={require('../../asset/close.png')}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                resizeMode: 'contain',
-                                tintColor: "#666"
-                              }}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {activityChannel !== 'all' && (
-                        <View style={styles.quickFilterActiveChip}>
-                          <Text style={styles.quickFilterActiveChipText}>
-                            Channel: {channelOptions.find(o => o.id === activityChannel)?.label}
-                          </Text>
-                          <TouchableOpacity onPress={() => setActivityChannel('all')}>
-                            <Image
-                              source={require('../../asset/close.png')}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                resizeMode: 'contain',
-                                tintColor: "#666"
-                              }}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {activityMinUnread !== '0' && (
-                        <View style={styles.quickFilterActiveChip}>
-                          <Text style={styles.quickFilterActiveChipText}>
-                            Min. Unread: {minUnreadOptions.find(o => o.id === activityMinUnread)?.label}
-                          </Text>
-                          <TouchableOpacity onPress={() => setActivityMinUnread('0')}>
-                            <Image
-                              source={require('../../asset/close.png')}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                resizeMode: 'contain',
-                                tintColor: "#666"
-                              }}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                      {activitySortBy !== 'newest' && (
-                        <View style={styles.quickFilterActiveChip}>
-                          <Text style={styles.quickFilterActiveChipText}>
-                            Sort: {sortOptions.find(o => o.id === activitySortBy)?.label}
-                          </Text>
-                          <TouchableOpacity onPress={() => setActivitySortBy('newest')}>
-                            <Image
-                              source={require('../../asset/close.png')}
-                              style={{
-                                width: 14,
-                                height: 14,
-                                resizeMode: 'contain',
-                                tintColor: "#666"
-                              }}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </View>
+                activitySortBy !== 'newest') && (
+                <View style={styles.quickFilterActiveSummary}>
+                  <Text style={styles.quickFilterActiveTitle}>
+                    Active Filters:
+                  </Text>
+                  <View style={styles.quickFilterActiveChips}>
+                    {activityQuickSearch && (
+                      <View style={styles.quickFilterActiveChip}>
+                        <Text style={styles.quickFilterActiveChipText}>
+                          Search: {activityQuickSearch}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setActivityQuickSearch('')}
+                        >
+                          <Image
+                            source={require('../../asset/close.png')}
+                            style={{
+                              width: 14,
+                              height: 14,
+                              resizeMode: 'contain',
+                              tintColor: '#666',
+                            }}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {activityReadStatus !== 'all' && (
+                      <View style={styles.quickFilterActiveChip}>
+                        <Text style={styles.quickFilterActiveChipText}>
+                          Read:{' '}
+                          {
+                            readStatusOptions.find(
+                              o => o.id === activityReadStatus,
+                            )?.label
+                          }
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setActivityReadStatus('all')}
+                        >
+                          <Image
+                            source={require('../../asset/close.png')}
+                            style={{
+                              width: 14,
+                              height: 14,
+                              resizeMode: 'contain',
+                              tintColor: '#666',
+                            }}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {activityRole !== 'all' && (
+                      <View style={styles.quickFilterActiveChip}>
+                        <Text style={styles.quickFilterActiveChipText}>
+                          Role:{' '}
+                          {roleOptions.find(o => o.id === activityRole)?.label}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setActivityRole('all')}
+                        >
+                          <Image
+                            source={require('../../asset/close.png')}
+                            style={{
+                              width: 14,
+                              height: 14,
+                              resizeMode: 'contain',
+                              tintColor: '#666',
+                            }}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {activityThread !== 'all' && (
+                      <View style={styles.quickFilterActiveChip}>
+                        <Text style={styles.quickFilterActiveChipText}>
+                          Thread:{' '}
+                          {
+                            threadOptions.find(o => o.id === activityThread)
+                              ?.label
+                          }
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setActivityThread('all')}
+                        >
+                          <Image
+                            source={require('../../asset/close.png')}
+                            style={{
+                              width: 14,
+                              height: 14,
+                              resizeMode: 'contain',
+                              tintColor: '#666',
+                            }}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {activityChannel !== 'all' && (
+                      <View style={styles.quickFilterActiveChip}>
+                        <Text style={styles.quickFilterActiveChipText}>
+                          Channel:{' '}
+                          {
+                            channelOptions.find(o => o.id === activityChannel)
+                              ?.label
+                          }
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setActivityChannel('all')}
+                        >
+                          <Image
+                            source={require('../../asset/close.png')}
+                            style={{
+                              width: 14,
+                              height: 14,
+                              resizeMode: 'contain',
+                              tintColor: '#666',
+                            }}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {activityMinUnread !== '0' && (
+                      <View style={styles.quickFilterActiveChip}>
+                        <Text style={styles.quickFilterActiveChipText}>
+                          Min. Unread:{' '}
+                          {
+                            minUnreadOptions.find(
+                              o => o.id === activityMinUnread,
+                            )?.label
+                          }
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setActivityMinUnread('0')}
+                        >
+                          <Image
+                            source={require('../../asset/close.png')}
+                            style={{
+                              width: 14,
+                              height: 14,
+                              resizeMode: 'contain',
+                              tintColor: '#666',
+                            }}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {activitySortBy !== 'newest' && (
+                      <View style={styles.quickFilterActiveChip}>
+                        <Text style={styles.quickFilterActiveChipText}>
+                          Sort:{' '}
+                          {
+                            sortOptions.find(o => o.id === activitySortBy)
+                              ?.label
+                          }
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setActivitySortBy('newest')}
+                        >
+                          <Image
+                            source={require('../../asset/close.png')}
+                            style={{
+                              width: 14,
+                              height: 14,
+                              resizeMode: 'contain',
+                              tintColor: '#666',
+                            }}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
-                )}
+                </View>
+              )}
 
               <View style={styles.quickFilterActions}>
                 <TouchableOpacity
-                  style={[styles.quickFilterActionBtn, styles.quickFilterResetBtn]}
+                  style={[
+                    styles.quickFilterActionBtn,
+                    styles.quickFilterResetBtn,
+                  ]}
                   onPress={() => {
                     resetActivityFilters();
                     setActiveDropdown(null);
@@ -2039,29 +2424,35 @@ const DashbaordScreen = ({ navigation }) => {
                       width: 20,
                       height: 20,
                       resizeMode: 'contain',
-                      tintColor: "#FF4757"
+                      tintColor: '#FF4757',
                     }}
                   />
-                  <Text style={styles.quickFilterResetBtnText}>Reset Filters</Text>
+                  <Text style={styles.quickFilterResetBtnText}>
+                    Reset Filters
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.quickFilterActionBtn, styles.quickFilterApplyBtn]}
+                  style={[
+                    styles.quickFilterActionBtn,
+                    styles.quickFilterApplyBtn,
+                  ]}
                   onPress={() => {
                     setShowActivityQuickFilterModal(false);
                     setActiveDropdown(null);
                   }}
                 >
-
                   <Image
                     source={require('../../asset/checkmark.png')}
                     style={{
                       width: 20,
                       height: 20,
                       resizeMode: 'contain',
-                      tintColor: "#fff"
+                      tintColor: '#fff',
                     }}
                   />
-                  <Text style={styles.quickFilterApplyBtnText}>Apply Filters</Text>
+                  <Text style={styles.quickFilterApplyBtnText}>
+                    Apply Filters
+                  </Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -2075,14 +2466,22 @@ const DashbaordScreen = ({ navigation }) => {
     const getBorderColor = () => {
       if (item.notSeenCount > 0) return '#6C63FF';
       switch (item.type) {
-        case 'message': return '#6C63FF';
-        case 'file': return '#2196F3';
-        case 'approval': return '#4CAF50';
-        case 'meeting': return '#FF9800';
-        case 'system': return '#FF4757';
-        case 'request': return '#9C27B0';
-        case 'code': return '#00BCD4';
-        default: return '#e9ecef';
+        case 'message':
+          return '#6C63FF';
+        case 'file':
+          return '#2196F3';
+        case 'approval':
+          return '#4CAF50';
+        case 'meeting':
+          return '#FF9800';
+        case 'system':
+          return '#FF4757';
+        case 'request':
+          return '#9C27B0';
+        case 'code':
+          return '#00BCD4';
+        default:
+          return '#e9ecef';
       }
     };
 
@@ -2106,7 +2505,7 @@ const DashbaordScreen = ({ navigation }) => {
             shadowOpacity: 0.2,
             shadowRadius: 8,
             elevation: 5,
-          }
+          },
         ]}
       >
         <View style={styles.activityAvatar}>
@@ -2120,8 +2519,15 @@ const DashbaordScreen = ({ navigation }) => {
         <View style={styles.activityInfo}>
           <View style={styles.activityHeader}>
             <Text style={styles.activityUserName}>{item.userName}</Text>
-            <View style={[styles.activityTag, getActivityTagStyle(item.userTag)]}>
-              <Text style={[styles.activityTagText, getActivityTagTextStyle(item.userTag)]}>
+            <View
+              style={[styles.activityTag, getActivityTagStyle(item.userTag)]}
+            >
+              <Text
+                style={[
+                  styles.activityTagText,
+                  getActivityTagTextStyle(item.userTag),
+                ]}
+              >
                 {item.userTag}
               </Text>
             </View>
@@ -2129,23 +2535,41 @@ const DashbaordScreen = ({ navigation }) => {
           <Text style={styles.activityMessage}>{item.message}</Text>
           <Text style={styles.activityDateTime}>{item.dateTime}</Text>
         </View>
-
       </TouchableOpacity>
     );
   };
 
-  const getActivityTagStyle = (tag) => {
-    if (tag.includes('System Admin') || tag.includes('Admin')) return styles.activitySystemAdminTag;
+  const getActivityTagStyle = tag => {
+    if (tag.includes('System Admin') || tag.includes('Admin'))
+      return styles.activitySystemAdminTag;
     if (tag.includes('Client')) return styles.activityClientTag;
     if (tag.includes('Team')) return styles.activityTeamTag;
     return styles.activityDefaultTag;
   };
 
-  const getActivityTagTextStyle = (tag) => {
-    if (tag.includes('System Admin') || tag.includes('Admin')) return styles.activitySystemAdminText;
+  const getActivityTagTextStyle = tag => {
+    if (tag.includes('System Admin') || tag.includes('Admin'))
+      return styles.activitySystemAdminText;
     if (tag.includes('Client')) return styles.activityClientText;
     if (tag.includes('Team')) return styles.activityTeamText;
     return styles.activityDefaultText;
+  };
+
+  const isValidEmail = email => {
+    if (!email || email.trim() === '') {
+      return false;
+    }
+
+    // Hide emails like:
+    // dialer+919804043285+2@chat.local
+    // dialer+<dynamic-number>+<dynamic-number>@chat.local
+    const dialerEmailPattern = /^dialer\+[^@]+\+[^@]+@chat\.local$/i;
+
+    if (dialerEmailPattern.test(email.trim())) {
+      return false;
+    }
+
+    return true;
   };
 
   const renderUserItem = ({ item }) => {
@@ -2180,7 +2604,7 @@ const DashbaordScreen = ({ navigation }) => {
             shadowOpacity: 0.15,
             shadowRadius: 6,
             elevation: 4,
-          }
+          },
         ]}
         onPress={() => navigation.navigate('UserChatPage')}
       >
@@ -2194,20 +2618,20 @@ const DashbaordScreen = ({ navigation }) => {
         </View>
         <View style={styles.userInfo}>
           <View style={styles.userHeader}>
-            <Text style={[
-              styles.userName,
-              hasUnread && styles.userNameUnread
-            ]}>
+            <Text style={[styles.userName, hasUnread && styles.userNameUnread]}>
               {item.name}
             </Text>
             <View style={[styles.tagContainer, getTagStyle(item.tag)]}>
               <Text style={[styles.tagText, getTagTextStyle(item.tag)]}>
-                {item.tag}
+                {/* {item.tag} */}
+                {item.user_type === 'Clients'
+                  ? `${item.sub_details || ''}${
+                      item.sub_details && item.tag ? ' • ' : ''
+                    }${item.tag || ''}`
+                  : item.tag}
               </Text>
             </View>
-            {hasUnread && (
-              <View style={styles.unreadDot} />
-            )}
+            {hasUnread && <View style={styles.unreadDot} />}
           </View>
 
           <View style={styles.userIconsRow}>
@@ -2220,36 +2644,35 @@ const DashbaordScreen = ({ navigation }) => {
                 setActiveTab('email');
               }}
             >
-
               <Image
                 source={require('../../asset/chat.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-
                 }}
               />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.userIconSmall]}
-              onPress={() => {
-                setEmailTo(contact?.email || '');
-                setEmailSubject('');
-                setEmailBody('');
-                setActiveTab('email');
-              }}
-            >
-              <Image
-                source={require('../../asset/mail.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-
+            {isValidEmail(item.email) && (
+              <TouchableOpacity
+                style={[styles.userIconSmall]}
+                onPress={() => {
+                  setEmailTo(contact?.email || '');
+                  setEmailSubject('');
+                  setEmailBody('');
+                  setActiveTab('email');
                 }}
-              />
-            </TouchableOpacity>
+              >
+                <Image
+                  source={require('../../asset/mail.png')}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    resizeMode: 'contain',
+                  }}
+                />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.userIconSmall, { backgroundColor: '#4CAF5020' }]}
               onPress={() => openModal('dial')}
@@ -2260,24 +2683,24 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-
                 }}
               />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.userIconSmall]}
-              onPress={() => openModal('whatsapp')}
-            >
-              <Image
-                source={require('../../asset/whatsapp.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-
-                }}
-              />
-            </TouchableOpacity>
+            {item.whatsapp_number && item.whatsapp_number.trim() !== '' && (
+              <TouchableOpacity
+                style={[styles.userIconSmall]}
+                onPress={() => openModal('whatsapp')}
+              >
+                <Image
+                  source={require('../../asset/whatsapp.png')}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    resizeMode: 'contain',
+                  }}
+                />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.userIconSmall]}
               onPress={() => openModal('message')}
@@ -2288,7 +2711,6 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-
                 }}
               />
             </TouchableOpacity>
@@ -2298,7 +2720,7 @@ const DashbaordScreen = ({ navigation }) => {
     );
   };
 
-  const getTagStyle = (tag) => {
+  const getTagStyle = tag => {
     if (tag.includes('System Admin')) return styles.systemAdminTag;
     if (tag.includes('Dialer')) return styles.dialerTag;
     if (tag.includes('Client')) return styles.clientTag;
@@ -2306,7 +2728,7 @@ const DashbaordScreen = ({ navigation }) => {
     return styles.defaultTag;
   };
 
-  const getTagTextStyle = (tag) => {
+  const getTagTextStyle = tag => {
     if (tag.includes('System Admin')) return styles.systemAdminText;
     if (tag.includes('Dialer')) return styles.dialerText;
     if (tag.includes('Client')) return styles.clientText;
@@ -2319,7 +2741,8 @@ const DashbaordScreen = ({ navigation }) => {
     const totalActivities = getTotalActivityCount();
     const unreadActivities = getUnreadActivityCount();
 
-    const hasQuickFilters = activityQuickSearch ||
+    const hasQuickFilters =
+      activityQuickSearch ||
       activityReadStatus !== 'all' ||
       activityRole !== 'all' ||
       activityThread !== 'all' ||
@@ -2331,18 +2754,20 @@ const DashbaordScreen = ({ navigation }) => {
       <View style={styles.activityContainer}>
         <View style={styles.activityHeaderContainer}>
           <View style={styles.activityCountContainer}>
-            <Text style={styles.activityTotalCount}>Total: {totalActivities}</Text>
-
+            <Text style={styles.activityTotalCount}>
+              Total: {totalActivities}
+            </Text>
           </View>
         </View>
 
         <View style={styles.activityFilterContainer}>
           <TouchableOpacity
-            style={[styles.activityFilterChip, hasQuickFilters && styles.activityFilterChipActive]}
+            style={[
+              styles.activityFilterChip,
+              hasQuickFilters && styles.activityFilterChipActive,
+            ]}
             onPress={() => openModal('activityQuickFilter')}
           >
-
-
             <Image
               source={require('../../asset/options.png')}
               style={{
@@ -2352,7 +2777,12 @@ const DashbaordScreen = ({ navigation }) => {
                 tintColor: hasQuickFilters ? '#fff' : '#6C63FF',
               }}
             />
-            <Text style={[styles.activityFilterChipText, hasQuickFilters && styles.activityFilterChipTextActive]}>
+            <Text
+              style={[
+                styles.activityFilterChipText,
+                hasQuickFilters && styles.activityFilterChipTextActive,
+              ]}
+            >
               Quick Filter
             </Text>
             {hasQuickFilters && (
@@ -2372,11 +2802,12 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 16,
                 height: 16,
                 resizeMode: 'contain',
-                tintColor: "#6C63FF"
+                tintColor: '#6C63FF',
               }}
             />
             <Text style={styles.activityFilterChipText}>
-              {activityTimeFilters.find(f => f.id === activityTimeFilter)?.label || 'This Week'}
+              {activityTimeFilters.find(f => f.id === activityTimeFilter)
+                ?.label || 'This Week'}
             </Text>
 
             <Image
@@ -2385,13 +2816,10 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 16,
                 height: 16,
                 resizeMode: 'contain',
-                tintColor: "#666"
+                tintColor: '#666',
               }}
             />
           </TouchableOpacity>
-
-
-
         </View>
 
         <View style={styles.activitySearchContainer}>
@@ -2401,7 +2829,7 @@ const DashbaordScreen = ({ navigation }) => {
               width: 20,
               height: 20,
               resizeMode: 'contain',
-              tintColor: "#999"
+              tintColor: '#999',
             }}
           />
           <TextInput
@@ -2435,12 +2863,14 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 60,
                 height: 60,
                 resizeMode: 'contain',
-                tintColor: "#6C63FF40"
+                tintColor: '#6C63FF40',
               }}
             />
 
             <Text style={styles.activityEmptyText}>No activities found</Text>
-            <Text style={styles.activityEmptySubtext}>Try changing your filters</Text>
+            <Text style={styles.activityEmptySubtext}>
+              Try changing your filters
+            </Text>
             <TouchableOpacity
               style={styles.resetFiltersEmptyBtn}
               onPress={resetActivityFilters}
@@ -2464,19 +2894,20 @@ const DashbaordScreen = ({ navigation }) => {
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Email History</Text>
-            <Text style={styles.dialModalSubtitle}>View all sent and draft emails</Text>
+            <Text style={styles.dialModalSubtitle}>
+              View all sent and draft emails
+            </Text>
             <TouchableOpacity
               style={styles.dialModalClose}
               onPress={() => setShowEmailHistory(false)}
             >
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -2491,7 +2922,7 @@ const DashbaordScreen = ({ navigation }) => {
                     width: 60,
                     height: 60,
                     resizeMode: 'contain',
-                    tintColor: "#6C63FF40"
+                    tintColor: '#6C63FF40',
                   }}
                 />
                 <Text style={styles.whatsappEmptyText}>No email history</Text>
@@ -2504,14 +2935,22 @@ const DashbaordScreen = ({ navigation }) => {
                   <View style={styles.historyItem}>
                     <View style={styles.historyItemLeft}>
                       <Text style={styles.historyItemTo}>{item.to}</Text>
-                      <Text style={styles.historyItemSubject}>{item.subject}</Text>
+                      <Text style={styles.historyItemSubject}>
+                        {item.subject}
+                      </Text>
                       <Text style={styles.historyItemDate}>{item.date}</Text>
                     </View>
-                    <View style={[
-                      styles.historyStatus,
-                      item.status === 'Sent' ? styles.sentStatus : styles.draftStatus
-                    ]}>
-                      <Text style={styles.historyStatusText}>{item.status}</Text>
+                    <View
+                      style={[
+                        styles.historyStatus,
+                        item.status === 'Sent'
+                          ? styles.sentStatus
+                          : styles.draftStatus,
+                      ]}
+                    >
+                      <Text style={styles.historyStatusText}>
+                        {item.status}
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -2534,19 +2973,20 @@ const DashbaordScreen = ({ navigation }) => {
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Select Signature</Text>
-            <Text style={styles.dialModalSubtitle}>Choose a signature to add to your email</Text>
+            <Text style={styles.dialModalSubtitle}>
+              Choose a signature to add to your email
+            </Text>
             <TouchableOpacity
               style={styles.dialModalClose}
               onPress={() => setShowSignatureModal(false)}
             >
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -2560,7 +3000,7 @@ const DashbaordScreen = ({ navigation }) => {
                 <TouchableOpacity
                   style={[
                     styles.signatureItem,
-                    selectedSignature === item.id && styles.signatureItemActive
+                    selectedSignature === item.id && styles.signatureItemActive,
                   ]}
                   onPress={() => {
                     setSelectedSignature(item.id);
@@ -2574,14 +3014,13 @@ const DashbaordScreen = ({ navigation }) => {
                     </Text>
                   </View>
                   {selectedSignature === item.id && (
-
                     <Image
                       source={require('../../asset/checkmark-circle.png')}
                       style={{
                         width: 24,
                         height: 24,
                         resizeMode: 'contain',
-                        tintColor: "#6C63FF"
+                        tintColor: '#6C63FF',
                       }}
                     />
                   )}
@@ -2595,14 +3034,13 @@ const DashbaordScreen = ({ navigation }) => {
                     openModal('addSignature');
                   }}
                 >
-
                   <Image
                     source={require('../../asset/add-circle.png')}
                     style={{
                       width: 24,
                       height: 24,
                       resizeMode: 'contain',
-                      tintColor: "#6C63FF"
+                      tintColor: '#6C63FF',
                     }}
                   />
                   <Text style={styles.addSignatureText}>Add New Signature</Text>
@@ -2631,14 +3069,13 @@ const DashbaordScreen = ({ navigation }) => {
               style={styles.dialModalClose}
               onPress={() => setShowAddSignatureModal(false)}
             >
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -2657,7 +3094,9 @@ const DashbaordScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Signature Content (HTML supported)</Text>
+              <Text style={styles.formLabel}>
+                Signature Content (HTML supported)
+              </Text>
               <TextInput
                 style={[styles.formInput, styles.textAreaInput]}
                 placeholder="Enter signature content with HTML tags"
@@ -2689,8 +3128,8 @@ const DashbaordScreen = ({ navigation }) => {
                       {
                         id: Date.now().toString(),
                         name: signatureName,
-                        content: signatureContent
-                      }
+                        content: signatureContent,
+                      },
                     ]);
                     setSignatureName('');
                     setSignatureContent('');
@@ -2718,19 +3157,20 @@ const DashbaordScreen = ({ navigation }) => {
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Dashboard</Text>
-            <Text style={styles.dialModalSubtitle}>Navigate to different sections</Text>
+            <Text style={styles.dialModalSubtitle}>
+              Navigate to different sections
+            </Text>
             <TouchableOpacity
               style={styles.dialModalClose}
               onPress={() => setShowDashboardModal(false)}
             >
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -2748,23 +3188,32 @@ const DashbaordScreen = ({ navigation }) => {
                   }
                 }}
               >
-                <View style={[styles.dashboardOptionIcon, { backgroundColor: '#6C63FF20' }]}>
+                <View
+                  style={[
+                    styles.dashboardOptionIcon,
+                    { backgroundColor: '#6C63FF20' },
+                  ]}
+                >
                   <Image
                     source={option.icon}
                     style={{
                       width: 28,
                       height: 28,
                       resizeMode: 'contain',
-                      tintColor: '#6C63FF'
+                      tintColor: '#6C63FF',
                     }}
                   />
                 </View>
                 <View style={styles.dashboardOptionContent}>
-                  <Text style={styles.dashboardOptionLabel}>{option.label}</Text>
+                  <Text style={styles.dashboardOptionLabel}>
+                    {option.label}
+                  </Text>
                   <Text style={styles.dashboardOptionDesc}>
-                    {option.id === 'dashboard' ? 'Go to main dashboard' :
-                      option.id === 'tutorial' ? 'Learn how to use LeafCom' :
-                        'Frequently asked questions'}
+                    {option.id === 'dashboard'
+                      ? 'Go to main dashboard'
+                      : option.id === 'tutorial'
+                      ? 'Learn how to use LeafCom'
+                      : 'Frequently asked questions'}
                   </Text>
                 </View>
 
@@ -2774,7 +3223,7 @@ const DashbaordScreen = ({ navigation }) => {
                     width: 24,
                     height: 24,
                     resizeMode: 'contain',
-                    tintColor: "#999"
+                    tintColor: '#999',
                   }}
                 />
               </TouchableOpacity>
@@ -2801,14 +3250,13 @@ const DashbaordScreen = ({ navigation }) => {
           <View style={styles.filterModalHeader}>
             <Text style={styles.filterModalTitle}>Filter Contacts</Text>
             <TouchableOpacity onPress={() => setShowContactFilter(false)}>
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -2822,7 +3270,7 @@ const DashbaordScreen = ({ navigation }) => {
                   key={type.id}
                   style={[
                     styles.userTypeChip,
-                    selectedUserType === type.id && styles.userTypeChipActive
+                    selectedUserType === type.id && styles.userTypeChipActive,
                   ]}
                   onPress={() => {
                     setSelectedUserType(type.id);
@@ -2835,13 +3283,17 @@ const DashbaordScreen = ({ navigation }) => {
                       width: 16,
                       height: 16,
                       resizeMode: 'contain',
-                      tintColor: selectedUserType === type.id ? '#6C63FF' : '#666',
+                      tintColor:
+                        selectedUserType === type.id ? '#6C63FF' : '#666',
                     }}
                   />
-                  <Text style={[
-                    styles.userTypeChipText,
-                    selectedUserType === type.id && styles.userTypeChipTextActive
-                  ]}>
+                  <Text
+                    style={[
+                      styles.userTypeChipText,
+                      selectedUserType === type.id &&
+                        styles.userTypeChipTextActive,
+                    ]}
+                  >
                     {type.name}
                   </Text>
                 </TouchableOpacity>
@@ -2850,21 +3302,26 @@ const DashbaordScreen = ({ navigation }) => {
 
             {selectedUserType !== 'all' && (
               <>
-                <Text style={[styles.filterSectionTitle, { marginTop: 16 }]}>Sub Type</Text>
+                <Text style={[styles.filterSectionTitle, { marginTop: 16 }]}>
+                  Sub Type
+                </Text>
                 <View style={styles.subTypeGrid}>
                   {subUserTypes[selectedUserType].map(sub => (
                     <TouchableOpacity
                       key={sub}
                       style={[
                         styles.subTypeChip,
-                        selectedSubType === sub && styles.subTypeChipActive
+                        selectedSubType === sub && styles.subTypeChipActive,
                       ]}
                       onPress={() => setSelectedSubType(sub)}
                     >
-                      <Text style={[
-                        styles.subTypeChipText,
-                        selectedSubType === sub && styles.subTypeChipTextActive
-                      ]}>
+                      <Text
+                        style={[
+                          styles.subTypeChipText,
+                          selectedSubType === sub &&
+                            styles.subTypeChipTextActive,
+                        ]}
+                      >
                         {sub}
                       </Text>
                     </TouchableOpacity>
@@ -2891,30 +3348,31 @@ const DashbaordScreen = ({ navigation }) => {
       transparent
       animationType="slide"
       onRequestClose={() => {
-        setShowDialModal(false)
-        setActiveTab('directory')
+        setShowDialModal(false);
+        setActiveTab('directory');
       }}
     >
       <View style={styles.dialModalContainer}>
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Start a new conversation</Text>
-            <Text style={styles.dialModalSubtitle}>Choose how you want to connect</Text>
+            <Text style={styles.dialModalSubtitle}>
+              Choose how you want to connect
+            </Text>
             <TouchableOpacity
               style={styles.dialModalClose}
               onPress={() => {
-                setShowDialModal(false)
-                setActiveTab('directory')
+                setShowDialModal(false);
+                setActiveTab('directory');
               }}
             >
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -2922,18 +3380,34 @@ const DashbaordScreen = ({ navigation }) => {
 
           <View style={styles.dialTabs}>
             <TouchableOpacity
-              style={[styles.dialTab, dialTab === 'number' && styles.dialTabActive]}
+              style={[
+                styles.dialTab,
+                dialTab === 'number' && styles.dialTabActive,
+              ]}
               onPress={() => setDialTab('number')}
             >
-              <Text style={[styles.dialTabText, dialTab === 'number' && styles.dialTabTextActive]}>
+              <Text
+                style={[
+                  styles.dialTabText,
+                  dialTab === 'number' && styles.dialTabTextActive,
+                ]}
+              >
                 Phone Number
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.dialTab, dialTab === 'contacts' && styles.dialTabActive]}
+              style={[
+                styles.dialTab,
+                dialTab === 'contacts' && styles.dialTabActive,
+              ]}
               onPress={() => setDialTab('contacts')}
             >
-              <Text style={[styles.dialTabText, dialTab === 'contacts' && styles.dialTabTextActive]}>
+              <Text
+                style={[
+                  styles.dialTabText,
+                  dialTab === 'contacts' && styles.dialTabTextActive,
+                ]}
+              >
                 Contacts
               </Text>
             </TouchableOpacity>
@@ -2950,7 +3424,7 @@ const DashbaordScreen = ({ navigation }) => {
                       width: 16,
                       height: 16,
                       resizeMode: 'contain',
-                      tintColor: "#666"
+                      tintColor: '#666',
                     }}
                   />
                 </TouchableOpacity>
@@ -2973,37 +3447,42 @@ const DashbaordScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.callActions}>
-                <TouchableOpacity style={[styles.callActionBtn, { backgroundColor: '#6C63FF' }]}>
-
+                <TouchableOpacity
+                  style={[styles.callActionBtn, { backgroundColor: '#6C63FF' }]}
+                >
                   <Image
                     source={require('../../asset/call.png')}
                     style={{
                       width: 24,
                       height: 24,
                       resizeMode: 'contain',
-                      tintColor: "#fff"
+                      tintColor: '#fff',
                     }}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.callActionBtn, { backgroundColor: '#3dd417' }]}>
+                <TouchableOpacity
+                  style={[styles.callActionBtn, { backgroundColor: '#3dd417' }]}
+                >
                   <Image
                     source={require('../../asset/whats-app.png')}
                     style={{
                       width: 24,
                       height: 24,
                       resizeMode: 'contain',
-                      tintColor: "#fff"
+                      tintColor: '#fff',
                     }}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.callActionBtn, { backgroundColor: '#FF9800' }]}>
+                <TouchableOpacity
+                  style={[styles.callActionBtn, { backgroundColor: '#FF9800' }]}
+                >
                   <Image
                     source={require('../../asset/chatbubbles.png')}
                     style={{
                       width: 24,
                       height: 24,
                       resizeMode: 'contain',
-                      tintColor: "#fff"
+                      tintColor: '#fff',
                     }}
                   />
                 </TouchableOpacity>
@@ -3018,7 +3497,7 @@ const DashbaordScreen = ({ navigation }) => {
                     width: 20,
                     height: 20,
                     resizeMode: 'contain',
-                    tintColor: "#999"
+                    tintColor: '#999',
                   }}
                 />
                 <TextInput
@@ -3038,7 +3517,7 @@ const DashbaordScreen = ({ navigation }) => {
                       width: 20,
                       height: 20,
                       resizeMode: 'contain',
-                      tintColor: "#6C63FF"
+                      tintColor: '#6C63FF',
                     }}
                   />
                 </TouchableOpacity>
@@ -3050,17 +3529,19 @@ const DashbaordScreen = ({ navigation }) => {
                     <Text style={styles.activeFilterText}>
                       {userTypes.find(t => t.id === selectedUserType)?.name}
                     </Text>
-                    <TouchableOpacity onPress={() => {
-                      setSelectedUserType('all');
-                      setSelectedSubType('All Users');
-                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedUserType('all');
+                        setSelectedSubType('All Users');
+                      }}
+                    >
                       <Image
                         source={require('../../asset/close.png')}
                         style={{
                           width: 14,
                           height: 14,
                           resizeMode: 'contain',
-                          tintColor: "#666"
+                          tintColor: '#666',
                         }}
                       />
                     </TouchableOpacity>
@@ -3068,15 +3549,19 @@ const DashbaordScreen = ({ navigation }) => {
                 )}
                 {selectedSubType !== 'All Users' && (
                   <View style={styles.activeFilterChip}>
-                    <Text style={styles.activeFilterText}>{selectedSubType}</Text>
-                    <TouchableOpacity onPress={() => setSelectedSubType('All Users')}>
+                    <Text style={styles.activeFilterText}>
+                      {selectedSubType}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setSelectedSubType('All Users')}
+                    >
                       <Image
                         source={require('../../asset/close.png')}
                         style={{
                           width: 14,
                           height: 14,
                           resizeMode: 'contain',
-                          tintColor: "#666"
+                          tintColor: '#666',
                         }}
                       />
                     </TouchableOpacity>
@@ -3121,27 +3606,29 @@ const DashbaordScreen = ({ navigation }) => {
           <View style={styles.filterModalHeader}>
             <Text style={styles.filterModalTitle}>Filter by Category</Text>
             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-
               <Image
                 source={require('../../asset/close.png')}
                 style={{
                   width: 14,
                   height: 14,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
-
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.filterModalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.filterModalContent}
+            showsVerticalScrollIndicator={false}
+          >
             {categories.map(cat => (
               <View key={cat.id} style={styles.categorySection}>
                 <TouchableOpacity
                   style={[
                     styles.filterModalItem,
-                    selectedCategory === cat.name && styles.filterModalItemActive
+                    selectedCategory === cat.name &&
+                      styles.filterModalItemActive,
                   ]}
                   onPress={() => {
                     if (selectedCategory === cat.name) {
@@ -3152,7 +3639,12 @@ const DashbaordScreen = ({ navigation }) => {
                   }}
                 >
                   <View style={styles.filterModalItemLeft}>
-                    <View style={[styles.categoryIcon, { backgroundColor: cat.color + '20' }]}>
+                    <View
+                      style={[
+                        styles.categoryIcon,
+                        { backgroundColor: cat.color + '20' },
+                      ]}
+                    >
                       <Image
                         source={cat.icon}
                         style={{
@@ -3164,38 +3656,61 @@ const DashbaordScreen = ({ navigation }) => {
                       />
                     </View>
                     <View>
-                      <Text style={[
-                        styles.filterModalItemText,
-                        selectedCategory === cat.name && styles.filterModalItemTextActive
-                      ]}>
+                      <Text
+                        style={[
+                          styles.filterModalItemText,
+                          selectedCategory === cat.name &&
+                            styles.filterModalItemTextActive,
+                        ]}
+                      >
                         {cat.name}
                       </Text>
-                      <Text style={styles.filterModalSubText}>{cat.subtitle}</Text>
+                      <Text style={styles.filterModalSubText}>
+                        {cat.subtitle}
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.filterModalItemRight}>
                     <View style={styles.countContainer}>
-                      <View style={[styles.countBadge, { backgroundColor: '#4CAF5020' }]}>
-                        <Text style={[styles.countText, { color: '#4CAF50' }]}>{cat.readCount}</Text>
+                      <View
+                        style={[
+                          styles.countBadge,
+                          { backgroundColor: '#4CAF5020' },
+                        ]}
+                      >
+                        <Text style={[styles.countText, { color: '#4CAF50' }]}>
+                          {cat.readCount}
+                        </Text>
                       </View>
-                      <View style={[styles.countBadge, { backgroundColor: '#FF475720' }]}>
-                        <Text style={[styles.countText, { color: '#FF4757' }]}>{cat.unreadCount}</Text>
+                      <View
+                        style={[
+                          styles.countBadge,
+                          { backgroundColor: '#FF475720' },
+                        ]}
+                      >
+                        <Text style={[styles.countText, { color: '#FF4757' }]}>
+                          {cat.unreadCount}
+                        </Text>
                       </View>
                     </View>
                     <TouchableOpacity
                       style={styles.expandButton}
-                      onPress={(e) => {
+                      onPress={e => {
                         e.stopPropagation();
                         toggleCategoryExpand(cat.id);
                       }}
                     >
                       <Image
-                        source={expandedCategories[cat.id] ? require('../../asset/chevron_up.png') : require('../../asset/chevron-down.png')}
+                        source={
+                          expandedCategories[cat.id]
+                            ? require('../../asset/chevron_up.png')
+                            : require('../../asset/chevron-down.png')
+                        }
                         style={{
                           width: 20,
                           height: 20,
                           resizeMode: 'contain',
-                          tintColor: '#666'
+                          tintColor: '#666',
                         }}
                       />
                     </TouchableOpacity>
@@ -3258,7 +3773,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -3270,8 +3785,10 @@ const DashbaordScreen = ({ navigation }) => {
                 key={filter.id}
                 style={[
                   styles.filterModalItem,
-                  (filter.id === 'unread' ? showUnread : selectedTimeFilter === filter.id) &&
-                  styles.filterModalItemActive
+                  (filter.id === 'unread'
+                    ? showUnread
+                    : selectedTimeFilter === filter.id) &&
+                    styles.filterModalItemActive,
                 ]}
                 onPress={() => {
                   if (filter.id === 'unread') {
@@ -3283,7 +3800,12 @@ const DashbaordScreen = ({ navigation }) => {
                 }}
               >
                 <View style={styles.filterModalItemLeft}>
-                  <View style={[styles.categoryIcon, { backgroundColor: filter.color + '20' }]}>
+                  <View
+                    style={[
+                      styles.categoryIcon,
+                      { backgroundColor: filter.color + '20' },
+                    ]}
+                  >
                     <Image
                       source={filter.icon}
                       style={{
@@ -3294,23 +3816,26 @@ const DashbaordScreen = ({ navigation }) => {
                       }}
                     />
                   </View>
-                  <Text style={[
-                    styles.filterModalItemText,
-                    (filter.id === 'unread' ? showUnread : selectedTimeFilter === filter.id) &&
-                    styles.filterModalItemTextActive
-                  ]}>
+                  <Text
+                    style={[
+                      styles.filterModalItemText,
+                      (filter.id === 'unread'
+                        ? showUnread
+                        : selectedTimeFilter === filter.id) &&
+                        styles.filterModalItemTextActive,
+                    ]}
+                  >
                     {filter.name}
                   </Text>
                 </View>
                 {selectedTimeFilter === filter.id && (
-
                   <Image
                     source={require('../../asset/checkmark-circle.png')}
                     style={{
                       width: 24,
                       height: 24,
                       resizeMode: 'contain',
-                      tintColor: "#6C63FF"
+                      tintColor: '#6C63FF',
                     }}
                   />
                 )}
@@ -3321,7 +3846,7 @@ const DashbaordScreen = ({ navigation }) => {
                       width: 24,
                       height: 24,
                       resizeMode: 'contain',
-                      tintColor: "#6C63FF"
+                      tintColor: '#6C63FF',
                     }}
                   />
                 )}
@@ -3341,7 +3866,8 @@ const DashbaordScreen = ({ navigation }) => {
             key={option.id}
             style={[
               styles.communicationFilterChip,
-              communicationFilter === option.id && styles.communicationFilterChipActive
+              communicationFilter === option.id &&
+                styles.communicationFilterChipActive,
             ]}
             onPress={() => {
               setCommunicationFilter(option.id);
@@ -3362,13 +3888,17 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 18,
                 height: 18,
                 resizeMode: 'contain',
-                tintColor: communicationFilter === option.id ? '#fff' : option.color
+                tintColor:
+                  communicationFilter === option.id ? '#fff' : option.color,
               }}
             />
-            <Text style={[
-              styles.communicationFilterText,
-              communicationFilter === option.id && styles.communicationFilterTextActive
-            ]}>
+            <Text
+              style={[
+                styles.communicationFilterText,
+                communicationFilter === option.id &&
+                  styles.communicationFilterTextActive,
+              ]}
+            >
               {option.label}
             </Text>
           </TouchableOpacity>
@@ -3376,7 +3906,10 @@ const DashbaordScreen = ({ navigation }) => {
       </View>
 
       {communicationFilter === 'email' && (
-        <ScrollView style={styles.emailFormContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.emailFormContainer}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>To</Text>
             <TextInput
@@ -3429,7 +3962,9 @@ const DashbaordScreen = ({ navigation }) => {
               onPress={() => openModal('signature')}
             >
               <Text style={styles.signatureSelectorText}>
-                {selectedSignature ? signatures.find(s => s.id === selectedSignature)?.name : 'Select Signature'}
+                {selectedSignature
+                  ? signatures.find(s => s.id === selectedSignature)?.name
+                  : 'Select Signature'}
               </Text>
 
               <Image
@@ -3438,7 +3973,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 20,
                   height: 20,
                   resizeMode: 'contain',
-                  tintColor: "#666"
+                  tintColor: '#666',
                 }}
               />
             </TouchableOpacity>
@@ -3446,7 +3981,9 @@ const DashbaordScreen = ({ navigation }) => {
               <View style={styles.signaturePreview}>
                 <Text style={styles.signaturePreviewLabel}>Preview:</Text>
                 <Text style={styles.signaturePreviewText} numberOfLines={2}>
-                  {signatures.find(s => s.id === selectedSignature)?.content.replace(/<[^>]*>/g, '')}
+                  {signatures
+                    .find(s => s.id === selectedSignature)
+                    ?.content.replace(/<[^>]*>/g, '')}
                 </Text>
               </View>
             )}
@@ -3463,9 +4000,9 @@ const DashbaordScreen = ({ navigation }) => {
                       to: emailTo,
                       subject: emailSubject || 'No Subject',
                       date: new Date().toISOString().split('T')[0],
-                      status: 'Sent'
+                      status: 'Sent',
                     },
-                    ...emailHistory
+                    ...emailHistory,
                   ]);
                   setEmailTo('');
                   setEmailSubject('');
@@ -3473,14 +4010,13 @@ const DashbaordScreen = ({ navigation }) => {
                 }
               }}
             >
-
               <Image
                 source={require('../../asset/send.png')}
                 style={{
                   width: 20,
                   height: 20,
                   resizeMode: 'contain',
-                  tintColor: "#fff"
+                  tintColor: '#fff',
                 }}
               />
               <Text style={styles.sendBtnText}>Send</Text>
@@ -3495,7 +4031,7 @@ const DashbaordScreen = ({ navigation }) => {
                   width: 20,
                   height: 20,
                   resizeMode: 'contain',
-                  tintColor: "#6C63FF"
+                  tintColor: '#6C63FF',
                 }}
               />
               <Text style={styles.historyBtnText}>History</Text>
@@ -3528,7 +4064,10 @@ const DashbaordScreen = ({ navigation }) => {
             <Text style={styles.sideNavEmail}>john@leafcom.com</Text>
           </View>
           <TouchableOpacity
-            style={[styles.sideNavItem, activeTab === 'directory' && styles.activeSideNav]}
+            style={[
+              styles.sideNavItem,
+              activeTab === 'directory' && styles.activeSideNav,
+            ]}
             onPress={() => {
               setActiveTab('directory');
               setShowSideNav(false);
@@ -3540,10 +4079,15 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: activeTab === 'directory' ? '#6C63FF' : '#666'
+                tintColor: activeTab === 'directory' ? '#6C63FF' : '#666',
               }}
             />
-            <Text style={[styles.sideNavText, activeTab === 'directory' && styles.activeSideNavText]}>
+            <Text
+              style={[
+                styles.sideNavText,
+                activeTab === 'directory' && styles.activeSideNavText,
+              ]}
+            >
               Dashboard
             </Text>
           </TouchableOpacity>
@@ -3561,7 +4105,7 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: '#666'
+                tintColor: '#666',
               }}
             />
             <Text style={styles.sideNavText}>Dial</Text>
@@ -3579,7 +4123,7 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: '#666'
+                tintColor: '#666',
               }}
             />
             <Text style={styles.sideNavText}>Message</Text>
@@ -3597,7 +4141,7 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: '#666'
+                tintColor: '#666',
               }}
             />
             <Text style={styles.sideNavText}>Dashboard</Text>
@@ -3606,14 +4150,13 @@ const DashbaordScreen = ({ navigation }) => {
             style={styles.sideNavItem}
             onPress={() => setShowSideNav(false)}
           >
-
             <Image
               source={require('../../asset/help-circle.png')}
               style={{
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: '#666'
+                tintColor: '#666',
               }}
             />
             <Text style={styles.sideNavText}>Tutorial</Text>
@@ -3622,14 +4165,13 @@ const DashbaordScreen = ({ navigation }) => {
             style={styles.sideNavItem}
             onPress={() => setShowSideNav(false)}
           >
-
             <Image
               source={require('../../asset/information-circle.png')}
               style={{
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: '#666'
+                tintColor: '#666',
               }}
             />
             <Text style={styles.sideNavText}>FAQ</Text>
@@ -3637,22 +4179,98 @@ const DashbaordScreen = ({ navigation }) => {
           <View style={styles.sideNavDivider} />
 
           <TouchableOpacity style={styles.sideNavItem}>
-
             <Image
               source={require('../../asset/log-out-outline.png')}
               style={{
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: '#FF4757'
+                tintColor: '#FF4757',
               }}
             />
-            <Text style={[styles.sideNavText, { color: '#FF4757' }]}>Logout</Text>
+            <Text style={[styles.sideNavText, { color: '#FF4757' }]}>
+              Logout
+            </Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>
   );
+
+  // ============================================================
+  // RENDER: BOTTOM FIXED ICONS (like bottom navigation)
+  // ============================================================
+  const renderBottomFixedIcons = () => {
+    return (
+      <View style={styles.bottomFixedContainer}>
+        {/* WhatsApp Icon - Left */}
+        <TouchableOpacity
+          style={styles.bottomFixedIconWrapper}
+          onPress={() => openModal('whatsapp')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.bottomFixedIcon, styles.bottomFixedWhatsApp]}>
+            <Image
+              source={require('../../asset/whats-app.png')}
+              style={{
+                width: 24,
+                height: 24,
+                resizeMode: 'contain',
+                tintColor: '#25D366',
+              }}
+            />
+          </View>
+          <Text style={[styles.bottomFixedLabel, { color: '#25D366' }]}>
+            WhatsApp
+          </Text>
+        </TouchableOpacity>
+
+        {/* Call Icon - Center */}
+        <TouchableOpacity
+          style={styles.bottomFixedIconWrapper}
+          onPress={() => openModal('dial')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.bottomFixedIcon, styles.bottomFixedCall]}>
+            <Image
+              source={require('../../asset/call.png')}
+              style={{
+                width: 24,
+                height: 24,
+                resizeMode: 'contain',
+                tintColor: '#4CAF50',
+              }}
+            />
+          </View>
+          <Text style={[styles.bottomFixedLabel, { color: '#4CAF50' }]}>
+            Call
+          </Text>
+        </TouchableOpacity>
+
+        {/* In-App Message Icon - Right */}
+        <TouchableOpacity
+          style={styles.bottomFixedIconWrapper}
+          onPress={() => openModal('message')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.bottomFixedIcon, styles.bottomFixedMessage]}>
+            <Image
+              source={require('../../asset/chatbubbles.png')}
+              style={{
+                width: 24,
+                height: 24,
+                resizeMode: 'contain',
+                tintColor: '#6C63FF',
+              }}
+            />
+          </View>
+          <Text style={[styles.bottomFixedLabel, { color: '#6C63FF' }]}>
+            Message
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   // ============================================================
   // RENDER: BODY CONTENT - FIXED LAYOUT
@@ -3662,44 +4280,60 @@ const DashbaordScreen = ({ navigation }) => {
       <View style={styles.bodyContainer}>
         <View style={styles.bottomNav}>
           <TouchableOpacity
-            style={[styles.navItem, activeTab === 'directory' && styles.activeNavItem]}
+            style={[
+              styles.navItem,
+              activeTab === 'directory' && styles.activeNavItem,
+            ]}
             onPress={() => setActiveTab('directory')}
           >
-
-
             <Image
               source={require('../../asset/people.png')}
               style={{
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: activeTab === 'directory' ? '#6C63FF' : '#999'
+                tintColor: activeTab === 'directory' ? '#6C63FF' : '#999',
               }}
             />
-            <Text style={[styles.navLabel, activeTab === 'directory' && styles.activeNavLabel]}>
-              Directory</Text>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'directory' && styles.activeNavLabel,
+              ]}
+            >
+              Directory
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.navItem, activeTab === 'activity' && styles.activeNavItem]}
+            style={[
+              styles.navItem,
+              activeTab === 'activity' && styles.activeNavItem,
+            ]}
             onPress={() => setActiveTab('activity')}
           >
-
-
             <Image
               source={require('../../asset/notification.png')}
               style={{
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: activeTab === 'activity' ? '#6C63FF' : '#999'
+                tintColor: activeTab === 'activity' ? '#6C63FF' : '#999',
               }}
             />
-            <Text style={[styles.navLabel, activeTab === 'activity' && styles.activeNavLabel]}>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'activity' && styles.activeNavLabel,
+              ]}
+            >
               Activity
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.navItem, activeTab === 'email' && styles.activeNavItem]}
+            style={[
+              styles.navItem,
+              activeTab === 'email' && styles.activeNavItem,
+            ]}
             onPress={() => setActiveTab('email')}
           >
             <Image
@@ -3708,19 +4342,27 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: activeTab === 'email' ? '#6C63FF' : '#999'
+                tintColor: activeTab === 'email' ? '#6C63FF' : '#999',
               }}
             />
-            <Text style={[styles.navLabel, activeTab === 'email' && styles.activeNavLabel]}>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'email' && styles.activeNavLabel,
+              ]}
+            >
               Email
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.navItem, activeTab === 'call' && styles.activeNavItem]}
+            style={[
+              styles.navItem,
+              activeTab === 'call' && styles.activeNavItem,
+            ]}
             onPress={() => {
-              setActiveTab('call')
-              openModal('dial')
+              setActiveTab('call');
+              openModal('dial');
             }}
           >
             <Image
@@ -3729,23 +4371,27 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: activeTab === 'call' ? '#6C63FF' : '#999'
+                tintColor: activeTab === 'call' ? '#6C63FF' : '#999',
               }}
             />
-            <Text style={[styles.navLabel, activeTab === 'call' && styles.activeNavLabel]}>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'call' && styles.activeNavLabel,
+              ]}
+            >
               Dial
             </Text>
           </TouchableOpacity>
 
-
-
-
-
           <TouchableOpacity
-            style={[styles.navItem, activeTab === 'meesages' && styles.activeNavItem]}
+            style={[
+              styles.navItem,
+              activeTab === 'meesages' && styles.activeNavItem,
+            ]}
             onPress={() => {
-              setActiveTab('meesages')
-              setShowMessageSidebar(true)
+              setActiveTab('meesages');
+              setShowMessageSidebar(true);
             }}
           >
             <Image
@@ -3754,10 +4400,15 @@ const DashbaordScreen = ({ navigation }) => {
                 width: 24,
                 height: 24,
                 resizeMode: 'contain',
-                tintColor: activeTab === 'meesages' ? '#6C63FF' : '#999'
+                tintColor: activeTab === 'meesages' ? '#6C63FF' : '#999',
               }}
             />
-            <Text style={[styles.navLabel, activeTab === 'meesages' && styles.activeNavLabel]}>
+            <Text
+              style={[
+                styles.navLabel,
+                activeTab === 'meesages' && styles.activeNavLabel,
+              ]}
+            >
               Messages
             </Text>
           </TouchableOpacity>
@@ -3766,16 +4417,13 @@ const DashbaordScreen = ({ navigation }) => {
         {activeTab === 'directory' && (
           <>
             <View style={styles.searchContainer}>
-
               <Image
-                source={require('../../asset/search.png')} // Update the path as needed
+                source={require('../../asset/search.png')}
                 style={{
                   width: 20,
                   height: 20,
                   resizeMode: 'contain',
-                  tintColor: "#999"
-
-
+                  tintColor: '#999',
                 }}
               />
               <TextInput
@@ -3787,7 +4435,10 @@ const DashbaordScreen = ({ navigation }) => {
 
             <View style={styles.filterIconsContainer}>
               <TouchableOpacity
-                style={[styles.filterIconButton, selectedCategory !== 'All' && styles.activeFilterIcon]}
+                style={[
+                  styles.filterIconButton,
+                  selectedCategory !== 'All' && styles.activeFilterIcon,
+                ]}
                 onPress={() => openModal('filter')}
               >
                 <Image
@@ -3796,20 +4447,43 @@ const DashbaordScreen = ({ navigation }) => {
                     width: 22,
                     height: 22,
                     resizeMode: 'contain',
-                    tintColor: selectedCategory !== 'All' ? '#6C63FF' : '#666'
+                    tintColor: selectedCategory !== 'All' ? '#6C63FF' : '#666',
                   }}
                 />
                 <View style={styles.filterLabelContainer}>
-                  <Text style={[styles.filterIconLabel, selectedCategory !== 'All' && styles.activeFilterLabel]}>
+                  <Text
+                    style={[
+                      styles.filterIconLabel,
+                      selectedCategory !== 'All' && styles.activeFilterLabel,
+                    ]}
+                  >
                     {selectedCategory !== 'All' ? selectedCategory : 'All'}
                   </Text>
                   {selectedCategory === 'All' && (
                     <View style={styles.filterCountContainer}>
-                      <View style={[styles.countBadgeSmall, { backgroundColor: '#4CAF5020' }]}>
-                        <Text style={[styles.countTextSmall, { color: '#4CAF50' }]}>{totalReadCount}</Text>
+                      <View
+                        style={[
+                          styles.countBadgeSmall,
+                          { backgroundColor: '#4a08b3fd' },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.countTextSmall, { color: '#fff' }]}
+                        >
+                          {totalReadCount}
+                        </Text>
                       </View>
-                      <View style={[styles.countBadgeSmall, { backgroundColor: '#FF475720' }]}>
-                        <Text style={[styles.countTextSmall, { color: '#FF4757' }]}>{totalUnreadCount}</Text>
+                      <View
+                        style={[
+                          styles.countBadgeSmall,
+                          { backgroundColor: '#d30f20f8' },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.countTextSmall, { color: '#fff' }]}
+                        >
+                          {totalUnreadCount}
+                        </Text>
                       </View>
                     </View>
                   )}
@@ -3822,7 +4496,11 @@ const DashbaordScreen = ({ navigation }) => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterIconButton, (showUnread || selectedTimeFilter !== 'Recent') && styles.activeFilterIcon]}
+                style={[
+                  styles.filterIconButton,
+                  (showUnread || selectedTimeFilter !== 'Recent') &&
+                    styles.activeFilterIcon,
+                ]}
                 onPress={() => openModal('time')}
               >
                 <Image
@@ -3831,10 +4509,19 @@ const DashbaordScreen = ({ navigation }) => {
                     width: 22,
                     height: 22,
                     resizeMode: 'contain',
-                    tintColor: (showUnread || selectedTimeFilter !== 'Recent') ? '#6C63FF' : '#666'
+                    tintColor:
+                      showUnread || selectedTimeFilter !== 'Recent'
+                        ? '#6C63FF'
+                        : '#666',
                   }}
                 />
-                <Text style={[styles.filterIconLabel, (showUnread || selectedTimeFilter !== 'Recent') && styles.activeFilterLabel]}>
+                <Text
+                  style={[
+                    styles.filterIconLabel,
+                    (showUnread || selectedTimeFilter !== 'Recent') &&
+                      styles.activeFilterLabel,
+                  ]}
+                >
                   {selectedTimeFilter}
                 </Text>
                 {(showUnread || selectedTimeFilter !== 'Recent') && (
@@ -3852,19 +4539,48 @@ const DashbaordScreen = ({ navigation }) => {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.userList}
               ListFooterComponent={
-                visibleCount < userList.length && (
-                  <TouchableOpacity style={styles.loadMoreButton} onPress={loadMoreUsers}>
-                    <Text style={styles.loadMoreText}>Load More</Text>
-                    <Image
-                      source={require('../../asset/arrow-down.png')}
-                      style={{
-                        width: 20,
-                        height: 20,
-                        resizeMode: 'contain',
-                        tintColor: '#fff'
-                      }}
-                    />
+                hasMorePages ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.loadMoreButton,
+                      isLoadingMoreUsers && {
+                        opacity: 0.6,
+                      },
+                    ]}
+                    onPress={loadMoreUsers}
+                    disabled={isLoadingMoreUsers}
+                  >
+                    {isLoadingMoreUsers ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Text style={styles.loadMoreText}>Load More</Text>
+
+                        <Image
+                          source={require('../../asset/arrow-down.png')}
+                          style={{
+                            width: 20,
+                            height: 20,
+                            resizeMode: 'contain',
+                            tintColor: '#fff',
+                          }}
+                        />
+                      </>
+                    )}
                   </TouchableOpacity>
+                ) : null
+              }
+              ListEmptyComponent={
+                isLoadingUsers ? (
+                  <View style={styles.emptyUserContainer}>
+                    <ActivityIndicator size="large" color="#6C63FF" />
+
+                    <Text style={styles.emptyUserText}>Loading users...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.emptyUserContainer}>
+                    <Text style={styles.emptyUserText}>No users found</Text>
+                  </View>
                 )
               }
             />
@@ -3890,14 +4606,26 @@ const DashbaordScreen = ({ navigation }) => {
 
       {renderBodyContent()}
 
+      {renderBottomFixedIcons()}
+
       {renderFilterModal()}
       {renderTimeModal()}
       {renderDialModal()}
       {renderContactFilterModal()}
       {renderSignatureModal()}
       {renderAddSignatureModal()}
-      {renderContactListModal('WhatsApp Contacts', 'whatsapp', require('../../asset/whatsapp.png'), '#25D366')}
-      {renderContactListModal('Message Contacts', 'message', require('../../asset/message.png'), '#061453')}
+      {renderContactListModal(
+        'WhatsApp Contacts',
+        'whatsapp',
+        require('../../asset/whatsapp.png'),
+        '#25D366',
+      )}
+      {renderContactListModal(
+        'Message Contacts',
+        'message',
+        require('../../asset/message.png'),
+        '#061453',
+      )}
       {renderDashboardModal()}
       {renderEmailHistoryModal()}
       {renderActivityTimeModal()}
@@ -4034,7 +4762,7 @@ const styles = StyleSheet.create({
   // ============================================================
   dashboardHeader: {
     paddingTop: Platform.OS === 'ios' ? 60 : 50,
-    
+
     paddingBottom: 12,
     backgroundColor: '#5C4FC9',
     borderBottomLeftRadius: 30,
@@ -4120,7 +4848,7 @@ const styles = StyleSheet.create({
   logoSection: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#FFF'
+    backgroundColor: '#FFF',
   },
   logoWrapper: {
     flexDirection: 'row',
@@ -4153,13 +4881,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     flex: 1,
-
   },
   logoContainer: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
-    marginRight:15,
+    marginRight: 15,
 
     // Tight curve on right side
     borderTopRightRadius: 120,
@@ -4170,13 +4897,12 @@ const styles = StyleSheet.create({
 
     alignItems: 'center',
     justifyContent: 'center',
-
   },
 
   topBarLogo: {
     width: 120,
     height: 50,
-    marginTop:40
+    marginTop: 40,
   },
   topBarTitle: {
     fontSize: 30,
@@ -4234,8 +4960,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginRight:20
-
+    marginRight: 20,
   },
   headerIconButton: {
     width: 30,
@@ -4245,7 +4970,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    
   },
   headerIconCall: {
     backgroundColor: 'rgba(156, 89, 182, 0.62)',
@@ -4334,6 +5058,64 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 5,
+  },
+
+  // ============================================================
+  // BOTTOM FIXED ICONS STYLES
+  // ============================================================
+  bottomFixedContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f3f5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 10,
+    zIndex: 100,
+  },
+  bottomFixedIconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 16,
+  },
+  bottomFixedIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  bottomFixedWhatsApp: {
+    backgroundColor: 'rgba(37, 211, 102, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(37, 211, 102, 0.25)',
+  },
+  bottomFixedCall: {
+    backgroundColor: 'rgba(76, 175, 80, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(76, 175, 80, 0.25)',
+  },
+  bottomFixedMessage: {
+    backgroundColor: 'rgba(108, 99, 255, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(108, 99, 255, 0.25)',
+  },
+  bottomFixedLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
 
   // ============================================================
@@ -4753,7 +5535,7 @@ const styles = StyleSheet.create({
   // USER CARD STYLES
   // ============================================================
   userList: {
-    paddingBottom: 20,
+    paddingBottom: 100,
   },
   userCard: {
     flexDirection: 'row',
@@ -5940,7 +6722,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityListContent: {
-    paddingBottom: 20,
+    paddingBottom: 100,
     flexGrow: 1,
   },
   activityHeaderContainer: {
