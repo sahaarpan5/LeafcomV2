@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import Loader from '../../util/Loader';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,6 +32,7 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
 
   // Tab and navigation states
+
   const [activeTab, setActiveTab] = useState('directory');
   const [showSideNav, setShowSideNav] = useState(false);
   const [showMessageSidebar, setShowMessageSidebar] = useState(false);
@@ -39,11 +41,14 @@ const DashbaordScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
-  const [selectedTimeFilter, setSelectedTimeFilter] = useState('Recent');
+  const [selectedTimeFilter, setSelectedTimeFilter] = useState('recent');
   const [showUnread, setShowUnread] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
 
   // User list states
+  const [selectedType, setSelectedType] = useState('All');
+  const [selectedSubType, setSelectedSubType] = useState('');
+
   const [userList, setUserList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
@@ -159,7 +164,6 @@ const DashbaordScreen = ({ navigation }) => {
   // Contact filter states
   const [contactSearch, setContactSearch] = useState('');
   const [selectedUserType, setSelectedUserType] = useState('all');
-  const [selectedSubType, setSelectedSubType] = useState('All Users');
 
   // Email states
   const [emailTo, setEmailTo] = useState('');
@@ -177,6 +181,9 @@ const DashbaordScreen = ({ navigation }) => {
   ]);
   const [signatureName, setSignatureName] = useState('');
   const [signatureContent, setSignatureContent] = useState('');
+
+  const [categories, setCategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   // Email history
   const [emailHistory, setEmailHistory] = useState([
@@ -379,108 +386,12 @@ const DashbaordScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchUsers(1, false);
+    fetchUserTypes();
   }, []);
 
   // ============================================================
   // CATEGORIES DATA
   // ============================================================
-  const categories = [
-    {
-      id: 'all',
-      name: 'All',
-      readCount: 10,
-      unreadCount: 5,
-      icon: require('../../asset/people.png'),
-      color: '#6C63FF',
-      subtitle: 'All Contacts',
-      children: [
-        {
-          name: 'Business',
-          icon: require('../../asset/business.png'),
-        },
-        {
-          name: 'Individual',
-          icon: require('../../asset/people.png'),
-        },
-      ],
-    },
-    {
-      id: 'system_admin',
-      name: 'System Admin',
-      readCount: 2,
-      unreadCount: 1,
-      icon: require('../../asset/settings.png'),
-      color: '#4CAF50',
-      subtitle: 'Admin Users',
-      children: [
-        {
-          name: 'Super Admin',
-          icon: require('../../asset/shield_checkmark.png'),
-        },
-        {
-          name: 'Support Admin',
-          icon: require('../../asset/settings.png'),
-        },
-      ],
-    },
-    {
-      id: 'dialer_contact',
-      name: 'Dialer Contact',
-      readCount: 2,
-      unreadCount: 2,
-      icon: require('../../asset/call.png'),
-      color: '#2196F3',
-      subtitle: 'Phone Contacts',
-      children: [
-        {
-          name: 'Active Calls',
-          icon: require('../../asset/call.png'),
-        },
-        {
-          name: 'Inactive',
-          icon: require('../../asset/call.png'),
-        },
-      ],
-    },
-    {
-      id: 'clients',
-      name: 'Clients',
-      readCount: 3,
-      unreadCount: 2,
-      icon: require('../../asset/business.png'),
-      color: '#9C27B0',
-      subtitle: 'Client List',
-      children: [
-        {
-          name: 'Enterprise',
-          icon: require('../../asset/business.png'),
-        },
-        {
-          name: 'Small Business',
-          icon: require('../../asset/business.png'),
-        },
-      ],
-    },
-    {
-      id: 'team',
-      name: 'Team',
-      readCount: 2,
-      unreadCount: 1,
-      icon: require('../../asset/group-chat.png'),
-      color: '#FF9800',
-      subtitle: 'Team Members',
-      children: [
-        {
-          name: 'Developers',
-          icon: require('../../asset/code.png'),
-        },
-        {
-          name: 'Designers',
-          icon: require('../../asset/graphic-designer.png'),
-        },
-      ],
-    },
-  ];
 
   // ============================================================
   // TIME FILTERS DATA
@@ -488,31 +399,25 @@ const DashbaordScreen = ({ navigation }) => {
   const timeFilters = [
     {
       id: 'recent',
-      name: 'Recent',
+      name: 'Recent First',
       icon: require('../../asset/time.png'),
       color: '#6C63FF',
     },
     {
-      id: 'today',
-      name: 'Today',
-      icon: require('../../asset/sunny.png'),
+      id: 'oldest',
+      name: 'Oldest First',
+      icon: require('../../asset/time.png'),
       color: '#FF9800',
     },
     {
-      id: 'week',
-      name: 'This Week',
-      icon: require('../../asset/calendar.png'),
+      id: 'newest_unread',
+      name: 'Newest Unread First',
+      icon: require('../../asset/email.png'),
       color: '#4CAF50',
     },
     {
-      id: 'month',
-      name: 'This Month',
-      icon: require('../../asset/schedule.png'),
-      color: '#2196F3',
-    },
-    {
-      id: 'unread',
-      name: 'Unread',
+      id: 'oldest_unread',
+      name: 'Oldest Unread First',
       icon: require('../../asset/email.png'),
       color: '#FF4757',
     },
@@ -946,7 +851,272 @@ const DashbaordScreen = ({ navigation }) => {
     alert('Mute toggled');
   };
 
-  const fetchUsers = async (pageNumber = 1, loadMore = false) => {
+  const getSortByValue = filterId => {
+    switch (filterId) {
+      case 'recent':
+        return 'date_sent_desc';
+
+      case 'oldest':
+        return 'date_sent_asc';
+
+      case 'newest_unread':
+        return 'new_unread';
+
+      case 'oldest_unread':
+        return 'oldest_unread';
+
+      default:
+        return 'date_sent_desc';
+    }
+  };
+
+
+   const getFilterName  = filterId => {
+    switch (filterId) {
+      case 'recent':
+        return 'Recent';
+
+      case 'oldest':
+        return 'Oldest First';
+
+      case 'newest_unread':
+        return 'Newest Unread First';
+
+      case 'oldest_unread':
+        return 'Oldest Unread First';
+
+      default:
+        return 'Recent';
+    }
+  };
+
+  const handleTimeFilterPress = filterId => {
+    const sortBy = getSortByValue(filterId);
+
+    console.log('SELECTED TIME FILTER:', filterId);
+    console.log('SORT BY:', sortBy);
+
+    // Update selected filter
+    setSelectedTimeFilter(filterId);
+
+    // Start from page 1
+    setCurrentPage(1);
+    setHasMorePages(false);
+
+    // Clear old users
+    setUserList([]);
+
+    // Reset unread count
+    setTotalUnreadCount(0);
+
+    // Call API with new sorting
+    fetchUsers(1, false, selectedType, selectedSubType, sortBy);
+  };
+
+  const fetchUserTypes = async () => {
+    try {
+      setIsLoadingCategories(true);
+
+      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+
+      const response = await axios.get(
+        'https://leafcom.us/backend/api/chat-application/userType',
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const res = response.data;
+
+      if (res.success && Array.isArray(res.data)) {
+        const dynamicCategories = res.data.map((item, index) => ({
+          id: item.type.toLowerCase().replace(/\s+/g, '_'),
+
+          name: item.type,
+
+          readCount: Number(item.user_count || 0),
+
+          unreadCount: Number(item.unread_count || 0),
+
+          // Generic icon for every category
+          icon: require('../../asset/people.png'),
+
+          color: '#76577F',
+
+          subtitle: `${item.type} Contacts`,
+
+          // Dynamic sub-categories from API
+          children: (item.sub_types || []).map((subType, childIndex) => ({
+            id: `${item.type.toLowerCase().replace(/\s+/g, '_')}_${childIndex}`,
+
+            name: subType,
+
+            // Generic icon for every sub-category
+            icon: require('../../asset/people.png'),
+          })),
+        }));
+
+        setCategories(dynamicCategories);
+      } else {
+        setCategories([]);
+      }
+    } catch (error) {
+      console.log(
+        'User Type API Error:',
+        error.response?.data || error.message,
+      );
+
+      setCategories([]);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
+  // const fetchUsers = async (
+  //   pageNumber = 1,
+  //   loadMore = false,
+  //   type = selectedType,
+  //   subType = selectedSubType,
+  // ) => {
+  //   try {
+  //     if (loadMore) {
+  //       setIsLoadingMoreUsers(true);
+  //     } else {
+  //       setIsLoadingUsers(true);
+  //     }
+
+  //     const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+  //     const payload = {
+  //       type: type || 'All',
+  //       sub_type: subType || '',
+  //       search_text: '',
+  //       is_show_all: false,
+  //       per_page: 10,
+  //       page: pageNumber,
+  //       sort_by: getSortByValue(selectedTimeFilter),
+  //     };
+
+  //     console.log('USER LIST PAYLOAD:', payload);
+
+  //     const response = await axios.post(
+  //       'https://leafcom.us/backend/api/chat-application/usersList',
+  //       payload,
+  //       {
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       },
+  //     );
+
+  //     const res = response.data;
+
+  //     console.log('USER LIST RESPONSE:', res);
+
+  //     if (res.success && Array.isArray(res.data)) {
+  //       const newUsers = res.data.map(item => ({
+  //         id: String(item.sender_id),
+  //         name: item.user_name || '',
+
+  //         avatar: item.profile_picture
+  //           ? { uri: item.profile_picture }
+  //           : require('../../asset/dummyuser.png'),
+
+  //         tag: item.user_type_details || item.user_type || '',
+
+  //         unread: Number(item.total_unread_message_count || 0),
+
+  //         sender_id: item.sender_id,
+  //         user_type: item.user_type,
+  //         user_type_details: item.user_type_details,
+  //         user_specifics: item.user_specifics,
+  //         email: item.email,
+  //         whatsapp_number: item.whatsapp_number,
+  //         mobile_no: item.mobile_no,
+  //         user_id_other_software: item.user_id_other_software,
+  //         main_id: item.main_id,
+  //         sub_id: item.sub_id,
+  //         sub_details: item.sub_details,
+  //         main_details: item.main_details,
+  //         last_message_date: item.last_message_date,
+  //         brand_name: item.brand_name,
+  //         office_name: item.office_name,
+  //       }));
+
+  //       // Add users to existing list
+  //       if (loadMore) {
+  //         setUserList(prev => [...prev, ...newUsers]);
+  //       } else {
+  //         setUserList(newUsers);
+  //       }
+
+  //       // --------------------------------
+  //       // TOTAL USER COUNT
+  //       // --------------------------------
+  //       const pagination = res.pagination;
+
+  //       setTotalReadCount(Number(pagination?.total || 0));
+
+  //       // --------------------------------
+  //       // UNREAD COUNT FOR THIS PAGE
+  //       // --------------------------------
+  //       const pageUnreadCount = res.data.reduce(
+  //         (total, item) => total + Number(item.total_unread_message_count || 0),
+  //         0,
+  //       );
+
+  //       // --------------------------------
+  //       // ADD PAGE UNREAD TO TOTAL
+  //       // --------------------------------
+  //       if (loadMore) {
+  //         setTotalUnreadCount(prev => prev + pageUnreadCount);
+  //       } else {
+  //         // Page 1 / fresh filter
+  //         setTotalUnreadCount(pageUnreadCount);
+  //       }
+
+  //       console.log('PAGE:', pageNumber);
+  //       console.log('PAGE UNREAD:', pageUnreadCount);
+  //       console.log('TOTAL USERS:', pagination?.total);
+
+  //       setCurrentPage(Number(pagination?.current_page || pageNumber));
+
+  //       setHasMorePages(Boolean(pagination?.has_more_pages));
+  //     } else {
+  //       if (!loadMore) {
+  //         setUserList([]);
+  //       }
+
+  //       setHasMorePages(false);
+  //     }
+  //   } catch (error) {
+  //     console.log(
+  //       'Users List API Error:',
+  //       error.response?.data || error.message,
+  //     );
+
+  //     if (!loadMore) {
+  //       setUserList([]);
+  //     }
+  //   } finally {
+  //     setIsLoadingUsers(false);
+  //     setIsLoadingMoreUsers(false);
+  //   }
+  // };
+
+  // ============================================================
+  // LOAD MORE USERS
+  // ============================================================
+  const fetchUsers = async (
+    pageNumber = 1,
+    loadMore = false,
+    type = selectedType,
+    subType = selectedSubType,
+    sortBy = getSortByValue(selectedTimeFilter),
+  ) => {
     try {
       if (loadMore) {
         setIsLoadingMoreUsers(true);
@@ -954,34 +1124,37 @@ const DashbaordScreen = ({ navigation }) => {
         setIsLoadingUsers(true);
       }
 
+      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+
+      const payload = {
+        type: type || 'All',
+        sub_type: subType || '',
+        search_text: '',
+        is_show_all: false,
+        per_page: 10,
+        page: pageNumber,
+        sort_by: sortBy,
+      };
+
+      console.log('USER LIST PAYLOAD:', payload);
+
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/usersList',
-        {
-          type: 'All',
-          search_text: '',
-          per_page: 10,
-          page: pageNumber,
-          sort_by: 'date_sent_desc',
-        },
+        payload,
         {
           headers: {
             'Content-Type': 'application/json',
-            Authorization:
-              'Bearer 5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0',
-
-            // 'Bearer 5901|p6Hp52iSaC4Q1mwqRCVlzSoJzKCHyyL8ii9QFlqb968d07b6',
+            Authorization: `Bearer ${token}`,
           },
         },
       );
 
-      console.log('Users API Response:', response.data);
-      if (response.data?.success) {
-        const apiUsers = response.data?.data || [];
+      const res = response.data;
 
-        const formattedUsers = apiUsers.map(item => ({
+      if (res.success && Array.isArray(res.data)) {
+        const newUsers = res.data.map(item => ({
           id: String(item.sender_id),
-
-          name: item.user_name || 'Unknown User',
+          name: item.user_name || '',
 
           avatar: item.profile_picture
             ? { uri: item.profile_picture }
@@ -992,101 +1165,71 @@ const DashbaordScreen = ({ navigation }) => {
           unread: Number(item.total_unread_message_count || 0),
 
           sender_id: item.sender_id,
-          user_id_other_software: item.user_id_other_software,
           user_type: item.user_type,
           user_type_details: item.user_type_details,
           user_specifics: item.user_specifics,
           email: item.email,
           whatsapp_number: item.whatsapp_number,
           mobile_no: item.mobile_no,
+          user_id_other_software: item.user_id_other_software,
           main_id: item.main_id,
           sub_id: item.sub_id,
           sub_details: item.sub_details,
           main_details: item.main_details,
-          oldest_unread_date: item.oldest_unread_date,
-          newest_unread_date: item.newest_unread_date,
           last_message_date: item.last_message_date,
           brand_name: item.brand_name,
           office_name: item.office_name,
         }));
 
-        // Add users to the list
         if (loadMore) {
-          setUserList(prevUsers => [...prevUsers, ...formattedUsers]);
+          setUserList(prev => [...prev, ...newUsers]);
         } else {
-          setUserList(formattedUsers);
+          setUserList(newUsers);
         }
 
-        // ============================================================
-        // PAGINATION
-        // ============================================================
+        // Total user count
+        const pagination = res.pagination;
 
-        // const pagination = response.data?.pagination;
+        setTotalReadCount(Number(pagination?.total || 0));
 
-        // if (pagination) {
-        //   // Total users from API
-        //   setTotalReadCount(Number(response.data?.pagination?.total || 0));
-
-        //   setCurrentPage(pagination.current_page || pageNumber);
-
-        //   setHasMorePages(pagination.has_more_pages || false);
-        // }
-
-        const pagination = response.data?.pagination;
-
-        if (pagination) {
-          console.log('PAGE:', pagination.current_page);
-          console.log('TOTAL:', pagination.total);
-          console.log('NEXT PAGE:', pagination.next_page);
-
-          // Always replace with latest API total
-          setTotalReadCount(Number(pagination.total || 0));
-
-          setCurrentPage(Number(pagination.current_page || pageNumber));
-
-          setCurrentPage(Number(pagination.current_page || pageNumber));
-
-          setHasMorePages(Boolean(pagination.has_more_pages));
-        }
-
-        // ============================================================
-        // TOTAL UNREAD COUNT
-        // ============================================================
-
-        const unreadCount = apiUsers.reduce(
+        // Add unread count for each loaded page
+        const pageUnreadCount = res.data.reduce(
           (total, item) => total + Number(item.total_unread_message_count || 0),
           0,
         );
 
         if (loadMore) {
-          setTotalUnreadCount(prevCount => prevCount + unreadCount);
+          setTotalUnreadCount(prev => prev + pageUnreadCount);
         } else {
-          setTotalUnreadCount(unreadCount);
+          setTotalUnreadCount(pageUnreadCount);
         }
+
+        setCurrentPage(Number(pagination?.current_page || pageNumber));
+
+        setHasMorePages(Boolean(pagination?.has_more_pages));
       } else {
-        Alert.alert(
-          'Error',
-          response.data?.message || 'Unable to fetch users.',
-        );
+        if (!loadMore) {
+          setUserList([]);
+          setTotalUnreadCount(0);
+        }
+
+        setHasMorePages(false);
       }
     } catch (error) {
-      console.log('Users API Error:', error.response?.data || error.message);
-
-      Alert.alert(
-        'Error',
-        error.response?.data?.message ||
-          'Something went wrong while fetching users.',
+      console.log(
+        'Users List API Error:',
+        error.response?.data || error.message,
       );
+
+      if (!loadMore) {
+        setUserList([]);
+        setTotalUnreadCount(0);
+      }
     } finally {
       setIsLoadingUsers(false);
       setIsLoadingMoreUsers(false);
     }
   };
-
-  // ============================================================
-  // LOAD MORE USERS
-  // ============================================================
-
   const loadMoreUsers = () => {
     if (isLoadingMoreUsers || !hasMorePages) {
       return;
@@ -1097,6 +1240,23 @@ const DashbaordScreen = ({ navigation }) => {
     console.log('Loading page:', nextPage);
 
     fetchUsers(nextPage, true);
+  };
+
+  const handleSubTypePress = (parentType, subType) => {
+    setSelectedType(parentType);
+    setSelectedSubType(subType);
+
+    setCurrentPage(1);
+    setHasMorePages(false);
+
+    // Reset previous filter's unread total
+    setTotalUnreadCount(0);
+
+    setUserList([]);
+
+    setShowFilterModal(false);
+
+    fetchUsers(1, false, parentType, subType);
   };
   // ============================================================
   // MODAL MANAGEMENT
@@ -1969,10 +2129,7 @@ const DashbaordScreen = ({ navigation }) => {
                   activityTimeFilter === filter.id &&
                     styles.activityFilterOptionActive,
                 ]}
-                onPress={() => {
-                  setActivityTimeFilter(filter.id);
-                  setShowActivityTimeModal(false);
-                }}
+                onPress={() => handleTimeFilterPress(item.id)}
               >
                 <Text
                   style={[
@@ -3624,19 +3781,12 @@ const DashbaordScreen = ({ navigation }) => {
           >
             {categories.map(cat => (
               <View key={cat.id} style={styles.categorySection}>
-                <TouchableOpacity
+                <View
                   style={[
                     styles.filterModalItem,
                     selectedCategory === cat.name &&
                       styles.filterModalItemActive,
                   ]}
-                  onPress={() => {
-                    if (selectedCategory === cat.name) {
-                      setSelectedCategory('All');
-                    } else {
-                      setSelectedCategory(cat.name);
-                    }
-                  }}
                 >
                   <View style={styles.filterModalItemLeft}>
                     <View
@@ -3675,20 +3825,20 @@ const DashbaordScreen = ({ navigation }) => {
                       <View
                         style={[
                           styles.countBadge,
-                          { backgroundColor: '#4CAF5020' },
+                          { backgroundColor: '#4a08b3fd' },
                         ]}
                       >
-                        <Text style={[styles.countText, { color: '#4CAF50' }]}>
+                        <Text style={[styles.countText, { color: '#FFF' }]}>
                           {cat.readCount}
                         </Text>
                       </View>
                       <View
                         style={[
                           styles.countBadge,
-                          { backgroundColor: '#FF475720' },
+                          { backgroundColor: '#d30f20f8' },
                         ]}
                       >
-                        <Text style={[styles.countText, { color: '#FF4757' }]}>
+                        <Text style={[styles.countText, { color: '#FFF' }]}>
                           {cat.unreadCount}
                         </Text>
                       </View>
@@ -3715,7 +3865,7 @@ const DashbaordScreen = ({ navigation }) => {
                       />
                     </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                </View>
 
                 {expandedCategories[cat.id] && (
                   <View style={styles.childContainer}>
@@ -3723,9 +3873,7 @@ const DashbaordScreen = ({ navigation }) => {
                       <TouchableOpacity
                         key={index}
                         style={styles.childItem}
-                        onPress={() => {
-                          setShowFilterModal(false);
-                        }}
+                        onPress={() => handleSubTypePress(cat.name, child.name)}
                       >
                         <View style={styles.childItemLeft}>
                           <Image
@@ -3791,11 +3939,7 @@ const DashbaordScreen = ({ navigation }) => {
                     styles.filterModalItemActive,
                 ]}
                 onPress={() => {
-                  if (filter.id === 'unread') {
-                    setShowUnread(!showUnread);
-                  } else {
-                    setSelectedTimeFilter(filter.id);
-                  }
+                  handleTimeFilterPress(filter.id);
                   setShowTimeModal(false);
                 }}
               >
@@ -3825,7 +3969,7 @@ const DashbaordScreen = ({ navigation }) => {
                         styles.filterModalItemTextActive,
                     ]}
                   >
-                    {filter.name}
+                   {getFilterName(filter.id)}
                   </Text>
                 </View>
                 {selectedTimeFilter === filter.id && (
@@ -4522,13 +4666,9 @@ const DashbaordScreen = ({ navigation }) => {
                       styles.activeFilterLabel,
                   ]}
                 >
-                  {selectedTimeFilter}
+                  {getFilterName(selectedTimeFilter)}
                 </Text>
-                {(showUnread || selectedTimeFilter !== 'Recent') && (
-                  <View style={styles.filterBadge}>
-                    <Text style={styles.filterBadgeText}>1</Text>
-                  </View>
-                )}
+                
               </TouchableOpacity>
             </View>
 
@@ -4597,6 +4737,14 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // MAIN RENDER
   // ============================================================
+
+  if (isLoadingCategories) {
+    return (
+      <View style={styles.fullScreenLoader}>
+        <Loader></Loader>
+      </View>
+    );
+  }
   return (
     <SafeAreaView style={styles.container}>
       {renderTopBar()}
@@ -7234,6 +7382,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     fontFamily: 'sans-serif',
+  },
+  fullScreenLoader: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#76577F',
+    fontWeight: '600',
   },
 });
 
