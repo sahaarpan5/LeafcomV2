@@ -20,6 +20,8 @@ import {
   Alert,
 } from 'react-native';
 import Loader from '../../util/Loader';
+import { ref, onValue } from 'firebase/database';
+import { database } from '../../config/firebaseConfig';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -32,6 +34,15 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
 
   // Tab and navigation states
+  const [activityTimeFilter, setActivityTimeFilter] = useState('all');
+  const activityTimeFilters = [
+  {id: 'all', label: 'All'},
+  {id: 'today', label: 'Today'},
+  {id: 'week', label: 'This Week'},
+  {id: 'month', label: 'This Month'},
+];
+  const [activityData, setActivityData] = useState([]);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(true);
 
   const [activeTab, setActiveTab] = useState('directory');
   const [showSideNav, setShowSideNav] = useState(false);
@@ -57,7 +68,7 @@ const DashbaordScreen = ({ navigation }) => {
 
   // Activity Feed states
   const [activityFilter, setActivityFilter] = useState('all');
-  const [activityTimeFilter, setActivityTimeFilter] = useState('week');
+  
   const [activitySearch, setActivitySearch] = useState('');
   const [showActivityTimeModal, setShowActivityTimeModal] = useState(false);
 
@@ -260,106 +271,101 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // ACTIVITY DATA
   // ============================================================
-  const [activityData, setActivityData] = useState([
-    {
-      id: '1',
-      userName: 'John Smith',
-      userTag: 'System Admin',
-      message: 'Updated the project timeline',
-      dateTime: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      notSeenCount: 3,
-      avatar: require('../../asset/dummyuser.png'),
-      type: 'message',
-    },
-    {
-      id: '2',
-      userName: 'Sarah Johnson',
-      userTag: 'Team',
-      message: 'Shared new design files',
-      dateTime: new Date(Date.now() - 3600000)
-        .toISOString()
-        .replace('T', ' ')
-        .slice(0, 16),
-      notSeenCount: 0,
-      avatar: require('../../asset/dummyuser.png'),
-      type: 'file',
-    },
-    {
-      id: '3',
-      userName: 'Michael Brown',
-      userTag: 'Client',
-      message: 'Approved the budget proposal',
-      dateTime: new Date(Date.now() - 7200000)
-        .toISOString()
-        .replace('T', ' ')
-        .slice(0, 16),
-      notSeenCount: 1,
-      avatar: require('../../asset/dummyuser.png'),
-      type: 'approval',
-    },
-    {
-      id: '4',
-      userName: 'Emily Davis',
-      userTag: 'Team',
-      message: 'Meeting scheduled for tomorrow',
-      dateTime: new Date(Date.now() - 10800000)
-        .toISOString()
-        .replace('T', ' ')
-        .slice(0, 16),
-      notSeenCount: 5,
-      avatar: require('../../asset/dummyuser.png'),
-      type: 'meeting',
-    },
-    {
-      id: '5',
-      userName: 'Robert Wilson',
-      userTag: 'Admin',
-      message: 'System maintenance completed',
-      dateTime: new Date(Date.now() - 14400000)
-        .toISOString()
-        .replace('T', ' ')
-        .slice(0, 16),
-      notSeenCount: 0,
-      avatar: require('../../asset/dummyuser.png'),
-      type: 'system',
-    },
-    {
-      id: '6',
-      userName: 'Lisa Anderson',
-      userTag: 'Client',
-      message: 'Requested new feature implementation',
-      dateTime: new Date(Date.now() - 18000000)
-        .toISOString()
-        .replace('T', ' ')
-        .slice(0, 16),
-      notSeenCount: 2,
-      avatar: require('../../asset/dummyuser.png'),
-      type: 'request',
-    },
-    {
-      id: '7',
-      userName: 'David Martinez',
-      userTag: 'Team',
-      message: 'Code review completed for sprint 3',
-      dateTime: new Date(Date.now() - 21600000)
-        .toISOString()
-        .replace('T', ' ')
-        .slice(0, 16),
-      notSeenCount: 0,
-      avatar: require('../../asset/dummyuser.png'),
-      type: 'code',
-    },
-  ]);
+  // const [activityData, setActivityData] = useState([
+  //   {
+  //     id: '1',
+  //     userName: 'John Smith',
+  //     userTag: 'System Admin',
+  //     message: 'Updated the project timeline',
+  //     dateTime: new Date().toISOString().replace('T', ' ').slice(0, 16),
+  //     notSeenCount: 3,
+  //     avatar: require('../../asset/dummyuser.png'),
+  //     type: 'message',
+  //   },
+  //   {
+  //     id: '2',
+  //     userName: 'Sarah Johnson',
+  //     userTag: 'Team',
+  //     message: 'Shared new design files',
+  //     dateTime: new Date(Date.now() - 3600000)
+  //       .toISOString()
+  //       .replace('T', ' ')
+  //       .slice(0, 16),
+  //     notSeenCount: 0,
+  //     avatar: require('../../asset/dummyuser.png'),
+  //     type: 'file',
+  //   },
+  //   {
+  //     id: '3',
+  //     userName: 'Michael Brown',
+  //     userTag: 'Client',
+  //     message: 'Approved the budget proposal',
+  //     dateTime: new Date(Date.now() - 7200000)
+  //       .toISOString()
+  //       .replace('T', ' ')
+  //       .slice(0, 16),
+  //     notSeenCount: 1,
+  //     avatar: require('../../asset/dummyuser.png'),
+  //     type: 'approval',
+  //   },
+  //   {
+  //     id: '4',
+  //     userName: 'Emily Davis',
+  //     userTag: 'Team',
+  //     message: 'Meeting scheduled for tomorrow',
+  //     dateTime: new Date(Date.now() - 10800000)
+  //       .toISOString()
+  //       .replace('T', ' ')
+  //       .slice(0, 16),
+  //     notSeenCount: 5,
+  //     avatar: require('../../asset/dummyuser.png'),
+  //     type: 'meeting',
+  //   },
+  //   {
+  //     id: '5',
+  //     userName: 'Robert Wilson',
+  //     userTag: 'Admin',
+  //     message: 'System maintenance completed',
+  //     dateTime: new Date(Date.now() - 14400000)
+  //       .toISOString()
+  //       .replace('T', ' ')
+  //       .slice(0, 16),
+  //     notSeenCount: 0,
+  //     avatar: require('../../asset/dummyuser.png'),
+  //     type: 'system',
+  //   },
+  //   {
+  //     id: '6',
+  //     userName: 'Lisa Anderson',
+  //     userTag: 'Client',
+  //     message: 'Requested new feature implementation',
+  //     dateTime: new Date(Date.now() - 18000000)
+  //       .toISOString()
+  //       .replace('T', ' ')
+  //       .slice(0, 16),
+  //     notSeenCount: 2,
+  //     avatar: require('../../asset/dummyuser.png'),
+  //     type: 'request',
+  //   },
+  //   {
+  //     id: '7',
+  //     userName: 'David Martinez',
+  //     userTag: 'Team',
+  //     message: 'Code review completed for sprint 3',
+  //     dateTime: new Date(Date.now() - 21600000)
+  //       .toISOString()
+  //       .replace('T', ' ')
+  //       .slice(0, 16),
+  //     notSeenCount: 0,
+  //     avatar: require('../../asset/dummyuser.png'),
+  //     type: 'code',
+  //   },
+  // ]);
 
   // ============================================================
   // ACTIVITY TIME FILTER OPTIONS
   // ============================================================
-  const activityTimeFilters = [
-    { id: 'today', label: 'Today' },
-    { id: 'week', label: 'This Week' },
-    { id: 'month', label: 'This Month' },
-    { id: 'custom', label: 'Custom' },
-  ];
+ 
 
   // ============================================================
   // ANIMATION FOR SIDEBAR
@@ -388,6 +394,172 @@ const DashbaordScreen = ({ navigation }) => {
     fetchUsers(1, false);
     fetchUserTypes();
   }, []);
+
+  useEffect(() => {
+    let unsubscribe = null;
+
+    const loadFirebaseNotifications = async () => {
+      try {
+        const userId = 2467;
+
+        if (!userId) {
+          console.log('User ID not found');
+          setActivityData([]);
+          setIsLoadingActivity(false);
+          return;
+        }
+
+        // Example:
+        // userId = 2467
+        // Firebase path:
+        // leafnet_notifications/User_2467_2
+
+        const notificationPath = `leafnet_notifications/User_${userId}_2`;
+
+        console.log('Firebase notification path:', notificationPath);
+
+        const notificationRef = ref(database, notificationPath);
+
+        unsubscribe = onValue(
+          notificationRef,
+          snapshot => {
+            try {
+              if (!snapshot.exists()) {
+                setActivityData([]);
+                setIsLoadingActivity(false);
+                return;
+              }
+
+
+
+              const firebaseData = snapshot.val();
+
+              console.log('Firebase notification data:', firebaseData);
+
+              const notifications = Object.entries(firebaseData).map(
+                ([firebaseKey, item]) => {
+                  return {
+                    // Firebase child key
+                    id: firebaseKey,
+
+                    // Sender
+                    userName: item.sender_name || 'Unknown User',
+
+                    // Example:
+                    // System Admin
+                    // Department User
+                    // Support
+                    userTag:
+                      item.sender_profile_type_details ||
+                      item.sender_profile_type ||
+                      '',
+
+                    // Notification description
+                    message:
+                      item.description || item.title || 'New notification',
+
+                    // Date + time
+                    dateTime: createNotificationDateTime(item.date, item.time),
+
+                    // Read / unread
+                    //
+                    // Change this if your backend uses the
+                    // opposite meaning.
+                    notSeenCount: Number(item.is_read_status) === 0 ? 1 : 0,
+
+                    // Firebase image URL
+                    avatar: item.sender_profile_picture || null,
+
+                    // Event type
+                    type: item.event || item.type || 'notification',
+
+                    // Keep original Firebase values
+                    title: item.title || '',
+                    event: item.event || '',
+                    senderId: item.sender_id || '',
+                    receiverId: item.receiver_id || '',
+                    isReadStatus: Number(item.is_read_status),
+                    firebaseKey,
+                    originalData: item,
+                  };
+                },
+              );
+
+              // Latest notification first
+              notifications.sort((a, b) => {
+                return new Date(b.dateTime) - new Date(a.dateTime);
+              });
+
+              setActivityData(notifications);
+              setIsLoadingActivity(false);
+            } catch (error) {
+              console.log('Error processing Firebase notifications:', error);
+
+              setActivityData([]);
+              setIsLoadingActivity(false);
+            }
+          },
+          error => {
+            console.log('Firebase notification listener error:', error);
+
+            setActivityData([]);
+            setIsLoadingActivity(false);
+          },
+        );
+      } catch (error) {
+        console.log('Error loading Firebase notifications:', error);
+
+        setActivityData([]);
+        setIsLoadingActivity(false);
+      }
+    };
+
+    loadFirebaseNotifications();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+  const createNotificationDateTime = (date, time) => {
+    if (!date) {
+      return new Date().toISOString();
+    }
+
+    try {
+      // Firebase:
+      // date = "2026-02-03"
+      // time = "07:58 AM"
+
+      if (time) {
+        const [timeValue, period] = time.split(' ');
+
+        let [hours, minutes] = timeValue.split(':').map(Number);
+
+        if (period === 'PM' && hours !== 12) {
+          hours += 12;
+        }
+
+        if (period === 'AM' && hours === 12) {
+          hours = 0;
+        }
+
+        const [year, month, day] = date.split('-').map(Number);
+
+        const notificationDate = new Date(year, month - 1, day, hours, minutes);
+
+        return notificationDate.toISOString();
+      }
+
+      return new Date(date).toISOString();
+    } catch (error) {
+      console.log('Date conversion error:', error);
+
+      return new Date().toISOString();
+    }
+  };
 
   // ============================================================
   // CATEGORIES DATA
@@ -759,54 +931,67 @@ const DashbaordScreen = ({ navigation }) => {
   };
 
   const getFilteredActivity = () => {
-    let filtered = [...activityData];
+  let filtered = [...activityData];
 
-    const hasQuickFilters =
-      activityQuickSearch ||
-      activityReadStatus !== 'all' ||
-      activityRole !== 'all' ||
-      activityThread !== 'all' ||
-      activityChannel !== 'all' ||
-      activityMinUnread !== '0' ||
-      activitySortBy !== 'newest';
+  const hasQuickFilters =
+    activityQuickSearch ||
+    activityReadStatus !== 'all' ||
+    activityRole !== 'all' ||
+    activityThread !== 'all' ||
+    activityChannel !== 'all' ||
+    activityMinUnread !== '0' ||
+    activitySortBy !== 'newest';
 
-    if (hasQuickFilters) {
-      return getFilteredActivityWithQuickFilters();
-    }
+  if (hasQuickFilters) {
+    return getFilteredActivityWithQuickFilters();
+  }
 
-    const now = new Date();
-    if (activityTimeFilter === 'today') {
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.dateTime);
-        return itemDate >= today;
-      });
-    } else if (activityTimeFilter === 'week') {
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.dateTime);
-        return itemDate >= weekAgo;
-      });
-    } else if (activityTimeFilter === 'month') {
-      const monthAgo = new Date(now);
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.dateTime);
-        return itemDate >= monthAgo;
-      });
-    }
+  const now = new Date();
 
-    if (activitySearch) {
-      filtered = filtered.filter(
-        item =>
-          item.userName.toLowerCase().includes(activitySearch.toLowerCase()) ||
-          item.message.toLowerCase().includes(activitySearch.toLowerCase()),
-      );
-    }
+  if (activityTimeFilter === 'today') {
+    const today = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
 
-    return filtered;
-  };
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.dateTime);
+      return itemDate >= today;
+    });
+  } else if (activityTimeFilter === 'week') {
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.dateTime);
+      return itemDate >= weekAgo;
+    });
+  } else if (activityTimeFilter === 'month') {
+    const monthAgo = new Date(now);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.dateTime);
+      return itemDate >= monthAgo;
+    });
+  }
+
+  // activityTimeFilter === 'all'
+  // means don't filter by date
+
+  if (activitySearch) {
+    const searchText = activitySearch.toLowerCase();
+
+    filtered = filtered.filter(
+      item =>
+        (item.userName || '').toLowerCase().includes(searchText) ||
+        (item.message || '').toLowerCase().includes(searchText),
+    );
+  }
+
+  return filtered;
+};
 
   const getTotalActivityCount = () => {
     return activityData.length;
@@ -870,8 +1055,7 @@ const DashbaordScreen = ({ navigation }) => {
     }
   };
 
-
-   const getFilterName  = filterId => {
+  const getFilterName = filterId => {
     switch (filterId) {
       case 'recent':
         return 'Recent';
@@ -3969,7 +4153,7 @@ const DashbaordScreen = ({ navigation }) => {
                         styles.filterModalItemTextActive,
                     ]}
                   >
-                   {getFilterName(filter.id)}
+                    {getFilterName(filter.id)}
                   </Text>
                 </View>
                 {selectedTimeFilter === filter.id && (
@@ -4668,7 +4852,6 @@ const DashbaordScreen = ({ navigation }) => {
                 >
                   {getFilterName(selectedTimeFilter)}
                 </Text>
-                
               </TouchableOpacity>
             </View>
 
