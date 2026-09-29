@@ -3312,7 +3312,7 @@ const DashbaordScreen = ({ navigation }) => {
       activityThread !== 'all' ||
       activityChannel !== 'all' ||
       activityMinUnread !== '0' ||
-      activitySortBy !== 'recent';
+      activitySortBy !== 'most_unread';
 
     return (
       <View style={styles.activityContainer}>
