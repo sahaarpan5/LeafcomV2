@@ -1,5 +1,5 @@
 import axios from 'axios';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -32,17 +32,19 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // STATE MANAGEMENT
   // ============================================================
+  const [activitySort, setActivitySort] = useState('newest');
 
   // Tab and navigation states
   const [activityTimeFilter, setActivityTimeFilter] = useState('all');
   const activityTimeFilters = [
-  {id: 'all', label: 'All'},
-  {id: 'today', label: 'Today'},
-  {id: 'week', label: 'This Week'},
-  {id: 'month', label: 'This Month'},
-];
+    { id: 'all', label: 'All' },
+    { id: 'today', label: 'Today' },
+    { id: 'week', label: 'This Week' },
+    { id: 'month', label: 'This Month' },
+  ];
   const [activityData, setActivityData] = useState([]);
   const [isLoadingActivity, setIsLoadingActivity] = useState(true);
+  const [avatarError, setAvatarError] = useState({});
 
   const [activeTab, setActiveTab] = useState('directory');
   const [showSideNav, setShowSideNav] = useState(false);
@@ -68,7 +70,7 @@ const DashbaordScreen = ({ navigation }) => {
 
   // Activity Feed states
   const [activityFilter, setActivityFilter] = useState('all');
-  
+
   const [activitySearch, setActivitySearch] = useState('');
   const [showActivityTimeModal, setShowActivityTimeModal] = useState(false);
 
@@ -80,7 +82,7 @@ const DashbaordScreen = ({ navigation }) => {
   const [activityRole, setActivityRole] = useState('all');
   const [activityThread, setActivityThread] = useState('all');
   const [activityChannel, setActivityChannel] = useState('all');
-  const [activitySortBy, setActivitySortBy] = useState('newest');
+  const [activitySortBy, setActivitySortBy] = useState('most_unread');
   const [activityMinUnread, setActivityMinUnread] = useState('0');
 
   const [totalReadCount, setTotalReadCount] = useState(0);
@@ -228,36 +230,58 @@ const DashbaordScreen = ({ navigation }) => {
   // Dropdown options for quick filter
   const readStatusOptions = [
     { id: 'all', label: 'All' },
-    { id: 'read', label: 'Read' },
-    { id: 'unread', label: 'Unread' },
+    { id: 'unread', label: 'Unread Only' },
+    { id: 'read', label: 'Read Only' },
   ];
 
-  const roleOptions = [
-    { id: 'all', label: 'All Roles' },
-    { id: 'admin', label: 'Admin' },
-    { id: 'client', label: 'Client' },
-    { id: 'team', label: 'Team' },
-    { id: 'system_admin', label: 'System Admin' },
-  ];
+  // const roleOptions = [
+  //   { id: 'all', label: 'All Roles' },
+  //   { id: 'admin', label: 'Admin' },
+  //   { id: 'client', label: 'Client' },
+  //   { id: 'team', label: 'Team' },
+  //   { id: 'system_admin', label: 'System Admin' },
+  // ];
+
+  const roleOptions = useMemo(() => {
+    const roles = new Set();
+
+    activityData.forEach(item => {
+      const role = (item.userTag || '').trim();
+
+      if (role) {
+        roles.add(role);
+      }
+    });
+
+    return [
+      {
+        id: 'all',
+        label: 'All Roles',
+      },
+      ...Array.from(roles).map(role => ({
+        id: role,
+        label: role,
+      })),
+    ];
+  }, [activityData]);
 
   const threadOptions = [
     { id: 'all', label: 'All Threads' },
-    { id: 'main', label: 'Main Thread' },
-    { id: 'reply', label: 'Replies' },
+    { id: 'main', label: 'Direct' },
+    // { id: 'reply', label: 'Replies' },
   ];
 
   const channelOptions = [
     { id: 'all', label: 'All Channels' },
+    { id: 'whatsapp', label: 'Whatsapp' },
     { id: 'email', label: 'Email' },
-    { id: 'chat', label: 'Chat' },
-    { id: 'call', label: 'Call' },
+    { id: 'sms', label: 'SMS' },
+    { id: 'inapp', label: 'Internal' },
   ];
 
   const sortOptions = [
-    { id: 'newest', label: 'Newest First' },
-    { id: 'oldest', label: 'Oldest First' },
-    { id: 'most_replies', label: 'Most Replies' },
-    { id: 'most_unread', label: 'Most Unread' },
+    { id: 'most_unread', label: 'Unread First' },
+    { id: 'recent', label: 'Recent First' },
   ];
 
   const minUnreadOptions = [
@@ -269,103 +293,8 @@ const DashbaordScreen = ({ navigation }) => {
   ];
 
   // ============================================================
-  // ACTIVITY DATA
-  // ============================================================
-  // const [activityData, setActivityData] = useState([
-  //   {
-  //     id: '1',
-  //     userName: 'John Smith',
-  //     userTag: 'System Admin',
-  //     message: 'Updated the project timeline',
-  //     dateTime: new Date().toISOString().replace('T', ' ').slice(0, 16),
-  //     notSeenCount: 3,
-  //     avatar: require('../../asset/dummyuser.png'),
-  //     type: 'message',
-  //   },
-  //   {
-  //     id: '2',
-  //     userName: 'Sarah Johnson',
-  //     userTag: 'Team',
-  //     message: 'Shared new design files',
-  //     dateTime: new Date(Date.now() - 3600000)
-  //       .toISOString()
-  //       .replace('T', ' ')
-  //       .slice(0, 16),
-  //     notSeenCount: 0,
-  //     avatar: require('../../asset/dummyuser.png'),
-  //     type: 'file',
-  //   },
-  //   {
-  //     id: '3',
-  //     userName: 'Michael Brown',
-  //     userTag: 'Client',
-  //     message: 'Approved the budget proposal',
-  //     dateTime: new Date(Date.now() - 7200000)
-  //       .toISOString()
-  //       .replace('T', ' ')
-  //       .slice(0, 16),
-  //     notSeenCount: 1,
-  //     avatar: require('../../asset/dummyuser.png'),
-  //     type: 'approval',
-  //   },
-  //   {
-  //     id: '4',
-  //     userName: 'Emily Davis',
-  //     userTag: 'Team',
-  //     message: 'Meeting scheduled for tomorrow',
-  //     dateTime: new Date(Date.now() - 10800000)
-  //       .toISOString()
-  //       .replace('T', ' ')
-  //       .slice(0, 16),
-  //     notSeenCount: 5,
-  //     avatar: require('../../asset/dummyuser.png'),
-  //     type: 'meeting',
-  //   },
-  //   {
-  //     id: '5',
-  //     userName: 'Robert Wilson',
-  //     userTag: 'Admin',
-  //     message: 'System maintenance completed',
-  //     dateTime: new Date(Date.now() - 14400000)
-  //       .toISOString()
-  //       .replace('T', ' ')
-  //       .slice(0, 16),
-  //     notSeenCount: 0,
-  //     avatar: require('../../asset/dummyuser.png'),
-  //     type: 'system',
-  //   },
-  //   {
-  //     id: '6',
-  //     userName: 'Lisa Anderson',
-  //     userTag: 'Client',
-  //     message: 'Requested new feature implementation',
-  //     dateTime: new Date(Date.now() - 18000000)
-  //       .toISOString()
-  //       .replace('T', ' ')
-  //       .slice(0, 16),
-  //     notSeenCount: 2,
-  //     avatar: require('../../asset/dummyuser.png'),
-  //     type: 'request',
-  //   },
-  //   {
-  //     id: '7',
-  //     userName: 'David Martinez',
-  //     userTag: 'Team',
-  //     message: 'Code review completed for sprint 3',
-  //     dateTime: new Date(Date.now() - 21600000)
-  //       .toISOString()
-  //       .replace('T', ' ')
-  //       .slice(0, 16),
-  //     notSeenCount: 0,
-  //     avatar: require('../../asset/dummyuser.png'),
-  //     type: 'code',
-  //   },
-  // ]);
-
-  // ============================================================
   // ACTIVITY TIME FILTER OPTIONS
   // ============================================================
- 
 
   // ============================================================
   // ANIMATION FOR SIDEBAR
@@ -409,11 +338,6 @@ const DashbaordScreen = ({ navigation }) => {
           return;
         }
 
-        // Example:
-        // userId = 2467
-        // Firebase path:
-        // leafnet_notifications/User_2467_2
-
         const notificationPath = `leafnet_notifications/User_${userId}_2`;
 
         console.log('Firebase notification path:', notificationPath);
@@ -430,64 +354,232 @@ const DashbaordScreen = ({ navigation }) => {
                 return;
               }
 
-
-
               const firebaseData = snapshot.val();
 
               console.log('Firebase notification data:', firebaseData);
 
-              const notifications = Object.entries(firebaseData).map(
+              // ============================================
+              // GROUP BY USER
+              // ============================================
+
+              const groupedNotifications = {};
+
+              Object.entries(firebaseData || {}).forEach(
                 ([firebaseKey, item]) => {
-                  return {
-                    // Firebase child key
-                    id: firebaseKey,
+                  const senderId = String(item.sender_id);
 
-                    // Sender
-                    userName: item.sender_name || 'Unknown User',
+                  // ----------------------------------------
+                  // USE Firebase dateTime DIRECTLY
+                  // ----------------------------------------
 
-                    // Example:
-                    // System Admin
-                    // Department User
-                    // Support
-                    userTag:
-                      item.sender_profile_type_details ||
-                      item.sender_profile_type ||
-                      '',
+                  const itemDateTime = item.dateTime || '';
 
-                    // Notification description
-                    message:
-                      item.description || item.title || 'New notification',
+                  const itemTimestamp = itemDateTime
+                    ? new Date(itemDateTime).getTime()
+                    : 0;
 
-                    // Date + time
-                    dateTime: createNotificationDateTime(item.date, item.time),
+                  // ----------------------------------------
+                  // IS THIS MESSAGE UNREAD?
+                  // ----------------------------------------
 
-                    // Read / unread
-                    //
-                    // Change this if your backend uses the
-                    // opposite meaning.
-                    notSeenCount: Number(item.is_read_status) === 0 ? 1 : 0,
+                  const isUnread = Number(item.is_read_status) === 0;
 
-                    // Firebase image URL
-                    avatar: item.sender_profile_picture || null,
+                  // ========================================
+                  // FIRST MESSAGE FROM THIS USER
+                  // ========================================
 
-                    // Event type
-                    type: item.event || item.type || 'notification',
+                  if (!groupedNotifications[senderId]) {
+                    groupedNotifications[senderId] = {
+                      id: senderId,
 
-                    // Keep original Firebase values
-                    title: item.title || '',
-                    event: item.event || '',
-                    senderId: item.sender_id || '',
-                    receiverId: item.receiver_id || '',
-                    isReadStatus: Number(item.is_read_status),
-                    firebaseKey,
-                    originalData: item,
-                  };
+                      senderId: item.sender_id,
+
+                      userName: item.sender_name || 'Unknown User',
+
+                      userTag:
+                        item.sender_profile_type_details ||
+                        item.sender_profile_type ||
+                        '',
+
+                      message:
+                        item.description || item.title || 'New notification',
+
+                      // Firebase dateTime
+                      dateTime: itemDateTime,
+
+                      // Keep Firebase date/time
+                      date: item.date || '',
+
+                      time: item.time || '',
+
+                      // Latest message timestamp
+                      latestTimestamp: itemTimestamp,
+
+                      // ====================================
+                      // IMPORTANT
+                      // Count ALL unread messages
+                      // ====================================
+
+                      notSeenCount: isUnread ? 1 : 0,
+
+                      unreadCount: isUnread ? 1 : 0,
+
+                      avatar:
+                        item.sender_profile_picture ||
+                        item.receiver_profile_picture ||
+                        null,
+                      channelTypes: item.type
+                        ? [String(item.type).trim().toLowerCase()]
+                        : [],
+
+                      type: item.type || 'inapp',
+
+                      title: item.title || '',
+
+                      event: item.event || '',
+
+                      receiverId: item.receiver_id || '',
+
+                      // Status of latest message
+                      isReadStatus: Number(item.is_read_status),
+
+                      firebaseKey,
+
+                      originalData: item,
+                    };
+
+                    return;
+                  }
+
+                  // ========================================
+                  // EXISTING USER
+                  // ========================================
+
+                  const existing = groupedNotifications[senderId];
+
+                  // ========================================
+                  // COUNT UNREAD
+                  // ========================================
+
+                  if (isUnread) {
+                    existing.unreadCount += 1;
+                    existing.notSeenCount += 1;
+                  }
+
+                  const currentChannel = String(item.type || '')
+                    .trim()
+                    .toLowerCase();
+
+                  if (
+                    currentChannel &&
+                    !existing.channelTypes.includes(currentChannel)
+                  ) {
+                    existing.channelTypes.push(currentChannel);
+                  }
+
+                  // ========================================
+                  // CHECK LATEST MESSAGE
+                  // ========================================
+
+                  if (itemTimestamp > existing.latestTimestamp) {
+                    existing.message =
+                      item.description || item.title || 'New notification';
+
+                    existing.dateTime = itemDateTime;
+
+                    existing.date = item.date || '';
+
+                    existing.time = item.time || '';
+
+                    if (itemTimestamp > existing.latestTimestamp) {
+                      existing.latestTimestamp = itemTimestamp;
+
+                      // latest message information
+                      existing.message =
+                        item.description || item.title || 'New notification';
+
+                      existing.dateTime = itemDateTime;
+                      existing.date = item.date || '';
+                      existing.time = item.time || '';
+                    }
+
+                    existing.avatar =
+                      item.sender_profile_picture ||
+                      item.receiver_profile_picture ||
+                      existing.avatar ||
+                      null;
+
+                    existing.type = item.type || 'notification';
+
+                    existing.title = item.title || '';
+
+                    existing.event = item.event || '';
+
+                    existing.receiverId = item.receiver_id || '';
+
+                    // VERY IMPORTANT:
+                    // Status of latest message
+                    existing.isReadStatus = Number(item.is_read_status);
+
+                    existing.firebaseKey = firebaseKey;
+
+                    existing.originalData = item;
+                  }
                 },
               );
 
-              // Latest notification first
+              // ============================================
+              // CONVERT TO ARRAY
+              // ============================================
+
+              // const notifications = Object.values(groupedNotifications);
+
+              // // ============================================
+              // // SORT
+              // //
+              // // 1. Users having unread messages first
+              // // 2. Users with no unread messages after
+              // // 3. Latest message first
+              // // ============================================
+
+              // notifications.sort((a, b) => {
+              //   const aUnread = a.unreadCount > 0 ? 0 : 1;
+
+              //   const bUnread = b.unreadCount > 0 ? 0 : 1;
+
+              //   if (aUnread !== bUnread) {
+              //     return aUnread - bUnread;
+              //   }
+
+              //   return b.latestTimestamp - a.latestTimestamp;
+              // });
+
+              // console.log('FINAL ACTIVITY DATA:', notifications);
+
+              // setActivityData(notifications);
+              // setIsLoadingActivity(false);
+
+              const notifications = Object.values(groupedNotifications);
+
               notifications.sort((a, b) => {
-                return new Date(b.dateTime) - new Date(a.dateTime);
+                // 1. Users with unread messages first
+                const aUnread = Number(a.unreadCount || 0);
+                const bUnread = Number(b.unreadCount || 0);
+
+                if (aUnread > 0 && bUnread === 0) {
+                  return -1;
+                }
+
+                if (aUnread === 0 && bUnread > 0) {
+                  return 1;
+                }
+
+                // 2. Within the same unread/read group,
+                // latest message first
+                return (
+                  Number(b.latestTimestamp || 0) -
+                  Number(a.latestTimestamp || 0)
+                );
               });
 
               setActivityData(notifications);
@@ -559,6 +651,13 @@ const DashbaordScreen = ({ navigation }) => {
 
       return new Date().toISOString();
     }
+  };
+
+  const createNotificationDateTimeForUI = (date, time) => {
+    return {
+      date: date || '',
+      time: time || '',
+    };
   };
 
   // ============================================================
@@ -850,72 +949,134 @@ const DashbaordScreen = ({ navigation }) => {
   const getFilteredActivityWithQuickFilters = () => {
     let filtered = [...activityData];
 
+    // --------------------------------------------------
+    // 1. QUICK SEARCH
+    // --------------------------------------------------
     if (activityQuickSearch) {
-      filtered = filtered.filter(
-        item =>
-          item.userName
-            .toLowerCase()
-            .includes(activityQuickSearch.toLowerCase()) ||
-          item.message
-            .toLowerCase()
-            .includes(activityQuickSearch.toLowerCase()) ||
-          item.userTag
-            .toLowerCase()
-            .includes(activityQuickSearch.toLowerCase()),
-      );
+      const searchText = activityQuickSearch.toLowerCase().trim();
+
+      filtered = filtered.filter(item => {
+        const userName = (item.userName || '').toLowerCase();
+        const message = (item.message || '').toLowerCase();
+        const userTag = (item.userTag || '').toLowerCase();
+
+        return (
+          userName.includes(searchText) ||
+          message.includes(searchText) ||
+          userTag.includes(searchText)
+        );
+      });
     }
 
+    // --------------------------------------------------
+    // 2. READ / UNREAD FILTER
+    // --------------------------------------------------
     if (activityReadStatus === 'read') {
-      filtered = filtered.filter(item => item.notSeenCount === 0);
+      filtered = filtered.filter(item => Number(item.unreadCount || 0) === 0);
     } else if (activityReadStatus === 'unread') {
-      filtered = filtered.filter(item => item.notSeenCount > 0);
+      filtered = filtered.filter(item => Number(item.unreadCount || 0) > 0);
     }
 
+    // --------------------------------------------------
+    // 3. ROLE FILTER
+    // Uses dynamic item.userTag
+    // --------------------------------------------------
     if (activityRole !== 'all') {
-      const roleMap = {
-        admin: ['Admin', 'System Admin'],
-        client: ['Client'],
-        team: ['Team'],
-        system_admin: ['System Admin'],
-      };
-      const allowedRoles = roleMap[activityRole] || [];
-      filtered = filtered.filter(item =>
-        allowedRoles.some(role => item.userTag.includes(role)),
-      );
+      const selectedRole = (activityRole || '').trim().toLowerCase();
+
+      filtered = filtered.filter(item => {
+        const itemRole = (item.userTag || '').trim().toLowerCase();
+
+        return itemRole === selectedRole;
+      });
     }
 
+    // --------------------------------------------------
+    // 4. THREAD FILTER
+    // --------------------------------------------------
     if (activityThread === 'main') {
-      filtered = filtered.filter(item => item.type !== 'reply');
+      filtered = filtered.filter(item => {
+        const itemType = (item.type || 'inapp').trim().toLowerCase();
+
+        return itemType !== 'reply';
+      });
     } else if (activityThread === 'reply') {
-      filtered = filtered.filter(item => item.type === 'reply');
+      filtered = filtered.filter(item => {
+        const itemType = (item.type || 'inapp').trim().toLowerCase();
+
+        return itemType === 'reply';
+      });
     }
 
+    // --------------------------------------------------
+    // 5. CHANNEL FILTER
+    //
+    // item.type values:
+    // whatsapp -> Whatsapp
+    // email    -> Email
+    // sms      -> SMS
+    // inapp    -> Internal
+    // --------------------------------------------------
     if (activityChannel !== 'all') {
-      filtered = filtered.filter(item => item.type === activityChannel);
+      const selectedChannel = String(activityChannel).trim().toLowerCase();
+
+      filtered = filtered.filter(item => {
+        const channels = Array.isArray(item.channelTypes)
+          ? item.channelTypes
+          : [];
+
+        const hasSelectedChannel = channels.some(
+          channel => String(channel).trim().toLowerCase() === selectedChannel,
+        );
+
+        // Keep matching-channel users
+        // OR keep users having unread messages
+        const hasUnread = Number(item.unreadCount || 0) > 0;
+
+        return hasSelectedChannel || hasUnread;
+      });
     }
 
-    const minCount = parseInt(activityMinUnread);
+    // --------------------------------------------------
+    // 6. MINIMUM UNREAD FILTER
+    // --------------------------------------------------
+    const minCount = parseInt(activityMinUnread, 10) || 0;
+
     if (minCount > 0) {
-      filtered = filtered.filter(item => item.notSeenCount >= minCount);
+      filtered = filtered.filter(item => {
+        return Number(item.unreadCount || 0) >= minCount;
+      });
     }
 
+    // --------------------------------------------------
+    // 7. SORT
+    // --------------------------------------------------
     switch (activitySortBy) {
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-        break;
-      case 'oldest':
-        filtered.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-        break;
-      case 'most_replies':
-        filtered.sort((a, b) => b.notSeenCount - a.notSeenCount);
-        break;
       case 'most_unread':
-        filtered.sort((a, b) => b.notSeenCount - a.notSeenCount);
+        filtered.sort((a, b) => {
+          return Number(b.unreadCount || 0) - Number(a.unreadCount || 0);
+        });
         break;
+
+      case 'recent':
+        filtered.sort((a, b) => {
+          return (
+            Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0)
+          );
+        });
+        break;
+
+      case 'oldest':
+        filtered.sort((a, b) => {
+          return (
+            Number(a.latestTimestamp || 0) - Number(b.latestTimestamp || 0)
+          );
+        });
+        break;
+
       default:
         break;
     }
-
     return filtered;
   };
 
@@ -925,73 +1086,69 @@ const DashbaordScreen = ({ navigation }) => {
     setActivityRole('all');
     setActivityThread('all');
     setActivityChannel('all');
-    setActivitySortBy('newest');
+    setActivitySortBy('most_unread');
     setActivityMinUnread('0');
     setActiveDropdown(null);
   };
 
   const getFilteredActivity = () => {
-  let filtered = [...activityData];
+    let filtered = [...activityData];
 
-  const hasQuickFilters =
-    activityQuickSearch ||
-    activityReadStatus !== 'all' ||
-    activityRole !== 'all' ||
-    activityThread !== 'all' ||
-    activityChannel !== 'all' ||
-    activityMinUnread !== '0' ||
-    activitySortBy !== 'newest';
+    const hasQuickFilters =
+      activityQuickSearch ||
+      activityReadStatus !== 'all' ||
+      activityRole !== 'all' ||
+      activityThread !== 'all' ||
+      activityChannel !== 'all' ||
+      activityMinUnread !== '0' ||
+      activitySortBy !== 'recent';
 
-  if (hasQuickFilters) {
-    return getFilteredActivityWithQuickFilters();
-  }
+    if (hasQuickFilters) {
+      return getFilteredActivityWithQuickFilters();
+    }
 
-  const now = new Date();
+    const now = new Date();
 
-  if (activityTimeFilter === 'today') {
-    const today = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
+    if (activityTimeFilter === 'today') {
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    filtered = filtered.filter(item => {
-      const itemDate = new Date(item.dateTime);
-      return itemDate >= today;
-    });
-  } else if (activityTimeFilter === 'week') {
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.dateTime);
+        return itemDate >= today;
+      });
+    } else if (activityTimeFilter === 'week') {
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
 
-    filtered = filtered.filter(item => {
-      const itemDate = new Date(item.dateTime);
-      return itemDate >= weekAgo;
-    });
-  } else if (activityTimeFilter === 'month') {
-    const monthAgo = new Date(now);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.dateTime);
+        return itemDate >= weekAgo;
+      });
+    } else if (activityTimeFilter === 'month') {
+      const monthAgo = new Date(now);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
 
-    filtered = filtered.filter(item => {
-      const itemDate = new Date(item.dateTime);
-      return itemDate >= monthAgo;
-    });
-  }
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.dateTime);
+        return itemDate >= monthAgo;
+      });
+    }
 
-  // activityTimeFilter === 'all'
-  // means don't filter by date
+    // activityTimeFilter === 'all'
+    // means don't filter by date
 
-  if (activitySearch) {
-    const searchText = activitySearch.toLowerCase();
+    if (activitySearch) {
+      const searchText = activitySearch.toLowerCase();
 
-    filtered = filtered.filter(
-      item =>
-        (item.userName || '').toLowerCase().includes(searchText) ||
-        (item.message || '').toLowerCase().includes(searchText),
-    );
-  }
+      filtered = filtered.filter(
+        item =>
+          (item.userName || '').toLowerCase().includes(searchText) ||
+          (item.message || '').toLowerCase().includes(searchText),
+      );
+    }
 
-  return filtered;
-};
+    return filtered;
+  };
 
   const getTotalActivityCount = () => {
     return activityData.length;
@@ -2347,7 +2504,9 @@ const DashbaordScreen = ({ navigation }) => {
     const isOpen = activeDropdown === dropdownId;
 
     return (
-      <View style={styles.dropdownWrapper}>
+      <View
+        style={[styles.dropdownWrapper, isOpen && styles.dropdownWrapperOpen]}
+      >
         <TouchableOpacity
           style={styles.dropdownTrigger}
           onPress={() => {
@@ -2356,10 +2515,12 @@ const DashbaordScreen = ({ navigation }) => {
           activeOpacity={0.7}
         >
           <Text style={styles.dropdownTriggerLabel}>{label}</Text>
+
           <View style={styles.dropdownTriggerValue}>
             <Text style={styles.dropdownTriggerText} numberOfLines={1}>
               {options.find(o => o.id === selectedId)?.label || 'Select'}
             </Text>
+
             <Image
               source={
                 isOpen
@@ -2380,12 +2541,16 @@ const DashbaordScreen = ({ navigation }) => {
           <View style={styles.dropdownMenuContainer}>
             <View style={styles.dropdownMenu}>
               <ScrollView
-                style={{ maxHeight: 150 }}
+                style={styles.dropdownScrollView}
+                contentContainerStyle={styles.dropdownScrollContent}
+                nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={true}
+                keyboardShouldPersistTaps="always"
+                bounces={false}
               >
-                {options.map(option => (
+                {options.map((option, index) => (
                   <TouchableOpacity
-                    key={option.id}
+                    key={`${option.id}-${index}`}
                     style={[
                       styles.dropdownItem,
                       selectedId === option.id && styles.dropdownItemActive,
@@ -2394,6 +2559,7 @@ const DashbaordScreen = ({ navigation }) => {
                       onSelect(option.id);
                       setActiveDropdown(null);
                     }}
+                    activeOpacity={0.7}
                   >
                     <Text
                       style={[
@@ -2404,6 +2570,7 @@ const DashbaordScreen = ({ navigation }) => {
                     >
                       {option.label}
                     </Text>
+
                     {selectedId === option.id && (
                       <Image
                         source={require('../../asset/checkmark.png')}
@@ -2424,7 +2591,6 @@ const DashbaordScreen = ({ navigation }) => {
       </View>
     );
   };
-
   const renderActivityQuickFilterModal = () => {
     return (
       <Modal
@@ -2508,7 +2674,13 @@ const DashbaordScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.quickFilterGrid}>
-                <View style={styles.quickFilterGridItem}>
+                {/* READ */}
+                <View
+                  style={[
+                    styles.quickFilterGridItem,
+                    activeDropdown === 'read' && styles.quickFilterGridItemOpen,
+                  ]}
+                >
                   {renderDropdown(
                     readStatusOptions,
                     activityReadStatus,
@@ -2518,7 +2690,13 @@ const DashbaordScreen = ({ navigation }) => {
                   )}
                 </View>
 
-                <View style={styles.quickFilterGridItem}>
+                {/* ROLE */}
+                <View
+                  style={[
+                    styles.quickFilterGridItem,
+                    activeDropdown === 'role' && styles.quickFilterGridItemOpen,
+                  ]}
+                >
                   {renderDropdown(
                     roleOptions,
                     activityRole,
@@ -2528,7 +2706,14 @@ const DashbaordScreen = ({ navigation }) => {
                   )}
                 </View>
 
-                <View style={styles.quickFilterGridItem}>
+                {/* THREAD */}
+                <View
+                  style={[
+                    styles.quickFilterGridItem,
+                    activeDropdown === 'thread' &&
+                      styles.quickFilterGridItemOpen,
+                  ]}
+                >
                   {renderDropdown(
                     threadOptions,
                     activityThread,
@@ -2538,7 +2723,14 @@ const DashbaordScreen = ({ navigation }) => {
                   )}
                 </View>
 
-                <View style={styles.quickFilterGridItem}>
+                {/* CHANNEL */}
+                <View
+                  style={[
+                    styles.quickFilterGridItem,
+                    activeDropdown === 'channel' &&
+                      styles.quickFilterGridItemOpen,
+                  ]}
+                >
                   {renderDropdown(
                     channelOptions,
                     activityChannel,
@@ -2548,17 +2740,30 @@ const DashbaordScreen = ({ navigation }) => {
                   )}
                 </View>
 
-                <View style={styles.quickFilterGridItem}>
+                {/* SORT */}
+                <View
+                  style={[
+                    styles.quickFilterGridItem,
+                    activeDropdown === 'sort' && styles.quickFilterGridItemOpen,
+                  ]}
+                >
                   {renderDropdown(
                     sortOptions,
-                    activitySortBy,
-                    setActivitySortBy,
+                    activitySort,
+                    setActivitySort,
                     'Sort',
                     'sort',
                   )}
                 </View>
 
-                <View style={styles.quickFilterGridItem}>
+                {/* MIN. UNREAD */}
+                <View
+                  style={[
+                    styles.quickFilterGridItem,
+                    activeDropdown === 'minunread' &&
+                      styles.quickFilterGridItemOpen,
+                  ]}
+                >
                   {renderDropdown(
                     minUnreadOptions,
                     activityMinUnread,
@@ -2575,7 +2780,7 @@ const DashbaordScreen = ({ navigation }) => {
                 activityThread !== 'all' ||
                 activityChannel !== 'all' ||
                 activityMinUnread !== '0' ||
-                activitySortBy !== 'newest') && (
+                activitySortBy !== 'recent') && (
                 <View style={styles.quickFilterActiveSummary}>
                   <Text style={styles.quickFilterActiveTitle}>
                     Active Filters:
@@ -2720,7 +2925,7 @@ const DashbaordScreen = ({ navigation }) => {
                         </TouchableOpacity>
                       </View>
                     )}
-                    {activitySortBy !== 'newest' && (
+                    {activitySortBy !== 'recent' && (
                       <View style={styles.quickFilterActiveChip}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Sort:{' '}
@@ -2730,7 +2935,7 @@ const DashbaordScreen = ({ navigation }) => {
                           }
                         </Text>
                         <TouchableOpacity
-                          onPress={() => setActivitySortBy('newest')}
+                          onPress={() => setActivitySortBy('most_unread')}
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -2850,10 +3055,25 @@ const DashbaordScreen = ({ navigation }) => {
         ]}
       >
         <View style={styles.activityAvatar}>
-          <Image source={item.avatar} style={styles.activityAvatarImage} />
-          {item.notSeenCount > 0 && (
+          <Image
+            source={
+              avatarError[item.id] || !item.avatar
+                ? require('../../asset/dummyuser.png')
+                : { uri: item.avatar }
+            }
+            style={styles.activityAvatarImage}
+            resizeMode="cover"
+            onError={() => {
+              setAvatarError(prev => ({
+                ...prev,
+                [item.id]: true,
+              }));
+            }}
+          />
+
+          {item.unreadCount > 0 && (
             <View style={styles.activityBadge}>
-              <Text style={styles.activityBadgeText}>{item.notSeenCount}</Text>
+              <Text style={styles.activityBadgeText}>{item.unreadCount}</Text>
             </View>
           )}
         </View>
@@ -2874,7 +3094,10 @@ const DashbaordScreen = ({ navigation }) => {
             </View>
           </View>
           <Text style={styles.activityMessage}>{item.message}</Text>
-          <Text style={styles.activityDateTime}>{item.dateTime}</Text>
+          <Text style={styles.activityDateTime}>
+            {' '}
+            {item.date} {item.time}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -3089,7 +3312,7 @@ const DashbaordScreen = ({ navigation }) => {
       activityThread !== 'all' ||
       activityChannel !== 'all' ||
       activityMinUnread !== '0' ||
-      activitySortBy !== 'newest';
+      activitySortBy !== 'recent';
 
     return (
       <View style={styles.activityContainer}>
@@ -4683,7 +4906,7 @@ const DashbaordScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[
               styles.navItem,
               activeTab === 'call' && styles.activeNavItem,
@@ -4739,7 +4962,7 @@ const DashbaordScreen = ({ navigation }) => {
             >
               Messages
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {activeTab === 'directory' && (
@@ -7327,8 +7550,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    maxHeight: SCREEN_HEIGHT * 0.85,
-    minHeight: SCREEN_HEIGHT * 0.5,
+    height: SCREEN_HEIGHT * 0.95,
+    maxHeight: SCREEN_HEIGHT * 0.95,
+    minHeight: SCREEN_HEIGHT * 0.95,
   },
   quickFilterModalHeader: {
     flexDirection: 'row',
@@ -7394,6 +7618,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginHorizontal: -4,
     marginBottom: 16,
+
+    // Important for Android
+    position: 'relative',
+    zIndex: 1,
   },
   quickFilterGridItem: {
     width: '50%',
@@ -7453,27 +7681,7 @@ const styles = StyleSheet.create({
     elevation: 10,
     maxHeight: 200,
   },
-  dropdownItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f5',
-  },
-  dropdownItemActive: {
-    backgroundColor: '#f0edff',
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    color: '#333',
-    fontFamily: 'sans-serif',
-  },
-  dropdownItemTextActive: {
-    color: '#6C63FF',
-    fontWeight: '500',
-  },
+
   quickFilterActiveSummary: {
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
@@ -7575,6 +7783,127 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: '#76577F',
+    fontWeight: '600',
+  },
+  quickFilterGridItem: {
+    width: '50%',
+    paddingHorizontal: 4,
+    marginBottom: 8,
+
+    // Normal item
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  quickFilterGridItemOpen: {
+    // The currently opened dropdown must come above
+    // every other grid item.
+    zIndex: 9999,
+    elevation: 9999,
+  },
+
+  dropdownWrapper: {
+    position: 'relative',
+    width: '100%',
+    zIndex: 1,
+  },
+
+  dropdownWrapperOpen: {
+    zIndex: 99999,
+    elevation: 99999,
+  },
+
+  dropdownTrigger: {
+    height: 52,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+
+  dropdownTriggerLabel: {
+    fontSize: 11,
+    color: '#888',
+    marginBottom: 2,
+  },
+
+  dropdownTriggerValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  dropdownTriggerText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    marginRight: 5,
+  },
+
+  dropdownMenuContainer: {
+    position: 'absolute',
+    top: 56,
+    left: 0,
+    right: 0,
+
+    zIndex: 999999,
+    elevation: 999999,
+  },
+
+  dropdownMenu: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+
+    elevation: 20,
+
+    // IMPORTANT
+    overflow: 'hidden',
+  },
+
+  dropdownScrollView: {
+    maxHeight: 220,
+  },
+
+  dropdownScrollContent: {
+    paddingVertical: 4,
+  },
+
+  dropdownItem: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+
+    backgroundColor: '#FFFFFF',
+  },
+
+  dropdownItemActive: {
+    backgroundColor: '#F5F2FF',
+  },
+
+  dropdownItemText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#444',
+  },
+
+  dropdownItemTextActive: {
+    color: '#6C63FF',
     fontWeight: '600',
   },
 });
