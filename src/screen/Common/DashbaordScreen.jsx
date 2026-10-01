@@ -32,7 +32,17 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // STATE MANAGEMENT
   // ============================================================
+
+  const [contacts, setContacts] = useState([]);
+
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [isLoadingMoreContacts, setIsLoadingMoreContacts] = useState(false);
+
+  const [contactsCurrentPage, setContactsCurrentPage] = useState(1);
+  const [contactsHasMorePages, setContactsHasMorePages] = useState(false);
+  const [isSavingSignature, setIsSavingSignature] = useState(false);
   const [activitySort, setActivitySort] = useState('newest');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Tab and navigation states
   const [activityTimeFilter, setActivityTimeFilter] = useState('all');
@@ -184,14 +194,8 @@ const DashbaordScreen = ({ navigation }) => {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [selectedSignature, setSelectedSignature] = useState('');
-  const [signatures, setSignatures] = useState([
-    {
-      id: '1',
-      name: 'Professional',
-      content: '<p>Best regards,<br/>John Doe<br/>LeafCom Team</p>',
-    },
-    { id: '2', name: 'Casual', content: '<p>Cheers,<br/>John</p>' },
-  ]);
+  const [signatures, setSignatures] = useState([]);
+  const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
   const [signatureName, setSignatureName] = useState('');
   const [signatureContent, setSignatureContent] = useState('');
 
@@ -321,8 +325,17 @@ const DashbaordScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchUsers(1, false);
+    fetchContacts(1, false);
     fetchUserTypes();
   }, []);
+
+  useEffect(() => {
+    fetchSignatures();
+  }, []);
+
+  // useEffect(() => {
+  //   fetchContacts(1, false);
+  // }, []);
 
   useEffect(() => {
     let unsubscribe = null;
@@ -697,36 +710,8 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // USER TYPES DATA FOR FILTERS
   // ============================================================
-  const userTypes = [
-    {
-      id: 'all',
-      name: 'All',
-      icon: require('../../asset/people.png'),
-    },
-    {
-      id: 'business',
-      name: 'Business',
-      icon: require('../../asset/business.png'),
-    },
-    {
-      id: 'individual',
-      name: 'Individual',
-      icon: require('../../asset/people.png'),
-    },
-    {
-      id: 'team',
-      name: 'Team',
-      icon: require('../../asset/group-chat.png'),
-    },
-  ];
-
-  const subUserTypes = {
-    business: ['Enterprise', 'Small Business', 'Startup'],
-    individual: ['Premium', 'Standard', 'Basic'],
-    team: ['Developers', 'Designers', 'Managers'],
-    all: ['All Users'],
-  };
-
+  const [userTypes, setUserTypes] = useState([]);
+  const [subUserTypes, setSubUserTypes] = useState({});
   // ============================================================
   // COMMUNICATION OPTIONS
   // ============================================================
@@ -779,100 +764,6 @@ const DashbaordScreen = ({ navigation }) => {
   ];
 
   // ============================================================
-  // CONTACTS DATA
-  // ============================================================
-  const contacts = [
-    {
-      id: '1',
-      name: 'John Smith',
-      number: '+1 234-567-8901',
-      type: 'business',
-      subType: 'Enterprise',
-      tag: 'Client',
-      hasWhatsApp: true,
-      hasMessage: true,
-      email: 'john@example.com',
-    },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      number: '+1 234-567-8902',
-      type: 'individual',
-      subType: 'Premium',
-      tag: 'Team',
-      hasWhatsApp: true,
-      hasMessage: true,
-      email: 'sarah@example.com',
-    },
-    {
-      id: '3',
-      name: 'Michael Brown',
-      number: '+1 234-567-8903',
-      type: 'business',
-      subType: 'Small Business',
-      tag: 'Client',
-      hasWhatsApp: false,
-      hasMessage: true,
-      email: 'michael@example.com',
-    },
-    {
-      id: '4',
-      name: 'Emily Davis',
-      number: '+1 234-567-8904',
-      type: 'individual',
-      subType: 'Standard',
-      tag: 'Team',
-      hasWhatsApp: true,
-      hasMessage: false,
-      email: 'emily@example.com',
-    },
-    {
-      id: '5',
-      name: 'Robert Wilson',
-      number: '+1 234-567-8905',
-      type: 'team',
-      subType: 'Developers',
-      tag: 'Admin',
-      hasWhatsApp: true,
-      hasMessage: true,
-      email: 'robert@example.com',
-    },
-    {
-      id: '6',
-      name: 'Lisa Anderson',
-      number: '+1 234-567-8906',
-      type: 'business',
-      subType: 'Startup',
-      tag: 'Client',
-      hasWhatsApp: false,
-      hasMessage: true,
-      email: 'lisa@example.com',
-    },
-    {
-      id: '7',
-      name: 'David Martinez',
-      number: '+1 234-567-8907',
-      type: 'individual',
-      subType: 'Basic',
-      tag: 'Team',
-      hasWhatsApp: true,
-      hasMessage: true,
-      email: 'david@example.com',
-    },
-    {
-      id: '8',
-      name: 'Jennifer Taylor',
-      number: '+1 234-567-8908',
-      type: 'team',
-      subType: 'Designers',
-      tag: 'Admin',
-      hasWhatsApp: true,
-      hasMessage: false,
-      email: 'jennifer@example.com',
-    },
-  ];
-
-  // ============================================================
   // DIALPAD NUMBERS
   // ============================================================
   const dialpadNumbers = [
@@ -920,6 +811,32 @@ const DashbaordScreen = ({ navigation }) => {
     return filtered;
   };
 
+  // const getFilteredContacts = type => {
+  //   let filtered = contacts;
+
+  //   if (type === 'whatsapp') {
+  //     filtered = filtered.filter(c => c.hasWhatsApp);
+  //   } else if (type === 'message') {
+  //     filtered = filtered.filter(c => c.hasMessage);
+  //   }
+
+  //   if (selectedUserType !== 'all') {
+  //     filtered = filtered.filter(c => c.type === selectedUserType);
+  //     if (selectedSubType !== 'All Users') {
+  //       filtered = filtered.filter(c => c.subType === selectedSubType);
+  //     }
+  //   }
+
+  //   if (contactSearch) {
+  //     filtered = filtered.filter(
+  //       c =>
+  //         c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+  //         c.number.includes(contactSearch),
+  //     );
+  //   }
+  //   return filtered;
+  // };
+
   const getFilteredContacts = type => {
     let filtered = contacts;
 
@@ -930,22 +847,30 @@ const DashbaordScreen = ({ navigation }) => {
     }
 
     if (selectedUserType !== 'all') {
-      filtered = filtered.filter(c => c.type === selectedUserType);
+      filtered = filtered.filter(
+        c => c.type?.toLowerCase() === selectedUserType?.toLowerCase(),
+      );
+
       if (selectedSubType !== 'All Users') {
-        filtered = filtered.filter(c => c.subType === selectedSubType);
+        filtered = filtered.filter(
+          c => c.subType?.toLowerCase() === selectedSubType?.toLowerCase(),
+        );
       }
     }
 
     if (contactSearch) {
+      const search = contactSearch.toLowerCase().trim();
+
       filtered = filtered.filter(
         c =>
-          c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-          c.number.includes(contactSearch),
+          (c.name || '').toLowerCase().includes(search) ||
+          (c.number || '').toLowerCase().includes(search) ||
+          (c.email || '').toLowerCase().includes(search),
       );
     }
+
     return filtered;
   };
-
   const getFilteredActivityWithQuickFilters = () => {
     let filtered = [...activityData];
 
@@ -1301,8 +1226,54 @@ const DashbaordScreen = ({ navigation }) => {
         }));
 
         setCategories(dynamicCategories);
+
+        const apiData = res.data;
+
+        const formattedUserTypes = apiData.map((item, index) => {
+          let icon = require('../../asset/people.png');
+
+          if (item.type === 'All') {
+            icon = require('../../asset/people.png');
+          } else if (item.type === 'Clients') {
+            icon = require('../../asset/business.png');
+          } else if (item.type === 'Users') {
+            icon = require('../../asset/people.png');
+          } else if (item.type === 'Sales Agent') {
+            icon = require('../../asset/group-chat.png');
+          } else if (item.type === 'Department') {
+            icon = require('../../asset/business.png');
+          } else if (item.type === 'Support') {
+            icon = require('../../asset/settings.png');
+          } else if (item.type === 'Leads') {
+            icon = require('../../asset/people.png');
+          } else {
+            icon = require('../../asset/people.png');
+          }
+
+          return {
+            id: item.type.toLowerCase().replace(/\s+/g, '_'),
+            name: item.type,
+            icon,
+            userCount: Number(item.user_count || 0),
+            unreadCount: Number(item.unread_count || 0),
+          };
+        });
+
+        // Dynamic sub user types
+        const formattedSubUserTypes = {};
+
+        apiData.forEach(item => {
+          const typeId = item.type.toLowerCase().replace(/\s+/g, '_');
+
+          formattedSubUserTypes[typeId] = [...(item.sub_types || [])];
+        });
+
+        setUserTypes(formattedUserTypes);
+        setSubUserTypes(formattedSubUserTypes);
       } else {
         setCategories([]);
+        setUserTypes([]);
+        setSubUserTypes({});
       }
     } catch (error) {
       console.log(
@@ -1315,138 +1286,6 @@ const DashbaordScreen = ({ navigation }) => {
       setIsLoadingCategories(false);
     }
   };
-
-  // const fetchUsers = async (
-  //   pageNumber = 1,
-  //   loadMore = false,
-  //   type = selectedType,
-  //   subType = selectedSubType,
-  // ) => {
-  //   try {
-  //     if (loadMore) {
-  //       setIsLoadingMoreUsers(true);
-  //     } else {
-  //       setIsLoadingUsers(true);
-  //     }
-
-  //     const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
-  //     const payload = {
-  //       type: type || 'All',
-  //       sub_type: subType || '',
-  //       search_text: '',
-  //       is_show_all: false,
-  //       per_page: 10,
-  //       page: pageNumber,
-  //       sort_by: getSortByValue(selectedTimeFilter),
-  //     };
-
-  //     console.log('USER LIST PAYLOAD:', payload);
-
-  //     const response = await axios.post(
-  //       'https://leafcom.us/backend/api/chat-application/usersList',
-  //       payload,
-  //       {
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       },
-  //     );
-
-  //     const res = response.data;
-
-  //     console.log('USER LIST RESPONSE:', res);
-
-  //     if (res.success && Array.isArray(res.data)) {
-  //       const newUsers = res.data.map(item => ({
-  //         id: String(item.sender_id),
-  //         name: item.user_name || '',
-
-  //         avatar: item.profile_picture
-  //           ? { uri: item.profile_picture }
-  //           : require('../../asset/dummyuser.png'),
-
-  //         tag: item.user_type_details || item.user_type || '',
-
-  //         unread: Number(item.total_unread_message_count || 0),
-
-  //         sender_id: item.sender_id,
-  //         user_type: item.user_type,
-  //         user_type_details: item.user_type_details,
-  //         user_specifics: item.user_specifics,
-  //         email: item.email,
-  //         whatsapp_number: item.whatsapp_number,
-  //         mobile_no: item.mobile_no,
-  //         user_id_other_software: item.user_id_other_software,
-  //         main_id: item.main_id,
-  //         sub_id: item.sub_id,
-  //         sub_details: item.sub_details,
-  //         main_details: item.main_details,
-  //         last_message_date: item.last_message_date,
-  //         brand_name: item.brand_name,
-  //         office_name: item.office_name,
-  //       }));
-
-  //       // Add users to existing list
-  //       if (loadMore) {
-  //         setUserList(prev => [...prev, ...newUsers]);
-  //       } else {
-  //         setUserList(newUsers);
-  //       }
-
-  //       // --------------------------------
-  //       // TOTAL USER COUNT
-  //       // --------------------------------
-  //       const pagination = res.pagination;
-
-  //       setTotalReadCount(Number(pagination?.total || 0));
-
-  //       // --------------------------------
-  //       // UNREAD COUNT FOR THIS PAGE
-  //       // --------------------------------
-  //       const pageUnreadCount = res.data.reduce(
-  //         (total, item) => total + Number(item.total_unread_message_count || 0),
-  //         0,
-  //       );
-
-  //       // --------------------------------
-  //       // ADD PAGE UNREAD TO TOTAL
-  //       // --------------------------------
-  //       if (loadMore) {
-  //         setTotalUnreadCount(prev => prev + pageUnreadCount);
-  //       } else {
-  //         // Page 1 / fresh filter
-  //         setTotalUnreadCount(pageUnreadCount);
-  //       }
-
-  //       console.log('PAGE:', pageNumber);
-  //       console.log('PAGE UNREAD:', pageUnreadCount);
-  //       console.log('TOTAL USERS:', pagination?.total);
-
-  //       setCurrentPage(Number(pagination?.current_page || pageNumber));
-
-  //       setHasMorePages(Boolean(pagination?.has_more_pages));
-  //     } else {
-  //       if (!loadMore) {
-  //         setUserList([]);
-  //       }
-
-  //       setHasMorePages(false);
-  //     }
-  //   } catch (error) {
-  //     console.log(
-  //       'Users List API Error:',
-  //       error.response?.data || error.message,
-  //     );
-
-  //     if (!loadMore) {
-  //       setUserList([]);
-  //     }
-  //   } finally {
-  //     setIsLoadingUsers(false);
-  //     setIsLoadingMoreUsers(false);
-  //   }
-  // };
 
   // ============================================================
   // LOAD MORE USERS
@@ -1598,6 +1437,382 @@ const DashbaordScreen = ({ navigation }) => {
     setShowFilterModal(false);
 
     fetchUsers(1, false, parentType, subType);
+  };
+
+  const handleSaveSignature = async () => {
+    if (!signatureName.trim()) {
+      Alert.alert('Validation', 'Please enter signature name.');
+      return;
+    }
+
+    if (!signatureContent.trim()) {
+      Alert.alert('Validation', 'Please enter signature content.');
+      return;
+    }
+
+    try {
+      setIsSavingSignature(true);
+
+      //const token = await AsyncStorage.getItem('token');
+      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found.');
+        return;
+      }
+
+      const payload = {
+        name: signatureName.trim(),
+        content: signatureContent.trim(),
+      };
+
+      console.log('CREATE SIGNATURE PAYLOAD:', payload);
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/createSignature',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('CREATE SIGNATURE RESPONSE:', response.data);
+
+      if (response.data?.success) {
+        const createdSignature = response.data.data;
+
+        // Add the newly created signature to local list
+        fetchSignatures();
+
+        // Clear fields
+        setSignatureName('');
+        setSignatureContent('');
+
+        // Close modal
+        setShowAddSignatureModal(false);
+
+        Alert.alert(
+          'Success',
+          response.data.message || 'Signature created successfully.',
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          response.data?.message || 'Failed to create signature.',
+        );
+      }
+    } catch (error) {
+      console.log(
+        'CREATE SIGNATURE API ERROR:',
+        error.response?.data || error.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Something went wrong while creating the signature.',
+      );
+    } finally {
+      setIsSavingSignature(false);
+    }
+  };
+
+  const fetchSignatures = async () => {
+    try {
+      setIsLoadingSignatures(true);
+
+      //const token = await AsyncStorage.getItem('token');
+      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+
+      if (!token) {
+        console.log('Authentication token not found');
+        return;
+      }
+
+      const response = await axios.get(
+        'https://leafcom.us/backend/api/chat-application/getUserSignatureList',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('SIGNATURE LIST RESPONSE:', response.data);
+
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        const formattedSignatures = response.data.data.map(item => ({
+          id: String(item.id),
+          name: item.name,
+          content: '', // API currently does not return content
+        }));
+
+        setSignatures(formattedSignatures);
+      } else {
+        setSignatures([]);
+      }
+    } catch (error) {
+      console.log(
+        'GET SIGNATURE LIST API ERROR:',
+        error.response?.data || error.message,
+      );
+
+      setSignatures([]);
+    } finally {
+      setIsLoadingSignatures(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailTo.trim()) {
+      Alert.alert('Validation', 'Please enter recipient email.');
+      return;
+    }
+
+    if (!emailSubject.trim()) {
+      Alert.alert('Validation', 'Please enter subject.');
+      return;
+    }
+
+    if (!emailBody.trim()) {
+      Alert.alert('Validation', 'Please enter email body.');
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+
+      //const token = await AsyncStorage.getItem('token');
+      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found.');
+        return;
+      }
+
+      const payload = {
+        subject: emailSubject.trim(),
+        body: emailBody.trim(),
+        send_to: emailTo.trim(),
+        signature_id: selectedSignature ? String(selectedSignature) : '',
+      };
+
+      console.log('========== EMAIL REQUEST ==========');
+      console.log(
+        'URL:',
+        'https://leafcom.us/backend/api/chat-application/sendUserEmail',
+      );
+      console.log('PAYLOAD:', JSON.stringify(payload, null, 2));
+      console.log('TOKEN EXISTS:', !!token);
+      console.log('SIGNATURE ID:', selectedSignature);
+      console.log('===================================');
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/sendUserEmail',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('========== EMAIL RESPONSE ==========');
+      console.log(JSON.stringify(response.data, null, 2));
+      console.log('STATUS:', response.status);
+      console.log('====================================');
+
+      if (response.data?.success) {
+        Alert.alert(
+          'Success',
+          response.data.message || 'Email sent successfully.',
+        );
+
+        setEmailTo('');
+        setEmailSubject('');
+        setEmailBody('');
+        setSelectedSignature('');
+      } else {
+        Alert.alert('Error', response.data?.message || 'Failed to send email.');
+      }
+    } catch (error) {
+      console.log('========== EMAIL ERROR ==========');
+      console.log('STATUS:', error.response?.status);
+      console.log('DATA:', error.response?.data);
+      console.log('MESSAGE:', error.message);
+      console.log('=================================');
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Something went wrong while sending email.',
+      );
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const fetchContacts = async (
+    pageNumber = 1,
+    loadMore = false,
+    selectedType = selectedUserType,
+    selectedSubTypeValue = selectedSubType,
+  ) => {
+    try {
+      if (loadMore) {
+        setIsLoadingMoreContacts(true);
+      } else {
+        //setIsLoadingContacts(true);
+        setIsLoadingCategories(true);
+      }
+
+      //const token = await AsyncStorage.getItem('token');
+      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+
+      if (!token) {
+        console.log('Authentication token not found');
+        return;
+      }
+
+      const apiType =
+        selectedType === 'all'
+          ? 'All'
+          : userTypes.find(item => item.id === selectedType)?.name || '';
+
+      // For All Users, send empty subtype
+      const apiSubType =
+        !selectedSubTypeValue || selectedSubTypeValue === 'All Users'
+          ? ''
+          : selectedSubTypeValue;
+
+      const payload = {
+        type: apiType,
+        sub_type: apiSubType,
+        search_text: '',
+        is_show_all: 1,
+        per_page: 10,
+        page: pageNumber,
+        sort_by: '',
+      };
+
+      console.log('CONTACT API PAYLOAD:', payload);
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/usersList',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('CONTACT API RESPONSE:', response.data);
+
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        const apiContacts = response.data.data.map(item => ({
+          id: String(item.sender_id),
+          name: (item.user_name || '').trim(),
+          number: item.mobile_no || '',
+          type: item.user_type || '',
+          subType: item.user_type_details || '',
+          tag: item.user_type || '',
+
+          // Same logic as renderUserItem
+          hasWhatsApp:
+            !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+
+          hasMessage: !!item.mobile_no && item.mobile_no.trim() !== '',
+
+          email: item.email || '',
+          whatsapp_number: item.whatsapp_number || '',
+          profile_picture: item.profile_picture || '',
+          unread: Number(item.total_unread_message_count || 0),
+
+          sender_id: item.sender_id,
+          user_type: item.user_type,
+          user_type_details: item.user_type_details,
+          user_specifics: item.user_specifics,
+          user_id_other_software: item.user_id_other_software,
+          main_id: item.main_id,
+          sub_id: item.sub_id,
+          sub_details: item.sub_details,
+          main_details: item.main_details,
+          brand_name: item.brand_name,
+          office_name: item.office_name,
+          last_message_date: item.last_message_date,
+        }));
+
+        if (loadMore) {
+          setContacts(prev => [...prev, ...apiContacts]);
+        } else {
+          setContacts(apiContacts);
+        }
+
+        const pagination = response.data.pagination;
+
+        setContactsCurrentPage(Number(pagination?.current_page || pageNumber));
+
+        setContactsHasMorePages(Boolean(pagination?.has_more_pages));
+      } else {
+        if (!loadMore) {
+          setContacts([]);
+        }
+
+        setContactsHasMorePages(false);
+      }
+    } catch (error) {
+      console.log('CONTACT API ERROR:', error.response?.data || error.message);
+
+      if (!loadMore) {
+        setContacts([]);
+      }
+    } finally {
+      
+      setIsLoadingCategories(false);
+      setIsLoadingMoreContacts(false);
+    }
+  };
+
+  const handleUserTypeSelect = typeId => {
+    setSelectedUserType(typeId);
+
+    // Reset subtype
+    setSelectedSubType('All Users');
+
+    // Fetch selected type
+    fetchContacts(1, false, typeId, '');
+  };
+
+  const handleSubTypeSelect = subType => {
+    setSelectedSubType(subType);
+
+    // Fetch selected type + subtype
+    fetchContacts(1, false, selectedUserType, subType);
+  };
+
+  const loadMoreContacts = () => {
+    if (isLoadingMoreContacts || !contactsHasMorePages) {
+      return;
+    }
+
+    const nextPage = contactsCurrentPage + 1;
+
+    fetchContacts(
+      nextPage,
+      true,
+      selectedUserType,
+      selectedSubType === 'All Users' ? '' : selectedSubType,
+    );
   };
   // ============================================================
   // MODAL MANAGEMENT
@@ -2059,11 +2274,34 @@ const DashbaordScreen = ({ navigation }) => {
   const renderContactItem = ({ item }) => (
     <TouchableOpacity style={styles.contactCard}>
       <View style={styles.contactAvatar}>
-        <Text style={styles.contactAvatarText}>{item.name.charAt(0)}</Text>
+        {item.profile_picture ? (
+          <Image
+            source={{ uri: item.profile_picture }}
+            style={styles.whatsappContactAvatarImage}
+          />
+        ) : (
+          <Text style={styles.whatsappContactAvatarText}>
+            {item.name?.charAt(0)?.toUpperCase() || '?'}
+          </Text>
+        )}
       </View>
       <View style={styles.contactInfo}>
         <Text style={styles.contactName}>{item.name}</Text>
+        {item.brand_name?.trim() !== '' && (
+          <View style={{ marginVertical: 4 }}>
+            <Text style={[styles.contactTagText, { color: '#181616' }]}>
+              {item.brand_name?.trim()}-{item.office_name?.trim()}
+            </Text>
+          </View>
+        )}
         <View style={styles.contactTags}>
+          {item.sub_details != null && item.sub_details.trim() !== '' && (
+            <View style={[styles.contactTag, { backgroundColor: '#1b0ff0' }]}>
+              <Text style={[styles.contactTagText, { color: '#FFF' }]}>
+                {item.sub_details?.trim()}
+              </Text>
+            </View>
+          )}
           <View style={[styles.contactTag, { backgroundColor: '#6C63FF20' }]}>
             <Text style={[styles.contactTagText, { color: '#6C63FF' }]}>
               {item.type}
@@ -2092,22 +2330,24 @@ const DashbaordScreen = ({ navigation }) => {
               }}
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.contactIconSmall]}
-            onPress={() => {
-              setEmailTo(item.email || '');
-              setActiveTab('email');
-            }}
-          >
-            <Image
-              source={require('../../asset/mail.png')}
-              style={{
-                width: 22,
-                height: 22,
-                resizeMode: 'contain',
+          {isValidEmail(item.email) && (
+            <TouchableOpacity
+              style={[styles.contactIconSmall]}
+              onPress={() => {
+                setEmailTo(item.email || '');
+                setActiveTab('email');
               }}
-            />
-          </TouchableOpacity>
+            >
+              <Image
+                source={require('../../asset/mail.png')}
+                style={{
+                  width: 22,
+                  height: 22,
+                  resizeMode: 'contain',
+                }}
+              />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.contactIconSmall, { backgroundColor: '#4CAF5020' }]}
             onPress={() => openModal('dial')}
@@ -2121,7 +2361,7 @@ const DashbaordScreen = ({ navigation }) => {
               }}
             />
           </TouchableOpacity>
-          {item.hasWhatsApp && (
+          {item.whatsapp_number && item.whatsapp_number.trim() !== '' && (
             <TouchableOpacity
               style={[styles.contactIconSmall]}
               onPress={() => openModal('whatsapp')}
@@ -2284,12 +2524,15 @@ const DashbaordScreen = ({ navigation }) => {
               <FlatList
                 data={filteredContacts}
                 keyExtractor={item => item.id}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.whatsappContactCard}>
                     <View style={styles.whatsappContactAvatar}>
                       <Text style={styles.whatsappContactAvatarText}>
-                        {item.name.charAt(0)}
+                        {item.name?.charAt(0)?.toUpperCase() || '?'}
                       </Text>
+
                       <View style={styles.whatsappStatusDot} />
                     </View>
                     <View style={styles.whatsappContactInfo}>
@@ -2345,6 +2588,7 @@ const DashbaordScreen = ({ navigation }) => {
                             }}
                           />
                         </TouchableOpacity>
+
                         <TouchableOpacity
                           style={[styles.contactIconSmall]}
                           onPress={() => {
@@ -2361,6 +2605,7 @@ const DashbaordScreen = ({ navigation }) => {
                             }}
                           />
                         </TouchableOpacity>
+
                         <TouchableOpacity
                           style={[
                             styles.contactIconSmall,
@@ -2377,19 +2622,22 @@ const DashbaordScreen = ({ navigation }) => {
                             }}
                           />
                         </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.contactIconSmall]}
-                          onPress={() => openModal('whatsapp')}
-                        >
-                          <Image
-                            source={require('../../asset/whatsapp.png')}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              resizeMode: 'contain',
-                            }}
-                          />
-                        </TouchableOpacity>
+                        {item.whatsapp_number &&
+                          item.whatsapp_number.trim() !== '' && (
+                            <TouchableOpacity
+                              style={[styles.contactIconSmall]}
+                              onPress={() => openModal('whatsapp')}
+                            >
+                              <Image
+                                source={require('../../asset/whatsapp.png')}
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  resizeMode: 'contain',
+                                }}
+                              />
+                            </TouchableOpacity>
+                          )}
                         <TouchableOpacity
                           style={[styles.contactIconSmall]}
                           onPress={() => openModal('message')}
@@ -2407,21 +2655,54 @@ const DashbaordScreen = ({ navigation }) => {
                     </View>
                   </TouchableOpacity>
                 )}
+                ListFooterComponent={
+                  contactsHasMorePages ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.loadMoreButton,
+                        isLoadingMoreContacts && {
+                          opacity: 0.6,
+                        },
+                      ]}
+                      onPress={loadMoreContacts}
+                      disabled={isLoadingMoreContacts}
+                    >
+                      {isLoadingMoreContacts ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <Text style={styles.loadMoreText}>Load More</Text>
+
+                          <Image
+                            source={require('../../asset/arrow-down.png')}
+                            style={{
+                              width: 20,
+                              height: 20,
+                              resizeMode: 'contain',
+                              tintColor: '#fff',
+                            }}
+                          />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  ) : null
+                }
                 ListEmptyComponent={
-                  <View style={styles.whatsappEmptyContainer}>
-                    <Image
-                      source={icon}
-                      style={{
-                        width: 60,
-                        height: 60,
-                        resizeMode: 'contain',
-                        tintColor: iconColor + '40',
-                      }}
-                    />
-                    <Text style={styles.whatsappEmptyText}>
-                      No contacts found
-                    </Text>
-                  </View>
+                  isLoadingContacts ? (
+                    <View style={styles.emptyUserContainer}>
+                      <ActivityIndicator size="large" color="#6C63FF" />
+
+                      <Text style={styles.emptyUserText}>
+                        Loading contacts...
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.emptyUserContainer}>
+                      <Text style={styles.emptyUserText}>
+                        No contacts found
+                      </Text>
+                    </View>
+                  )
                 }
               />
             </View>
@@ -3684,24 +3965,19 @@ const DashbaordScreen = ({ navigation }) => {
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionButton, styles.saveButton]}
-                onPress={() => {
-                  if (signatureName && signatureContent) {
-                    setSignatures([
-                      ...signatures,
-                      {
-                        id: Date.now().toString(),
-                        name: signatureName,
-                        content: signatureContent,
-                      },
-                    ]);
-                    setSignatureName('');
-                    setSignatureContent('');
-                    setShowAddSignatureModal(false);
-                  }
-                }}
+                style={[
+                  styles.actionButton,
+                  styles.saveButton,
+                  isSavingSignature && { opacity: 0.6 },
+                ]}
+                onPress={handleSaveSignature}
+                disabled={isSavingSignature}
               >
-                <Text style={styles.saveButtonText}>Save Signature</Text>
+                {isSavingSignature ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save Signature</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -3837,7 +4113,7 @@ const DashbaordScreen = ({ navigation }) => {
                     selectedUserType === type.id && styles.userTypeChipActive,
                   ]}
                   onPress={() => {
-                    setSelectedUserType(type.id);
+                    handleUserTypeSelect(type.id);
                     setSelectedSubType('All Users');
                   }}
                 >
@@ -3877,7 +4153,7 @@ const DashbaordScreen = ({ navigation }) => {
                         styles.subTypeChip,
                         selectedSubType === sub && styles.subTypeChipActive,
                       ]}
-                      onPress={() => setSelectedSubType(sub)}
+                       onPress={() => handleSubTypeSelect(sub)}
                     >
                       <Text
                         style={[
@@ -4024,6 +4300,7 @@ const DashbaordScreen = ({ navigation }) => {
                     }}
                   />
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[styles.callActionBtn, { backgroundColor: '#3dd417' }]}
                 >
@@ -4037,6 +4314,7 @@ const DashbaordScreen = ({ navigation }) => {
                     }}
                   />
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[styles.callActionBtn, { backgroundColor: '#FF9800' }]}
                 >
@@ -4133,18 +4411,67 @@ const DashbaordScreen = ({ navigation }) => {
                 )}
               </View>
 
+              <View style={styles.contactCountHeader}>
+                <Text style={styles.contactCountText}>
+                  {getFilteredContacts('all').length} contacts found
+                </Text>
+              </View>
+
               <FlatList
                 data={getFilteredContacts('all')}
                 renderItem={renderContactItem}
                 keyExtractor={item => item.id}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.contactList}
-                ListHeaderComponent={
-                  <View style={styles.contactCountHeader}>
-                    <Text style={styles.contactCountText}>
-                      {getFilteredContacts('all').length} contacts found
-                    </Text>
-                  </View>
+                ListFooterComponent={
+                  contactsHasMorePages ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.loadMoreButton,
+                        isLoadingMoreContacts && {
+                          opacity: 0.6,
+                        },
+                      ]}
+                      onPress={loadMoreContacts}
+                      disabled={isLoadingMoreContacts}
+                    >
+                      {isLoadingMoreContacts ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <Text style={styles.loadMoreText}>Load More</Text>
+
+                          <Image
+                            source={require('../../asset/arrow-down.png')}
+                            style={{
+                              width: 20,
+                              height: 20,
+                              resizeMode: 'contain',
+                              tintColor: '#fff',
+                            }}
+                          />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  ) : null
+                }
+                ListEmptyComponent={
+                  isLoadingContacts ? (
+                    <View style={styles.emptyUserContainer}>
+                      <ActivityIndicator size="large" color="#6C63FF" />
+
+                      <Text style={styles.emptyUserText}>
+                        Loading contacts...
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.emptyUserContainer}>
+                      <Text style={styles.emptyUserText}>
+                        No contacts found
+                      </Text>
+                    </View>
+                  )
                 }
               />
             </View>
@@ -4457,138 +4784,179 @@ const DashbaordScreen = ({ navigation }) => {
       </View>
 
       {communicationFilter === 'email' && (
-        <ScrollView
-          style={styles.emailFormContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>To</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="Enter recipient email"
-              value={emailTo}
-              onChangeText={setEmailTo}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>From</Text>
-            <TextInput
-              style={[styles.formInput, styles.disabledInput]}
-              value={emailFrom}
-              editable={false}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Subject</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="Enter subject"
-              value={emailSubject}
-              onChangeText={setEmailSubject}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Body</Text>
-            <TextInput
-              style={[styles.formInput, styles.textAreaInput]}
-              placeholder="Write your email..."
-              value={emailBody}
-              onChangeText={setEmailBody}
-              placeholderTextColor="#999"
-              multiline
-              numberOfLines={8}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Signature</Text>
-            <TouchableOpacity
-              style={styles.signatureSelector}
-              onPress={() => openModal('signature')}
-            >
-              <Text style={styles.signatureSelectorText}>
-                {selectedSignature
-                  ? signatures.find(s => s.id === selectedSignature)?.name
-                  : 'Select Signature'}
-              </Text>
-
-              <Image
-                source={require('../../asset/chevron-down.png')}
-                style={{
-                  width: 20,
-                  height: 20,
-                  resizeMode: 'contain',
-                  tintColor: '#666',
-                }}
+        <View style={styles.emailFormWrapper}>
+          <ScrollView
+            style={styles.emailFormContainer}
+            contentContainerStyle={styles.emailFormContent}
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled={true}
+            bounces={true}
+          >
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>To</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Enter recipient email"
+                value={emailTo}
+                onChangeText={setEmailTo}
+                placeholderTextColor="#999"
+                keyboardType="email-address"
               />
-            </TouchableOpacity>
-            {selectedSignature && (
-              <View style={styles.signaturePreview}>
-                <Text style={styles.signaturePreviewLabel}>Preview:</Text>
-                <Text style={styles.signaturePreviewText} numberOfLines={2}>
-                  {signatures
-                    .find(s => s.id === selectedSignature)
-                    ?.content.replace(/<[^>]*>/g, '')}
-                </Text>
-              </View>
-            )}
-          </View>
+            </View>
 
-          <View style={styles.emailActions}>
-            <TouchableOpacity
-              style={[styles.emailActionBtn, styles.sendBtn]}
-              onPress={() => {
-                if (emailTo && emailSubject) {
-                  setEmailHistory([
-                    {
-                      id: Date.now().toString(),
-                      to: emailTo,
-                      subject: emailSubject || 'No Subject',
-                      date: new Date().toISOString().split('T')[0],
-                      status: 'Sent',
-                    },
-                    ...emailHistory,
-                  ]);
-                  setEmailTo('');
-                  setEmailSubject('');
-                  setEmailBody('');
-                }
-              }}
-            >
-              <Image
-                source={require('../../asset/send.png')}
-                style={{
-                  width: 20,
-                  height: 20,
-                  resizeMode: 'contain',
-                  tintColor: '#fff',
-                }}
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>From</Text>
+              <TextInput
+                style={[styles.formInput, styles.disabledInput]}
+                value={emailFrom}
+                editable={false}
               />
-              <Text style={styles.sendBtnText}>Send</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.emailActionBtn, styles.historyBtn]}
-              onPress={() => openModal('emailHistory')}
-            >
-              <Image
-                source={require('../../asset/time.png')}
-                style={{
-                  width: 20,
-                  height: 20,
-                  resizeMode: 'contain',
-                  tintColor: '#6C63FF',
-                }}
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Subject</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Enter subject"
+                value={emailSubject}
+                onChangeText={setEmailSubject}
+                placeholderTextColor="#999"
               />
-              <Text style={styles.historyBtnText}>History</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Body</Text>
+              <TextInput
+                style={[styles.formInput, styles.textAreaInput]}
+                placeholder="Write your email..."
+                value={emailBody}
+                onChangeText={setEmailBody}
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={8}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Signature</Text>
+
+              <TouchableOpacity
+                style={styles.signatureSelector}
+                onPress={() => {
+                  if (!isLoadingSignatures) {
+                    openModal('signature');
+                  }
+                }}
+                activeOpacity={0.7}
+                disabled={isLoadingSignatures}
+              >
+                {isLoadingSignatures ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <ActivityIndicator size="small" color="#6C63FF" />
+
+                    <Text
+                      style={[
+                        styles.signatureSelectorText,
+                        {
+                          marginLeft: 10,
+                          color: '#999',
+                        },
+                      ]}
+                    >
+                      Loading signatures...
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.signatureSelectorText}>
+                      {selectedSignature
+                        ? signatures.find(s => s.id === selectedSignature)?.name
+                        : 'Select Signature'}
+                    </Text>
+
+                    <Image
+                      source={require('../../asset/chevron-down.png')}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        resizeMode: 'contain',
+                        tintColor: '#666',
+                      }}
+                    />
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {!isLoadingSignatures && selectedSignature && (
+                <View style={styles.signaturePreview}>
+                  <Text style={styles.signaturePreviewLabel}>Preview:</Text>
+
+                  <Text style={styles.signaturePreviewText} numberOfLines={2}>
+                    {signatures.find(s => s.id === selectedSignature)
+                      ?.content || 'Signature content is not available.'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.emailActions}>
+              <TouchableOpacity
+                style={[
+                  styles.emailActionBtn,
+                  styles.sendBtn,
+                  isSendingEmail && { opacity: 0.6 },
+                ]}
+                onPress={handleSendEmail}
+                disabled={isSendingEmail}
+              >
+                {isSendingEmail ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Image
+                      source={require('../../asset/send.png')}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        resizeMode: 'contain',
+                        tintColor: '#fff',
+                      }}
+                    />
+
+                    <Text style={styles.sendBtnText}>Send</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.emailActionBtn, styles.historyBtn]}
+                onPress={() => openModal('emailHistory')}
+              >
+                <Image
+                  source={require('../../asset/time.png')}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    resizeMode: 'contain',
+                    tintColor: '#6C63FF',
+                  }}
+                />
+
+                <Text style={styles.historyBtnText}>History</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Extra bottom space so last buttons can scroll above modal edge */}
+            <View style={{ height: 30 }} />
+          </ScrollView>
+        </View>
       )}
     </View>
   );
@@ -6939,7 +7307,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   textAreaInput: {
-    minHeight: 120,
+    minHeight: 150,
     textAlignVertical: 'top',
   },
   signatureSelector: {
@@ -6981,7 +7349,7 @@ const styles = StyleSheet.create({
   emailActions: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 60,
   },
   emailActionBtn: {
     flexDirection: 'row',
@@ -7905,6 +8273,50 @@ const styles = StyleSheet.create({
   dropdownItemTextActive: {
     color: '#6C63FF',
     fontWeight: '600',
+  },
+  emailFormWrapper: {
+    flex: 1,
+    minHeight: 0,
+  },
+
+  emailFormContainer: {
+    flex: 1,
+  },
+
+  emailFormContent: {
+    paddingBottom: 20,
+    paddingHorizontal: 2,
+  },
+  emptyUserContainer: {
+    flex: 1,
+    minHeight: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+  },
+
+  emptyUserText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#777',
+    textAlign: 'center',
+    fontFamily: 'OpenSans-Regular',
+  },
+  whatsappContactAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E8E0EE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  whatsappContactAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
+    resizeMode: 'cover',
   },
 });
 
