@@ -1331,6 +1331,8 @@ const DashbaordScreen = ({ navigation }) => {
 
       const res = response.data;
 
+      console.log('USERLIST API RESPONSE:', response.data);
+
       if (res.success && Array.isArray(res.data)) {
         const newUsers = res.data.map(item => ({
           id: String(item.sender_id),
@@ -1777,7 +1779,6 @@ const DashbaordScreen = ({ navigation }) => {
         setContacts([]);
       }
     } finally {
-      
       setIsLoadingCategories(false);
       setIsLoadingMoreContacts(false);
     }
@@ -2395,7 +2396,12 @@ const DashbaordScreen = ({ navigation }) => {
   );
 
   const renderContactListModal = (title, type, icon, iconColor) => {
-    const filteredContacts = getFilteredContacts(type);
+    const filteredContacts =
+      type === 'whatsapp'
+        ? userList.filter(
+            user => user.whatsapp_number && user.whatsapp_number.trim() !== '',
+          )
+        : getFilteredContacts(type);
     const isVisible =
       type === 'whatsapp' ? showWhatsAppModal : showMessageModal;
     const setVisible =
@@ -2528,13 +2534,27 @@ const DashbaordScreen = ({ navigation }) => {
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity style={styles.whatsappContactCard}>
-                    <View style={styles.whatsappContactAvatar}>
+                    {/* <View style={styles.whatsappContactAvatar}>
                       <Text style={styles.whatsappContactAvatarText}>
                         {item.name?.charAt(0)?.toUpperCase() || '?'}
                       </Text>
 
                       <View style={styles.whatsappStatusDot} />
+                    </View> */}
+
+                    <View style={styles.whatsappContactAvatar}>
+                      {item.avatar ? (
+                        <Image
+                          source={item.avatar}
+                          style={styles.whatsappContactAvatarImage}
+                        />
+                      ) : (
+                        <Text style={styles.whatsappContactAvatarText}>
+                          {item.name?.charAt(0)?.toUpperCase() || '?'}
+                        </Text>
+                      )}
                     </View>
+
                     <View style={styles.whatsappContactInfo}>
                       <Text style={styles.whatsappContactName}>
                         {item.name}
@@ -2588,23 +2608,24 @@ const DashbaordScreen = ({ navigation }) => {
                             }}
                           />
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.contactIconSmall]}
-                          onPress={() => {
-                            setEmailTo(item.email || '');
-                            setActiveTab('email');
-                          }}
-                        >
-                          <Image
-                            source={require('../../asset/mail.png')}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              resizeMode: 'contain',
+                        {isValidEmail(item.email) && (
+                          <TouchableOpacity
+                            style={[styles.contactIconSmall]}
+                            onPress={() => {
+                              setEmailTo(item.email || '');
+                              setActiveTab('email');
                             }}
-                          />
-                        </TouchableOpacity>
+                          >
+                            <Image
+                              source={require('../../asset/mail.png')}
+                              style={{
+                                width: 20,
+                                height: 20,
+                                resizeMode: 'contain',
+                              }}
+                            />
+                          </TouchableOpacity>
+                        )}
 
                         <TouchableOpacity
                           style={[
@@ -2664,10 +2685,10 @@ const DashbaordScreen = ({ navigation }) => {
                           opacity: 0.6,
                         },
                       ]}
-                      onPress={loadMoreContacts}
-                      disabled={isLoadingMoreContacts}
+                      onPress={loadMoreUsers}
+                      disabled={isLoadingMoreUsers}
                     >
-                      {isLoadingMoreContacts ? (
+                      {isLoadingMoreUsers ? (
                         <ActivityIndicator size="small" color="#FFFFFF" />
                       ) : (
                         <>
@@ -3451,7 +3472,14 @@ const DashbaordScreen = ({ navigation }) => {
             elevation: 4,
           },
         ]}
-        onPress={() => navigation.navigate('UserChatPage')}
+        onPress={() =>
+          navigation.navigate('UserChatPage', {
+            senderId: item.sender_id,
+            userName: item.sender_name,
+            userImage: item.sender_profile_picture,
+            userType: item.sender_profile_type,
+          })
+        }
       >
         <View style={styles.avatarContainer}>
           <Image source={item.avatar} style={styles.avatar} />
@@ -4153,7 +4181,7 @@ const DashbaordScreen = ({ navigation }) => {
                         styles.subTypeChip,
                         selectedSubType === sub && styles.subTypeChipActive,
                       ]}
-                       onPress={() => handleSubTypeSelect(sub)}
+                      onPress={() => handleSubTypeSelect(sub)}
                     >
                       <Text
                         style={[
