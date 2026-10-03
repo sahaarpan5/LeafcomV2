@@ -18,6 +18,7 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import Loader from '../../util/Loader';
 import { ref, onValue } from 'firebase/database';
@@ -336,6 +337,18 @@ const DashbaordScreen = ({ navigation }) => {
   // useEffect(() => {
   //   fetchContacts(1, false);
   // }, []);
+
+  const handleOpenTutorial = async () => {
+    const pdfUrl =
+      'https://leafnet.us/assets/sample-documents/LEAFCOM-Training-Tutorial.pdf';
+
+    try {
+      await Linking.openURL(pdfUrl);
+    } catch (error) {
+      console.log('Tutorial PDF Error:', error);
+      Alert.alert('Error', 'Unable to open the tutorial PDF.');
+    }
+  };
 
   useEffect(() => {
     let unsubscribe = null;
@@ -1985,7 +1998,7 @@ const DashbaordScreen = ({ navigation }) => {
                 styles.headerIconMenu,
                 { height: 30, width: 30, marginRight: 8 },
               ]}
-              onPress={() => setShowSideNav(!showSideNav)}
+              onPress={() => setShowMessageSidebar(true)}
             >
               <Image
                 source={require('../../asset/bell.png')}
@@ -1998,7 +2011,7 @@ const DashbaordScreen = ({ navigation }) => {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={[
                 styles.headerIconButton,
                 styles.headerIconMenu,
@@ -2015,7 +2028,7 @@ const DashbaordScreen = ({ navigation }) => {
                   tintColor: '#FFF',
                 }}
               />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
       </View>
@@ -4051,8 +4064,22 @@ const DashbaordScreen = ({ navigation }) => {
                 style={styles.dashboardOptionItem}
                 onPress={() => {
                   setShowDashboardModal(false);
-                  if (option.id === 'dashboard') {
-                    setActiveTab('directory');
+
+                  switch (option.id) {
+                    case 'dashboard':
+                      setActiveTab('directory');
+                      break;
+
+                    case 'tutorial':
+                      handleOpenTutorial();
+                      break;
+
+                    case 'contacts':
+                      setActiveTab('contacts');
+                      break;
+
+                    default:
+                      break;
                   }
                 }}
               >
@@ -5095,7 +5122,11 @@ const DashbaordScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sideNavItem}
-            onPress={() => setShowSideNav(false)}
+            onPress={() => {
+              setShowSideNav(false);
+
+              handleOpenTutorial();
+            }}
           >
             <Image
               source={require('../../asset/help-circle.png')}

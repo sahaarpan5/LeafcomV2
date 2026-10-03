@@ -25,6 +25,8 @@ import {
 import { ref, onValue } from 'firebase/database';
 import { database } from '../../config/firebaseConfig';
 import axios from 'axios';
+import EmojiPicker from 'rn-emoji-keyboard';
+import Loader from '../../util/Loader';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const BOTTOM_SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.92;
@@ -104,19 +106,6 @@ const MOCK_TRANSLATIONS = {
   en: 'This is a sample message translated to English.',
 };
 
-const TYPE_OPTIONS = ['Client', 'Vendor', 'Partner', 'Employee', 'Contractor'];
-const STATE_OPTIONS = [
-  'California',
-  'Texas',
-  'New York',
-  'Florida',
-  'Illinois',
-  'Washington',
-  'Massachusetts',
-  'Other',
-];
-const COUNTRY_CODES = ['+1', '+44', '+91', '+61', '+81', '+86', '+971', '+49'];
-
 const WHATSAPP_TEMPLATES = [
   {
     id: 'custom',
@@ -157,13 +146,13 @@ const WHATSAPP_TEMPLATES = [
 ];
 
 // SMS sender numbers
-const SMS_SENDERS = [
-  { id: 'primary', label: 'Primary Number', number: '+1 234-567-8901' },
-  { id: 'business', label: 'Business Line', number: '+1 800-555-0100' },
-  { id: 'support', label: 'Support Line', number: '+1 800-555-0200' },
-  { id: 'sales', label: 'Sales Line', number: '+1 800-555-0300' },
-  { id: 'personal', label: 'Personal Number', number: '+1 415-555-0142' },
-];
+// const SMS_SENDERS = [
+//   { id: 'primary', label: 'Primary Number', number: '+1 234-567-8901' },
+//   { id: 'business', label: 'Business Line', number: '+1 800-555-0100' },
+//   { id: 'support', label: 'Support Line', number: '+1 800-555-0200' },
+//   { id: 'sales', label: 'Sales Line', number: '+1 800-555-0300' },
+//   { id: 'personal', label: 'Personal Number', number: '+1 415-555-0142' },
+// ];
 
 // ============================================================
 // MAIN COMPONENT
@@ -190,17 +179,25 @@ const UserChatPage = ({ navigation, route }) => {
     phone: '',
     whatsapp: '',
   });
+const [SMS_SENDERS, setSMSSenders] = useState([]);
+  const [stateOptions, setStateOptions] = useState([]);
+  const [stateLoading, setStateLoading] = useState(false);
 
   const [messages, setMessages] = useState([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
+  const [typeOptions, setTypeOptions] = useState([]);
+
   const [isSendingSms, setIsSendingSms] = useState(false);
+
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
 
   const [inputMessage, setInputMessage] = useState('');
   const [selectedMessageType, setSelectedMessageType] = useState('inapp');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [showAISuggestion, setShowAISuggestion] = useState(false);
+  const [showEmojiKeyboard, setShowEmojiKeyboard] = useState(false);
 
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
@@ -248,6 +245,9 @@ const UserChatPage = ({ navigation, route }) => {
   const [translatedResult, setTranslatedResult] = useState('');
 
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [countryOptions, setCountryOptions] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
   const [showStateDropdown, setShowStateDropdown] = useState(false);
   const [showPhoneCountryDropdown, setShowPhoneCountryDropdown] =
     useState(false);
@@ -294,145 +294,16 @@ const UserChatPage = ({ navigation, route }) => {
     phoneNumber: '',
     whatsappCountryCode: '+1',
     whatsappNumber: '',
+    countryId: null,
+    country_phone_code: '+1',
+    country_code: '',
+    state: '',
+    stateId: null,
+    typeId: null,
+    email: '',
   });
 
-  const [contacts, setContacts] = useState([
-    {
-      id: '1',
-      name: 'John Smith',
-      userTag: '@john.smith',
-      email: 'john.smith@example.com',
-      phone: '+1 234-567-8901',
-      whatsapp: '+1 234-567-8901',
-      address: '123 Main St, San Francisco, CA 94105, USA',
-      image: { uri: 'https://i.pravatar.cc/150?img=12' },
-      role: 'System Admin',
-      subtype: 'Admin',
-      form: {
-        type: 'Employee',
-        firstName: 'John',
-        middleName: '',
-        lastName: 'Smith',
-        address: '123 Main St',
-        city: 'San Francisco',
-        state: 'California',
-        zip: '94105',
-        country: 'USA',
-        phoneCountryCode: '+1',
-        phoneNumber: '234-567-8901',
-        whatsappCountryCode: '+1',
-        whatsappNumber: '234-567-8901',
-      },
-    },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      userTag: '@sarah.j',
-      email: 'sarah.j@example.com',
-      phone: '+1 234-567-8902',
-      whatsapp: '+1 234-567-8902',
-      address: '456 Oak Ave, Los Angeles, CA 90001, USA',
-      image: { uri: 'https://i.pravatar.cc/150?img=5' },
-      role: 'Client Manager',
-      subtype: 'Manager',
-      form: {
-        type: 'Client',
-        firstName: 'Sarah',
-        middleName: '',
-        lastName: 'Johnson',
-        address: '456 Oak Ave',
-        city: 'Los Angeles',
-        state: 'California',
-        zip: '90001',
-        country: 'USA',
-        phoneCountryCode: '+1',
-        phoneNumber: '234-567-8902',
-        whatsappCountryCode: '+1',
-        whatsappNumber: '234-567-8902',
-      },
-    },
-    {
-      id: '3',
-      name: 'Mike Chen',
-      userTag: '@mike.chen',
-      email: 'mike.chen@example.com',
-      phone: '+1 234-567-8903',
-      whatsapp: '+1 234-567-8903',
-      address: '789 Pine Rd, New York, NY 10001, USA',
-      image: { uri: 'https://i.pravatar.cc/150?img=8' },
-      role: 'Team Lead',
-      subtype: 'Lead',
-      form: {
-        type: 'Employee',
-        firstName: 'Mike',
-        middleName: '',
-        lastName: 'Chen',
-        address: '789 Pine Rd',
-        city: 'New York',
-        state: 'New York',
-        zip: '10001',
-        country: 'USA',
-        phoneCountryCode: '+1',
-        phoneNumber: '234-567-8903',
-        whatsappCountryCode: '+1',
-        whatsappNumber: '234-567-8903',
-      },
-    },
-    {
-      id: '4',
-      name: 'Emily Davis',
-      userTag: '@emily.d',
-      email: 'emily.d@example.com',
-      phone: '+1 234-567-8904',
-      whatsapp: '+1 234-567-8904',
-      address: '321 Elm Blvd, Chicago, IL 60601, USA',
-      image: { uri: 'https://i.pravatar.cc/150?img=9' },
-      role: 'Support Agent',
-      subtype: 'Agent',
-      form: {
-        type: 'Employee',
-        firstName: 'Emily',
-        middleName: '',
-        lastName: 'Davis',
-        address: '321 Elm Blvd',
-        city: 'Chicago',
-        state: 'Illinois',
-        zip: '60601',
-        country: 'USA',
-        phoneCountryCode: '+1',
-        phoneNumber: '234-567-8904',
-        whatsappCountryCode: '+1',
-        whatsappNumber: '234-567-8904',
-      },
-    },
-    {
-      id: '5',
-      name: 'David Wilson',
-      userTag: '@david.w',
-      email: 'david.w@example.com',
-      phone: '+1 234-567-8905',
-      whatsapp: '+1 234-567-8905',
-      address: '654 Cedar Ln, Seattle, WA 98101, USA',
-      image: { uri: 'https://i.pravatar.cc/150?img=15' },
-      role: 'Developer',
-      subtype: 'Engineer',
-      form: {
-        type: 'Contractor',
-        firstName: 'David',
-        middleName: '',
-        lastName: 'Wilson',
-        address: '654 Cedar Ln',
-        city: 'Seattle',
-        state: 'Washington',
-        zip: '98101',
-        country: 'USA',
-        phoneCountryCode: '+1',
-        phoneNumber: '234-567-8905',
-        whatsappCountryCode: '+1',
-        whatsappNumber: '234-567-8905',
-      },
-    },
-  ]);
+  const [contacts, setContacts] = useState([]);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -500,6 +371,8 @@ const UserChatPage = ({ navigation, route }) => {
 
   const flatListRef = useRef(null);
   const inputRef = useRef(null);
+  const initialScrollDoneRef = useRef(false);
+  const reactionFocusIdRef = useRef(null);
 
   // ============================================================
   // KEYBOARD LISTENERS
@@ -536,6 +409,8 @@ const UserChatPage = ({ navigation, route }) => {
 
   useEffect(() => {
     let unsubscribe = null;
+    initialScrollDoneRef.current = false;
+    reactionFocusIdRef.current = null;
 
     const loadChatMessages = () => {
       try {
@@ -724,11 +599,15 @@ const UserChatPage = ({ navigation, route }) => {
               setIsLoadingMessages(false);
 
               // Scroll to latest message
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({
-                  animated: false,
-                });
-              }, 300);
+              if (!initialScrollDoneRef.current) {
+                setTimeout(() => {
+                  flatListRef.current?.scrollToEnd({
+                    animated: false,
+                  });
+
+                  initialScrollDoneRef.current = true;
+                }, 300);
+              }
             } catch (error) {
               console.log('Error processing Firebase chat:', error);
 
@@ -754,15 +633,14 @@ const UserChatPage = ({ navigation, route }) => {
     loadChatMessages();
 
     return () => {
+      initialScrollDoneRef.current = false;
+      reactionFocusIdRef.current = null;
       if (unsubscribe) {
         unsubscribe();
       }
     };
   }, [selectedUserId]);
 
-  // ============================================================
-  // MESSAGE TYPES & OPTIONS
-  // ============================================================
   const messageTypes = [
     {
       id: 'inapp',
@@ -888,66 +766,222 @@ const UserChatPage = ({ navigation, route }) => {
     { id: 'custom', label: 'Custom Date Range' },
   ];
 
-  const emojis = [
-    '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
-  '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
-  '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
-  '🤪', '🤨', '🧐', '🤓', '😎', '🥳', '🤩', '🥺',
-  '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️',
-  '😣', '😖', '😫', '😩', '🥹', '😢', '😭', '😤',
-  '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱',
-  '😨', '😰', '😥', '😓', '🤗', '🤔', '🫣', '🤭',
-  '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯',
-  '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪',
-  '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒',
-  '🤕', '🤑', '🤠', '😈', '👿', '👹', '👺', '💀',
-  '☠️', '👻', '👽', '🤖', '💩',
+  useEffect(() => {
+    fetchCountryCodes();
+    fetchContactInfoTypes();
+    fetchContacts();
+  }, []);
 
-  // Hands & gestures
-  '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏',
-  '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👈', '👉',
-  '👆', '👇', '☝️', '✊', '👊', '🤛', '🤜', '👏',
-  '🙌', '👐', '🤲', '🤝', '🙏', '💪', '🫶',
-  '👍', '👎', '❤️', '🩷', '🧡', '💛', '💚', '💙',
-  '🩵', '💜', '🖤', '🩶', '🤍', '🤎', '💔',
+  useEffect(() => {
+    if (contactForm.countryId) {
+      fetchStatesByCountry(contactForm.countryId);
+    } else {
+      setStateOptions([]);
+    }
+  }, [contactForm.countryId]);
 
-  // Hearts & symbols
-  '❤️', '💖', '💗', '💓', '💞', '💕', '💘', '💝',
-  '💟', '❣️', '💯', '💢', '💥', '💫', '💦', '💨',
-  '💬', '💭', '💤', '✨', '⭐', '🌟', '🔥', '🎉',
-  '🎊', '✅', '❌', '❗', '❓', '‼️', '⁉️', '⚡',
-  '💡', '🔔', '🔕', '✔️', '☑️',
+  const fetchContacts = async () => {
+    try {
+      setIsLoadingContacts(true);
 
-  // Celebration
-  '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉',
-  '🏅', '🎖️', '🎂', '🍾', '🥂', '🍻', '👏', '🙌',
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
 
-  // Animals
-  '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
-  '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈',
-  '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦄',
-  '🐝', '🦋', '🐌', '🐞', '🐢', '🐍', '🦎', '🐙',
-  '🦀', '🐠', '🐟', '🐬', '🐳', '🦈', '🐊',
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/usersContactsList',
+        {
+          user_id: selectedUserId,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
-  // Food & drinks
-  '🍎', '🍏', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓',
-  '🫐', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝',
-  '🍅', '🥑', '🌽', '🥕', '🌶️', '🍔', '🍕',
-  '🍟', '🌭', '🌮', '🌯', '🍿', '🍩', '🍪',
-  '🎂', '🍰', '🧁', '🍫', '🍭', '☕', '🍵',
-  '🥤', '🍺', '🍻', '🍷', '🥂', '🍾',
+      console.log('Contacts API Response:', response.data);
 
-  // Travel & places
-  '🚗', '🚕', '🚌', '🏎️', '🚓', '🚑', '🚒', '🚲',
-  '✈️', '🚀', '🚁', '🚢', '🏠', '🏢', '🏥',
-  '🏫', '🏖️', '🏝️', '🌋', '🗽', '🗼', '🏰',
+      if (response.data?.success) {
+        const apiContacts = response.data?.data?.contacts || [];
 
-  // Objects
-  '📱', '💻', '⌚', '📷', '📺', '🎧', '🎵', '🎶',
-  '🎮', '⚽', '🏀', '🏈', '⚾', '🎾', '🏏',
-  '📚', '📖', '✏️', '📝', '📌', '📍', '🔑',
-  '🔒', '🔓', '💰', '💎', '🎯', '🔍', '🔗',
-  ];
+        const formattedContacts = apiContacts.map(item => ({
+          id: String(item.id),
+          name: item.full_name || '',
+          userTag: item.email ? `@${item.email.split('@')[0]}` : '',
+          email: item.email || '',
+          phone: item.phone1_country_code
+            ? `(${item.phone1_country_code}) ${item.phone1 || ''}`
+            : item.phone1 || '',
+
+          whatsapp: item.whatsapp_country_code
+            ? `(${item.whatsapp_country_code}) ${item.whatsapp || ''}`
+            : item.whatsapp || '',
+          address: [
+            item.address1,
+            item.address2,
+            item.city,
+            item.state_name,
+            item.zip,
+            item.country_name,
+          ]
+            .filter(Boolean)
+            .join(', '),
+
+          // Keep the same structure expected by your existing UI
+          image: item.profile_picture ? { uri: item.profile_picture } : null,
+
+          role: item.type || '',
+          subtype: item.source || '',
+
+          form: {
+            type: item.type || '',
+            typeId: item.type_id || null,
+            firstName: item.first_name || '',
+            middleName: item.middle_name || '',
+            lastName: item.last_name || '',
+            address: item.address1 || '',
+            city: item.city || '',
+            state: item.state_name || '',
+            zip: item.zip || '',
+            country: item.country_name || '',
+            phoneCountryCode: item.phone1_country_code || '',
+            phoneNumber: item.phone1 || '',
+            whatsappCountryCode: item.whatsapp_country_code || '',
+            whatsappNumber: item.whatsapp || '',
+            email: item.email || '',
+            countryId: item.country || null,
+            stateId: item.state || null,
+            phone1_country_ID: item.phone1_country_id || null,
+            whatsapp_country_ID: item.whatsapp_country_id || null,
+          },
+
+          // Keep original API data also available if needed later
+          originalData: item,
+        }));
+
+        setContacts(formattedContacts);
+        const senders = formattedContacts
+      .filter(contact => contact?.email)
+      .map(contact => ({
+        id: String(contact?.id ?? ''),
+        label: contact?.role || 'Contact',
+        number: contact?.email || '',
+      }));
+
+    setSMSSenders(senders);
+      } else {
+        setContacts([]);
+      }
+    } catch (error) {
+      console.log(
+        'Contacts API Error:',
+        error?.response?.data || error?.message,
+      );
+
+      setContacts([]);
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+
+  const fetchStatesByCountry = async countryId => {
+    if (!countryId) {
+      setStateOptions([]);
+      return;
+    }
+
+    setStateLoading(true);
+    const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+    try {
+      const response = await axios.get(
+        `https://leafcom.us/backend/api/chat-application/statesByCountry?country_id=${countryId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('States Response:', response.data);
+
+      if (response.data?.success) {
+        setStateOptions(response.data?.data || []);
+      } else {
+        setStateOptions([]);
+      }
+    } catch (error) {
+      console.log('States API Error:', error?.response?.data || error?.message);
+
+      setStateOptions([]);
+    } finally {
+      setStateLoading(false);
+    }
+  };
+
+  const fetchCountryCodes = async () => {
+    try {
+      setIsLoadingContacts(true);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const response = await axios.get(
+        'https://leafcom.us/backend/api/chat-application/countryCodes',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('Country Codes Response:', response.data);
+
+      if (response.data?.success) {
+        setCountryOptions(response.data?.data || []);
+      }
+    } catch (error) {
+      console.log(
+        'Country Codes API Error:',
+        error?.response?.data || error?.message,
+      );
+    }
+  };
+
+  const fetchContactInfoTypes = async () => {
+    try {
+      setIsLoadingContacts(true);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const response = await axios.get(
+        'https://leafcom.us/backend/api/chat-application/contactInfoTypes',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('Contact Info Types Response:', response.data);
+
+      if (response.data?.success) {
+        // const types = (response.data?.data || []).map(item => item.type);
+
+        // setTypeOptions(types);
+
+        setTypeOptions(response.data?.data || []);
+      } else {
+        setTypeOptions([]);
+      }
+    } catch (error) {
+      console.log(
+        'Contact Info Types API Error:',
+        error?.response?.data || error?.message,
+      );
+
+      setTypeOptions([]);
+    } finally {
+    }
+  };
 
   const aiSuggestions = [
     'Thank you for your message!',
@@ -1444,12 +1478,61 @@ const UserChatPage = ({ navigation, route }) => {
       'Delete Contact',
       'Are you sure you want to delete this contact?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () =>
-            setContacts(prev => prev.filter(c => c.id !== contactId)),
+          onPress: async () => {
+            try {
+              const token =
+                '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+              const response = await axios.delete(
+                'https://leafcom.us/backend/api/chat-application/deleteUserContact',
+                {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  data: {
+                    user_id: selectedUserId,
+                    contact_id: contactId,
+                    source: 'staff',
+                  },
+                },
+              );
+
+              console.log('Delete Contact Response:', response.data);
+
+              if (response.data?.success === true) {
+                // Remove from local list only after successful API response
+                setContacts(prev =>
+                  prev.filter(contact => contact.id !== contactId),
+                );
+
+                Alert.alert('Success', 'Contact deleted successfully.');
+              } else {
+                Alert.alert(
+                  'Delete Failed',
+                  response.data?.message || 'Unable to delete contact.',
+                );
+              }
+            } catch (error) {
+              console.log(
+                'Delete Contact API Error:',
+                error?.response?.data || error?.message,
+              );
+
+              Alert.alert(
+                'Error',
+                error?.response?.data?.message ||
+                  'Something went wrong while deleting the contact.',
+              );
+            }
+          },
         },
       ],
     );
@@ -1472,6 +1555,7 @@ const UserChatPage = ({ navigation, route }) => {
       phoneNumber: '',
       whatsappCountryCode: '+1',
       whatsappNumber: '',
+      country_phone_code: '+1',
     });
     setShowContactModal(false);
     setTimeout(() => setShowAddContactModal(true), 300);
@@ -1479,99 +1563,169 @@ const UserChatPage = ({ navigation, route }) => {
 
   const handleOpenEditContact = contact => {
     setIsEditingContact(true);
+
+    // IMPORTANT
     setEditingContactId(contact.id);
+
     setContactForm({
       type: contact.form?.type || contact.role || '',
+      typeId: contact.form?.typeId || contact.type_id || null,
+
       firstName: contact.form?.firstName || '',
       middleName: contact.form?.middleName || '',
       lastName: contact.form?.lastName || '',
+
       address: contact.form?.address || '',
       city: contact.form?.city || '',
       state: contact.form?.state || '',
+      stateId: contact.form?.stateId || contact.state || null,
       zip: contact.form?.zip || '',
+
       country: contact.form?.country || '',
-      phoneCountryCode: contact.form?.phoneCountryCode || '+1',
-      phoneNumber: contact.form?.phoneNumber || '',
-      whatsappCountryCode: contact.form?.whatsappCountryCode || '+1',
-      whatsappNumber: contact.form?.whatsappNumber || '',
+      countryId: contact.form?.countryId || contact.country || null,
+
+      country_phone_code:
+        contact.form?.phoneCountryCode || contact.phone1_country_code || '+1',
+
+      phoneNumber: contact.form?.phoneNumber || contact.phone1 || '',
+
+      country_phone_code:
+        contact.form?.whatsappCountryCode ||
+        contact.whatsapp_country_code ||
+        '+1',
+
+      whatsappNumber: contact.form?.whatsappNumber || contact.whatsapp || '',
+
+      email: contact.form?.email || contact.email || '',
+
+      whatsapp_country_ID:
+        contact.form?.whatsapp_country_ID ||
+        contact.whatsapp_country_id ||
+        null,
+      phone1_country_ID:
+        contact.form?.phone1_country_ID || contact.phone1_country_id || null,
     });
+
     setShowContactModal(false);
-    setTimeout(() => setShowAddContactModal(true), 300);
+
+    setTimeout(() => {
+      setShowAddContactModal(true);
+    }, 300);
   };
 
-  const handleSaveContact = () => {
-    const fullName = getFormFullName();
-    const userTag = `@${(contactForm.firstName || 'user').toLowerCase()}.${(
-      contactForm.lastName || 'new'
-    ).toLowerCase()}`;
-    const email = `${(contactForm.firstName || 'user').toLowerCase()}.${(
-      contactForm.lastName || 'new'
-    ).toLowerCase()}@example.com`;
-    const phone = `${contactForm.phoneCountryCode} ${contactForm.phoneNumber}`;
-    const whatsapp = `${contactForm.whatsappCountryCode} ${contactForm.whatsappNumber}`;
-    const address = [
-      contactForm.address,
-      contactForm.city,
-      contactForm.state,
-      contactForm.zip,
-      contactForm.country,
-    ]
-      .filter(Boolean)
-      .join(', ');
+  const handleSaveContact = async () => {
+    try {
+      if (!contactForm.firstName?.trim()) {
+        Alert.alert('Validation', 'Please enter first name.');
+        return;
+      }
 
-    if (isEditingContact && editingContactId) {
-      setContacts(prev =>
-        prev.map(c =>
-          c.id === editingContactId
-            ? {
-                ...c,
-                name: fullName,
-                userTag,
-                email,
-                phone,
-                whatsapp,
-                address,
-                role: contactForm.type || c.role,
-                subtype: contactForm.type || c.subtype,
-                form: { ...contactForm },
-              }
-            : c,
-        ),
-      );
-    } else {
-      const newContact = {
-        id: Date.now().toString(),
-        name: fullName,
-        userTag,
-        email,
-        phone,
-        whatsapp,
-        address,
-        image: { uri: `https://i.pravatar.cc/150?u=${Date.now()}` },
-        role: contactForm.type || 'Contact',
-        subtype: contactForm.type || 'New',
-        form: { ...contactForm },
+      if (!contactForm.typeId) {
+        Alert.alert('Validation', 'Please select contact type.');
+        return;
+      }
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const payload = {
+        user_id: selectedUserId,
+        contact_id: isEditingContact ? editingContactId : null,
+        source: 'staff',
+
+        contact: {
+          type_id: contactForm.typeId,
+
+          first_name: contactForm.firstName?.trim() || '',
+          middle_name: contactForm.middleName?.trim() || '',
+          last_name: contactForm.lastName?.trim() || '',
+
+          address1: contactForm.address?.trim() || '',
+          city: contactForm.city?.trim() || '',
+
+          state: contactForm.stateId || null,
+          zip: contactForm.zip?.trim() || '',
+
+          country: contactForm.countryId || null,
+
+          phone1: contactForm.phoneNumber?.trim() || '',
+          phone1_country: contactForm.countryId || null,
+
+          whatsapp: contactForm.whatsappNumber?.trim() || '',
+          whatsapp_country: contactForm.countryId || null,
+
+          email: contactForm.email?.trim() || '',
+        },
       };
-      setContacts(prev => [newContact, ...prev]);
+
+      console.log(
+        isEditingContact ? 'Update Contact Payload:' : 'Save Contact Payload:',
+        payload,
+      );
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/saveUserContact',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('Save Contact Response:', response.data);
+
+      if (response.data?.success) {
+        // Get newly created contact from API response
+        const newContact = response.data?.data?.contact;
+
+        console.log('New Contact:', newContact);
+
+        Alert.alert(
+          'Success',
+          isEditingContact ? 'Contact edit successful.' : 'Contact save successful.',
+        );
+
+        fetchContacts();
+
+        setShowAddContactModal(false);
+        setShowContactModal(false);
+
+        // Reset form
+        setContactForm({
+          type: '',
+          firstName: '',
+          middleName: '',
+          lastName: '',
+          address: '',
+          city: '',
+          state: '',
+          zip: '',
+          country: '',
+          phoneCountryCode: '+1',
+          phoneNumber: '',
+          whatsappCountryCode: '+1',
+          whatsappNumber: '',
+          countryId: null,
+          country_phone_code: '+1',
+          country_code: '',
+          state: '',
+          stateId: null,
+          typeId: null,
+        });
+      }
+    } catch (error) {
+      console.log(
+        'Save Contact API Error:',
+        error?.response?.data || error?.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message ||
+          'Unable to save contact. Please try again.',
+      );
     }
-    setShowAddContactModal(false);
-    setIsEditingContact(false);
-    setEditingContactId(null);
-    setContactForm({
-      type: '',
-      firstName: '',
-      middleName: '',
-      lastName: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-      country: '',
-      phoneCountryCode: '+1',
-      phoneNumber: '',
-      whatsappCountryCode: '+1',
-      whatsappNumber: '',
-    });
   };
 
   const sendMessageReaction = async (firebaseKey, emoji) => {
@@ -1596,6 +1750,7 @@ const UserChatPage = ({ navigation, route }) => {
       console.log('Reaction API Response:', response.data);
 
       if (response.data?.success) {
+        reactionFocusIdRef.current = firebaseKey;
         return true;
       }
 
@@ -4374,6 +4529,35 @@ const UserChatPage = ({ navigation, route }) => {
                 }
               />
             </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Country</Text>
+
+              <TouchableOpacity
+                style={styles.formDropdown}
+                onPress={() => setShowCountryDropdown(true)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.formDropdownText,
+                    !contactForm.country && { color: COLORS.textTertiary },
+                  ]}
+                >
+                  {contactForm.country || 'Select Country'}
+                </Text>
+
+                <Image
+                  source={require('../../asset/chevron-down.png')} // Update the path as needed
+                  style={{
+                    width: 14,
+                    height: 14,
+                    resizeMode: 'contain',
+                    tintColor: COLORS.textSecondary,
+                  }}
+                />
+              </TouchableOpacity>
+            </View>
             <View style={styles.formRow}>
               <View style={[styles.formGroup, { flex: 1 }]}>
                 <Text style={styles.formLabel}>City</Text>
@@ -4399,47 +4583,41 @@ const UserChatPage = ({ navigation, route }) => {
                 />
               </View>
             </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>State</Text>
-              <TouchableOpacity
-                style={styles.formDropdown}
-                onPress={() => setShowStateDropdown(true)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.formDropdownText,
-                    !contactForm.state && { color: COLORS.textTertiary },
-                  ]}
-                >
-                  {contactForm.state || 'Select State'}
-                </Text>
 
-                <Image
-                  source={require('../../asset/chevron-down.png')} // Update the path as needed
-                  style={{
-                    width: 14,
-                    height: 14,
-                    resizeMode: 'contain',
-                    tintColor: COLORS.textSecondary,
-                  }}
-                />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Country</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Country"
-                placeholderTextColor={COLORS.textTertiary}
-                value={contactForm.country}
-                onChangeText={t =>
-                  setContactForm({ ...contactForm, country: t })
-                }
-              />
-            </View>
+            {isSendingSms ? (
+              <ActivityIndicator size="small" color="#020202" />
+            ) : (
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>State</Text>
+                <TouchableOpacity
+                  style={styles.formDropdown}
+                  onPress={() => setShowStateDropdown(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.formDropdownText,
+                      !contactForm.state && { color: COLORS.textTertiary },
+                    ]}
+                  >
+                    {contactForm.state || 'Select State'}
+                  </Text>
+
+                  <Image
+                    source={require('../../asset/chevron-down.png')} // Update the path as needed
+                    style={{
+                      width: 14,
+                      height: 14,
+                      resizeMode: 'contain',
+                      tintColor: COLORS.textSecondary,
+                    }}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
 
             <Text style={styles.sectionHeader}>Contact Information</Text>
+
             <View style={styles.formGroup}>
               <Text style={styles.formLabel}>Phone Number</Text>
               <View style={styles.phoneRow}>
@@ -4449,7 +4627,7 @@ const UserChatPage = ({ navigation, route }) => {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.countryCodeText}>
-                    {contactForm.phoneCountryCode}
+                    {contactForm.country_phone_code}
                   </Text>
 
                   <Image
@@ -4483,7 +4661,7 @@ const UserChatPage = ({ navigation, route }) => {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.countryCodeText}>
-                    {contactForm.whatsappCountryCode}
+                    {contactForm.country_phone_code}
                   </Text>
 
                   <Image
@@ -4507,6 +4685,17 @@ const UserChatPage = ({ navigation, route }) => {
                   keyboardType="phone-pad"
                 />
               </View>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Email</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Enter email"
+                placeholderTextColor={COLORS.textTertiary}
+                value={contactForm.email}
+                onChangeText={t => setContactForm({ ...contactForm, email: t })}
+              />
             </View>
 
             <TouchableOpacity
@@ -4542,12 +4731,12 @@ const UserChatPage = ({ navigation, route }) => {
   // ============================================================
   // RENDER: CONTACT SIDE DRAWER
   // ============================================================
+
   const renderContactModal = () => (
     <Modal
       visible={showContactModal}
       transparent
       animationType="none"
-      onRequestClose={() => setShowContactModal(false)}
       statusBarTranslucent={true}
     >
       <View style={styles.sideDrawerBackdrop}>
@@ -4557,25 +4746,33 @@ const UserChatPage = ({ navigation, route }) => {
               styles.sideDrawer,
               {
                 opacity: contactSheetOpacity,
-                transform: [{ translateX: contactDrawerX }],
+                transform: [
+                  {
+                    translateX: contactDrawerX,
+                  },
+                ],
               },
             ]}
           >
+            {/* HEADER */}
             <View
               style={[
                 styles.contactHeader,
-                { paddingTop: HEADER_TOP_PADDING + 12 },
+                {
+                  paddingTop: HEADER_TOP_PADDING + 12,
+                },
               ]}
             >
               <View style={styles.contactHeaderDecor}>
                 <View style={styles.contactDecorCircle1} />
                 <View style={styles.contactDecorCircle2} />
               </View>
+
               <View style={styles.contactHeaderTop}>
                 <View style={styles.contactTitleWrap}>
                   <View style={styles.contactTitleIcon}>
                     <Image
-                      source={require('../../asset/people.png')} // Update the path as needed
+                      source={require('../../asset/people.png')}
                       style={{
                         width: 20,
                         height: 20,
@@ -4584,21 +4781,24 @@ const UserChatPage = ({ navigation, route }) => {
                       }}
                     />
                   </View>
+
                   <View style={{ flex: 1 }}>
                     <Text style={styles.contactTitle}>Contacts</Text>
+
                     <Text style={styles.contactSubtitle}>
                       {contacts.length}{' '}
                       {contacts.length === 1 ? 'contact' : 'contacts'} available
                     </Text>
                   </View>
                 </View>
+
                 <TouchableOpacity
                   style={styles.contactCloseBtn}
                   onPress={() => setShowContactModal(false)}
                   activeOpacity={0.7}
                 >
                   <Image
-                    source={require('../../asset/close.png')} // Update the path as needed
+                    source={require('../../asset/close.png')}
                     style={{
                       width: 18,
                       height: 18,
@@ -4610,60 +4810,74 @@ const UserChatPage = ({ navigation, route }) => {
               </View>
             </View>
 
-            <ScrollView
-              style={styles.contactBody}
-              contentContainerStyle={styles.contactBodyContent}
+            {/* CONTACT LIST */}
+            <FlatList
+              data={contacts}
+              keyExtractor={item => String(item.id)}
               showsVerticalScrollIndicator={false}
-            >
-              <TouchableOpacity
-                style={styles.addContactCard}
-                onPress={handleOpenAddContact}
-                activeOpacity={0.75}
-              >
-                <View style={styles.addContactCardIconWrap}>
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              style={styles.contactBody}
+              contentContainerStyle={[
+                styles.contactBodyContent,
+                {
+                  paddingBottom: 40,
+                },
+              ]}
+              ListHeaderComponent={
+                <TouchableOpacity
+                  style={styles.addContactCard}
+                  onPress={handleOpenAddContact}
+                  activeOpacity={0.75}
+                >
+                  <View style={styles.addContactCardIconWrap}>
+                    <Image
+                      source={require('../../asset/person_add.png')}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.textInverse,
+                      }}
+                    />
+                  </View>
+
+                  <View style={styles.addContactCardTextWrap}>
+                    <Text style={styles.addContactCardTitle}>
+                      Add New Contact
+                    </Text>
+
+                    <Text style={styles.addContactCardSubtitle}>
+                      Tap to create a new contact
+                    </Text>
+                  </View>
+
                   <Image
-                    source={require('../../asset/person_add.png')} // Update the path as needed
+                    source={require('../../asset/chevron-forward.png')}
                     style={{
-                      width: 24,
-                      height: 24,
+                      width: 20,
+                      height: 20,
                       resizeMode: 'contain',
                       tintColor: COLORS.textInverse,
                     }}
                   />
-                </View>
-                <View style={styles.addContactCardTextWrap}>
-                  <Text style={styles.addContactCardTitle}>
-                    Add New Contact
-                  </Text>
-                  <Text style={styles.addContactCardSubtitle}>
-                    Tap to create a new contact
-                  </Text>
-                </View>
-
-                <Image
-                  source={require('../../asset/chevron-forward.png')} // Update the path as needed
-                  style={{
-                    width: 20,
-                    height: 20,
-                    resizeMode: 'contain',
-                    tintColor: COLORS.textInverse,
-                  }}
-                />
-              </TouchableOpacity>
-
-              {contacts.map(contact => (
-                <View key={contact.id} style={styles.contactItem}>
+                </TouchableOpacity>
+              }
+              renderItem={({ item: contact }) => (
+                // your contact item here
+                <View style={styles.contactItem}>
                   <View style={styles.contactItemTop}>
                     <Image
-                      source={contact.image}
+                      source={require('../../asset/dummyuser.png')}
                       style={styles.contactAvatar}
                     />
+
                     <View style={styles.contactInfo}>
                       <Text style={styles.contactName}>{contact.name}</Text>
-                      <Text style={styles.contactUserTag}>
-                        {contact.userTag}
-                      </Text>
+
+                      <Text style={styles.contactUserTag}>{contact.role}</Text>
                     </View>
+
                     <View style={styles.contactItemActions}>
                       <TouchableOpacity
                         style={[
@@ -4674,7 +4888,7 @@ const UserChatPage = ({ navigation, route }) => {
                         activeOpacity={0.7}
                       >
                         <Image
-                          source={require('../../asset/pencil.png')} // Update the path as needed
+                          source={require('../../asset/pencil.png')}
                           style={{
                             width: 16,
                             height: 16,
@@ -4683,6 +4897,7 @@ const UserChatPage = ({ navigation, route }) => {
                           }}
                         />
                       </TouchableOpacity>
+
                       <TouchableOpacity
                         style={[
                           styles.contactIconBtn,
@@ -4692,7 +4907,7 @@ const UserChatPage = ({ navigation, route }) => {
                         activeOpacity={0.7}
                       >
                         <Image
-                          source={require('../../asset/trash.png')} // Update the path as needed
+                          source={require('../../asset/trash.png')}
                           style={{
                             width: 16,
                             height: 16,
@@ -4707,7 +4922,7 @@ const UserChatPage = ({ navigation, route }) => {
                   <View style={styles.contactDetailsWrap}>
                     <View style={styles.contactDetailRow}>
                       <Image
-                        source={require('../../asset/call.png')} // Update the path as needed
+                        source={require('../../asset/call.png')}
                         style={{
                           width: 13,
                           height: 13,
@@ -4715,13 +4930,15 @@ const UserChatPage = ({ navigation, route }) => {
                           tintColor: COLORS.success,
                         }}
                       />
+
                       <Text style={styles.contactDetailText} numberOfLines={1}>
                         {contact.phone}
                       </Text>
                     </View>
+
                     <View style={styles.contactDetailRow}>
                       <Image
-                        source={require('../../asset/email.png')} // Update the path as needed
+                        source={require('../../asset/email.png')}
                         style={{
                           width: 13,
                           height: 13,
@@ -4729,13 +4946,15 @@ const UserChatPage = ({ navigation, route }) => {
                           tintColor: COLORS.warning,
                         }}
                       />
+
                       <Text style={styles.contactDetailText} numberOfLines={1}>
                         {contact.email}
                       </Text>
                     </View>
+
                     <View style={styles.contactDetailRow}>
                       <Image
-                        source={require('../../asset/whats-app.png')} // Update the path as needed
+                        source={require('../../asset/whats-app.png')}
                         style={{
                           width: 13,
                           height: 13,
@@ -4743,13 +4962,15 @@ const UserChatPage = ({ navigation, route }) => {
                           tintColor: COLORS.whatsapp,
                         }}
                       />
+
                       <Text style={styles.contactDetailText} numberOfLines={1}>
                         {contact.whatsapp}
                       </Text>
                     </View>
+
                     <View style={styles.contactDetailRow}>
                       <Image
-                        source={require('../../asset/location.png')} // Update the path as needed
+                        source={require('../../asset/location.png')}
                         style={{
                           width: 13,
                           height: 13,
@@ -4757,14 +4978,15 @@ const UserChatPage = ({ navigation, route }) => {
                           tintColor: COLORS.primary,
                         }}
                       />
+
                       <Text style={styles.contactDetailText} numberOfLines={2}>
                         {contact.address}
                       </Text>
                     </View>
                   </View>
                 </View>
-              ))}
-            </ScrollView>
+              )}
+            />
           </Animated.View>
         </TouchableWithoutFeedback>
       </View>
@@ -4981,7 +5203,7 @@ const UserChatPage = ({ navigation, route }) => {
   // RENDER: HEADER
   // ============================================================
   const renderHeader = () => (
-    <View style={[styles.header, { paddingTop: HEADER_TOP_PADDING + 8 }]}>
+    <View style={[styles.header, { paddingTop: HEADER_TOP_PADDING + 25 }]}>
       <StatusBar
         backgroundColor={COLORS.primaryDark}
         barStyle="light-content"
@@ -5184,7 +5406,7 @@ const UserChatPage = ({ navigation, route }) => {
     const success = await sendMessageReaction(firebaseKey, emoji);
 
     if (success) {
-      setShowReactionPicker(false);
+      setShowEmojiKeyboard(false);
       setReactionTargetId(null);
     }
   };
@@ -5198,7 +5420,7 @@ const UserChatPage = ({ navigation, route }) => {
         style={styles.inlineActionBtn}
         onPress={() => {
           setReactionTargetId(item.id);
-          setShowReactionPicker(true);
+          setShowEmojiKeyboard(true);
         }}
         activeOpacity={0.6}
       >
@@ -5907,20 +6129,15 @@ const UserChatPage = ({ navigation, route }) => {
       </View>
 
       {showEmojiPicker && (
-        <View style={styles.emojiPicker}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {emojis.map((emoji, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.emojiBtn}
-                onPress={() => setInputMessage(inputMessage + emoji)}
-                activeOpacity={0.6}
-              >
-                <Text style={styles.emojiText}>{emoji}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        <EmojiPicker
+          open={showEmojiPicker}
+          onClose={() => setShowEmojiPicker(false)}
+          onEmojiSelected={emojiObject => {
+            const emoji = emojiObject.emoji;
+
+            setInputMessage(prev => prev + emoji);
+          }}
+        />
       )}
 
       {showAISuggestion && (
@@ -6171,6 +6388,14 @@ const UserChatPage = ({ navigation, route }) => {
   // ============================================================
   // MAIN RENDER
   // ============================================================
+
+  if (isLoadingContacts) {
+    return (
+      <View style={styles.fullScreenLoader}>
+        <Loader></Loader>
+      </View>
+    );
+  }
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -6235,9 +6460,23 @@ const UserChatPage = ({ navigation, route }) => {
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="interactive"
                 onContentSizeChange={() => {
-                  if (isKeyboardVisible) {
-                    flatListRef.current?.scrollToEnd({ animated: false });
+                  // Only scroll to bottom while typing with keyboard open
+                  // and never when a reaction is being focused.
+                  if (isKeyboardVisible && !reactionFocusIdRef.current) {
+                    flatListRef.current?.scrollToEnd({
+                      animated: false,
+                    });
                   }
+                }}
+                onScrollToIndexFailed={info => {
+                  // Retry after FlatList finishes rendering the item
+                  setTimeout(() => {
+                    flatListRef.current?.scrollToIndex({
+                      index: info.index,
+                      animated: true,
+                      viewPosition: 0.5,
+                    });
+                  }, 300);
                 }}
               />
             )}
@@ -6247,6 +6486,23 @@ const UserChatPage = ({ navigation, route }) => {
           {renderInputArea()}
         </View>
       </KeyboardAvoidingView>
+
+      <EmojiPicker
+        open={showEmojiKeyboard}
+        onClose={() => {
+          setShowEmojiKeyboard(false);
+          setReactionTargetId(null);
+        }}
+        onEmojiSelected={emojiObject => {
+          const emoji = emojiObject.emoji;
+
+          console.log('Selected Emoji:', emoji);
+
+          setShowEmojiKeyboard(false);
+
+          handleReactionSelect(emoji);
+        }}
+      />
 
       {showMessageModal && renderMessageModal()}
       {showAnalyticsModal && renderAnalyticsModal()}
@@ -6271,34 +6527,132 @@ const UserChatPage = ({ navigation, route }) => {
         visible: showTypeDropdown,
         onClose: () => setShowTypeDropdown(false),
         title: 'Select Type',
-        options: TYPE_OPTIONS,
+        options: typeOptions.map(item => item.type),
         selectedValue: contactForm.type,
-        onSelect: v => setContactForm({ ...contactForm, type: v }),
+        onSelect: selectedType => {
+          const selectedItem = typeOptions.find(
+            item => item.type === selectedType,
+          );
+
+          setContactForm({
+            ...contactForm,
+            type: selectedType,
+            typeId: selectedItem?.id || null,
+          });
+        },
       })}
       {renderDropdownModal({
         visible: showStateDropdown,
         onClose: () => setShowStateDropdown(false),
         title: 'Select State',
-        options: STATE_OPTIONS,
+
+        options: stateOptions.map(item => item.state_name),
+
         selectedValue: contactForm.state,
-        onSelect: v => setContactForm({ ...contactForm, state: v }),
+
+        onSelect: selectedState => {
+          const selectedItem = stateOptions.find(
+            item => item.state_name === selectedState,
+          );
+
+          setContactForm({
+            ...contactForm,
+            state: selectedState,
+            stateId: selectedItem?.id || null,
+            stateCode: selectedItem?.state_code || '',
+          });
+
+          setShowStateDropdown(false);
+        },
       })}
+
       {renderDropdownModal({
         visible: showPhoneCountryDropdown,
         onClose: () => setShowPhoneCountryDropdown(false),
-        title: 'Country Code',
-        options: COUNTRY_CODES,
-        selectedValue: contactForm.phoneCountryCode,
-        onSelect: v => setContactForm({ ...contactForm, phoneCountryCode: v }),
+        title: 'Select Country Code',
+
+        options: countryOptions.map(
+          item => `${item.country_phone_code} (${item.country_code})`,
+        ),
+
+        selectedValue: contactForm.country_phone_code
+          ? `${contactForm.country_phone_code} (${contactForm.country_code})`
+          : '',
+
+        onSelect: selectedValue => {
+          const selectedItem = countryOptions.find(
+            item =>
+              `${item.country_phone_code} (${item.country_code})` ===
+              selectedValue,
+          );
+
+          setContactForm({
+            ...contactForm,
+            country_phone_code: selectedItem?.country_phone_code || '',
+            country: selectedItem?.name || '',
+            countryId: selectedItem?.id || null,
+            country_code: selectedItem?.country_code || '',
+          });
+
+          setShowPhoneCountryDropdown(false);
+        },
       })}
+
       {renderDropdownModal({
         visible: showWhatsappCountryDropdown,
         onClose: () => setShowWhatsappCountryDropdown(false),
-        title: 'Country Code',
-        options: COUNTRY_CODES,
-        selectedValue: contactForm.whatsappCountryCode,
-        onSelect: v =>
-          setContactForm({ ...contactForm, whatsappCountryCode: v }),
+        title: 'Select Country Code',
+
+        options: countryOptions.map(
+          item => `${item.country_phone_code} (${item.country_code})`,
+        ),
+
+        selectedValue: contactForm.whatsappCountryCode
+          ? `${contactForm.whatsappCountryCode} (${
+              contactForm.whatsappCountryCodeCode || ''
+            })`
+          : '',
+
+        onSelect: selectedValue => {
+          const selectedItem = countryOptions.find(
+            item =>
+              `${item.country_phone_code} (${item.country_code})` ===
+              selectedValue,
+          );
+
+          setContactForm({
+            ...contactForm,
+            country_phone_code: selectedItem?.country_phone_code || '',
+            country: selectedItem?.name || '',
+            countryId: selectedItem?.id || null,
+            country_code: selectedItem?.country_code || '',
+          });
+
+          setShowWhatsappCountryDropdown(false);
+        },
+      })}
+
+      {renderDropdownModal({
+        visible: showCountryDropdown,
+        onClose: () => setShowCountryDropdown(false),
+        title: 'Select Country',
+        options: countryOptions.map(item => item.name),
+        selectedValue: contactForm.country,
+        onSelect: selectedCountry => {
+          const selectedItem = countryOptions.find(
+            item => item.name === selectedCountry,
+          );
+
+          setContactForm({
+            ...contactForm,
+            country: selectedCountry,
+            countryId: selectedItem?.id || null,
+            country_phone_code: selectedItem?.country_phone_code || null,
+            country_code: selectedItem?.country_code || null,
+          });
+
+          setShowCountryDropdown(false);
+        },
       })}
     </SafeAreaView>
   );
@@ -6928,7 +7282,7 @@ const styles = StyleSheet.create({
   },
   sideDrawer: {
     width: SIDE_DRAWER_WIDTH,
-    height: '100%',
+    flex: 1,
     backgroundColor: COLORS.bgPrimary,
     borderTopRightRadius: RADIUS.xxl,
     borderBottomRightRadius: RADIUS.xxl,
@@ -9303,6 +9657,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: '500',
     fontFamily: 'sans-serif',
+  },
+
+  fullScreenLoader: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
 });
 
