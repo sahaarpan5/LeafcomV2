@@ -25,7 +25,7 @@ import {
 import { ref, onValue } from 'firebase/database';
 import { database } from '../../config/firebaseConfig';
 import axios from 'axios';
-import EmojiPicker from 'rn-emoji-keyboard';
+import EmojiPicker, { tr } from 'rn-emoji-keyboard';
 import Loader from '../../util/Loader';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -163,6 +163,26 @@ const UserChatPage = ({ navigation, route }) => {
   // Selected user ID.
   // Ideally pass this from Dashboard:
   // navigation.navigate('UserChatPage', { userId: item.senderId })
+
+  const [whatsappTemplates, setWhatsappTemplates] = useState([]);
+  const [isLoadingWhatsappTemplates, setIsLoadingWhatsappTemplates] =
+    useState(false);
+
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const [isSendingMobileSms, setIsSendingMobileSms] = useState(false);
+
+  const [isSavingSignature, setIsSavingSignature] = useState(false);
+
+  const [showAddSignatureModal, setShowAddSignatureModal] = useState(false);
+
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+
+  const [selectedSignature, setSelectedSignature] = useState('');
+  const [signatures, setSignatures] = useState([]);
+  const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
+  const [signatureName, setSignatureName] = useState('');
+  const [signatureContent, setSignatureContent] = useState('');
   const selectedUserId = String(route?.params?.senderId || '3597');
 
   const [sender, setSender] = useState({
@@ -179,7 +199,7 @@ const UserChatPage = ({ navigation, route }) => {
     phone: '',
     whatsapp: '',
   });
-const [SMS_SENDERS, setSMSSenders] = useState([]);
+  const [SMS_SENDERS, setSMSSenders] = useState([]);
   const [stateOptions, setStateOptions] = useState([]);
   const [stateLoading, setStateLoading] = useState(false);
 
@@ -266,11 +286,17 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
   // WhatsApp compose state
   const [whatsappTemplateModal, setWhatsappTemplateModal] = useState(false);
   const [whatsappNumberModal, setWhatsappNumberModal] = useState(false);
-  const [selectedWhatsappTemplate, setSelectedWhatsappTemplate] = useState(
-    WHATSAPP_TEMPLATES[0],
-  );
+  const [selectedWhatsappTemplate, setSelectedWhatsappTemplate] =
+    useState(null);
   const [whatsappMessage, setWhatsappMessage] = useState('');
+
+  const [whatsappMessagePreview, setWhatsappMessagePreview] = useState('');
   const [selectedWhatsappNumber, setSelectedWhatsappNumber] = useState('');
+
+  const [isFetchingWhatsappContent, setIsFetchingWhatsappContent] =
+    useState(false);
+
+  const [showWhatsappSendButton, setShowWhatsappSendButton] = useState(false);
 
   // SMS compose state
   const [smsSenderModal, setSmsSenderModal] = useState(false);
@@ -599,15 +625,11 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
               setIsLoadingMessages(false);
 
               // Scroll to latest message
-              if (!initialScrollDoneRef.current) {
-                setTimeout(() => {
-                  flatListRef.current?.scrollToEnd({
-                    animated: false,
-                  });
-
-                  initialScrollDoneRef.current = true;
-                }, 300);
-              }
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({
+                  animated: true,
+                });
+              }, 200);
             } catch (error) {
               console.log('Error processing Firebase chat:', error);
 
@@ -769,7 +791,12 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
   useEffect(() => {
     fetchCountryCodes();
     fetchContactInfoTypes();
+    fetchWhatsappTemplates();
     fetchContacts();
+  }, []);
+
+  useEffect(() => {
+    fetchSignatures();
   }, []);
 
   useEffect(() => {
@@ -779,6 +806,252 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
       setStateOptions([]);
     }
   }, [contactForm.countryId]);
+
+  const handleSaveSignature = async () => {
+    if (!signatureName.trim()) {
+      Alert.alert('Validation', 'Please enter signature name.');
+      return;
+    }
+
+    if (!signatureContent.trim()) {
+      Alert.alert('Validation', 'Please enter signature content.');
+      return;
+    }
+
+    try {
+      setIsSavingSignature(true);
+
+      //const token = await AsyncStorage.getItem('token');
+      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found.');
+        return;
+      }
+
+      const payload = {
+        name: signatureName.trim(),
+        content: signatureContent.trim(),
+      };
+
+      console.log('CREATE SIGNATURE PAYLOAD:', payload);
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/createSignature',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('CREATE SIGNATURE RESPONSE:', response.data);
+
+      if (response.data?.success) {
+        const createdSignature = response.data.data;
+
+        // Add the newly created signature to local list
+        fetchSignatures();
+
+        // Clear fields
+        setSignatureName('');
+        setSignatureContent('');
+
+        // Close modal
+        setShowAddSignatureModal(false);
+
+        Alert.alert(
+          'Success',
+          response.data.message || 'Signature created successfully.',
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          response.data?.message || 'Failed to create signature.',
+        );
+      }
+    } catch (error) {
+      console.log(
+        'CREATE SIGNATURE API ERROR:',
+        error.response?.data || error.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Something went wrong while creating the signature.',
+      );
+    } finally {
+      setIsSavingSignature(false);
+    }
+  };
+
+  const fetchSignatures = async () => {
+    try {
+      setIsLoadingSignatures(true);
+
+      //const token = await AsyncStorage.getItem('token');
+      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+
+      if (!token) {
+        console.log('Authentication token not found');
+        return;
+      }
+
+      const response = await axios.get(
+        'https://leafcom.us/backend/api/chat-application/getUserSignatureList',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('SIGNATURE LIST RESPONSE:', response.data);
+
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        const formattedSignatures = response.data.data.map(item => ({
+          id: String(item.id),
+          name: item.name,
+          content: '', // API currently does not return content
+        }));
+
+        setSignatures(formattedSignatures);
+      } else {
+        setSignatures([]);
+      }
+    } catch (error) {
+      console.log(
+        'GET SIGNATURE LIST API ERROR:',
+        error.response?.data || error.message,
+      );
+
+      setSignatures([]);
+    } finally {
+      setIsLoadingSignatures(false);
+    }
+  };
+
+  const fetchWhatsappTemplates = async () => {
+    try {
+      setIsLoadingContacts(true);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/whatsappTemplates',
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log(
+        'WHATSAPP TEMPLATES RESPONSE:',
+        JSON.stringify(response.data, null, 2),
+      );
+
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        const formattedTemplates = response.data.data.map(item => ({
+          id: String(item.id),
+          templateId: String(item.template_id || ''),
+          whatsappTemplateId: item.whatsapp_template_id || '',
+          name: item.name || '',
+          description: item.description || '',
+          body: item.body || '',
+          language: item.language,
+          status: Number(item.status),
+          isVisibleInChatPlugin: String(item.is_visible_in_chat_plugin) === '1',
+          whatsappTemplateName:
+            item.whatsapp_default_template_name || item.name || '',
+          whatsappTemplateStatus: item.whatsapp_template_status || '',
+          whatsappTemplateCategory: item.whatsapp_template_category || '',
+          signature: item.signature || '',
+          sendAfterDays: item.send_after_days || 0,
+        }));
+
+        // Add Custom Message at the beginning
+        formattedTemplates.unshift({
+          id: 'custom',
+          templateId: '',
+          whatsappTemplateId: '',
+          name: 'Custom Message',
+          description:
+            'Type your own custom WhatsApp message in the preview area, then submit.',
+          body: '',
+          language: '',
+          status: 1,
+          isVisibleInChatPlugin: true,
+          whatsappTemplateName: 'custom',
+          whatsappTemplateStatus: '',
+          whatsappTemplateCategory: '',
+          signature: '',
+          sendAfterDays: 0,
+        });
+
+        setWhatsappTemplates(formattedTemplates);
+
+        // Select Custom Message by default
+        setSelectedWhatsappTemplate(formattedTemplates[0]);
+      } else {
+        // Even if API returns no templates,
+        // keep Custom Message available
+        const customTemplate = {
+          id: 'custom',
+          templateId: '',
+          whatsappTemplateId: '',
+          name: 'Custom Message',
+          description:
+            'Type your own custom WhatsApp message in the preview area, then submit.',
+          body: '',
+          language: '',
+          status: 1,
+          isVisibleInChatPlugin: true,
+          whatsappTemplateName: 'custom',
+          whatsappTemplateStatus: '',
+          whatsappTemplateCategory: '',
+          signature: '',
+          sendAfterDays: 0,
+        };
+
+        setWhatsappTemplates([customTemplate]);
+        setSelectedWhatsappTemplate(customTemplate);
+      }
+    } catch (error) {
+      console.log(
+        'WHATSAPP TEMPLATES API ERROR:',
+        error?.response?.data || error?.message,
+      );
+
+      // Keep Custom Message available even if API fails
+      const customTemplate = {
+        id: 'custom',
+        templateId: '',
+        whatsappTemplateId: '',
+        name: 'Custom Message',
+        description:
+          'Type your own custom WhatsApp message in the preview area, then submit.',
+        body: '',
+        language: '',
+        status: 1,
+        isVisibleInChatPlugin: true,
+        whatsappTemplateName: 'custom',
+        whatsappTemplateStatus: '',
+        whatsappTemplateCategory: '',
+        signature: '',
+        sendAfterDays: 0,
+      };
+
+      setWhatsappTemplates([customTemplate]);
+      setSelectedWhatsappTemplate(customTemplate);
+    }
+  };
 
   const fetchContacts = async () => {
     try {
@@ -813,9 +1086,14 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
             ? `(${item.phone1_country_code}) ${item.phone1 || ''}`
             : item.phone1 || '',
 
+          phoneNumber: item.phone1_country_code
+            ? `${item.phone1_country_code}${item.phone1 || ''}`
+            : item.phone1 || '',
+
           whatsapp: item.whatsapp_country_code
-            ? `(${item.whatsapp_country_code}) ${item.whatsapp || ''}`
+            ? `${item.whatsapp_country_code}${item.whatsapp || ''}`
             : item.whatsapp || '',
+
           address: [
             item.address1,
             item.address2,
@@ -861,14 +1139,14 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
 
         setContacts(formattedContacts);
         const senders = formattedContacts
-      .filter(contact => contact?.email)
-      .map(contact => ({
-        id: String(contact?.id ?? ''),
-        label: contact?.role || 'Contact',
-        number: contact?.email || '',
-      }));
+          .filter(contact => contact?.phoneNumber)
+          .map(contact => ({
+            id: String(contact?.id ?? ''),
+            label: contact?.role || 'Contact',
+            number: contact?.phoneNumber || '',
+          }));
 
-    setSMSSenders(senders);
+        setSMSSenders(senders);
       } else {
         setContacts([]);
       }
@@ -1291,39 +1569,263 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
     setShowEmailComposeModal(true);
   };
 
-  const handleSendEmail = () => {
-    if (!selectedEmailTo || !composeSubject.trim() || !composeBody.trim()) {
+  const handleSendEmail = async () => {
+    // ============================
+    // VALIDATION
+    // ============================
+    if (!selectedEmailTo?.trim()) {
+      Alert.alert('Validation', 'Please enter recipient email.');
+      return;
+    }
+
+    if (!composeSubject?.trim()) {
+      Alert.alert('Validation', 'Please enter subject.');
+      return;
+    }
+
+    if (!composeBody?.trim()) {
+      Alert.alert('Validation', 'Please enter email body.');
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+
+      // ============================
+      // TOKEN
+      // ============================
+      // Recommended:
+      // const token = await AsyncStorage.getItem('token');
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found.');
+        return;
+      }
+
+      // ============================
+      // API PAYLOAD
+      // ============================
+      const payload = {
+        subject: composeSubject.trim(),
+        body: composeBody.trim(),
+        send_to: selectedEmailTo.trim(),
+        signature_id: selectedSignature ? String(selectedSignature) : '',
+      };
+
+      console.log('========== EMAIL REQUEST ==========');
+      console.log(
+        'URL:',
+        'https://leafcom.us/backend/api/chat-application/sendUserEmail',
+      );
+      console.log('PAYLOAD:', JSON.stringify(payload, null, 2));
+      console.log('TOKEN EXISTS:', !!token);
+      console.log('SIGNATURE ID:', selectedSignature);
+      console.log('===================================');
+
+      // ============================
+      // SEND EMAIL API
+      // ============================
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/sendUserEmail',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('========== EMAIL RESPONSE ==========');
+      console.log(JSON.stringify(response.data, null, 2));
+      console.log('STATUS:', response.status);
+      console.log('====================================');
+
+      // ============================
+      // SUCCESS
+      // ============================
+      if (response.data?.success) {
+        Alert.alert(
+          'Success',
+          response.data.message || 'Email sent successfully.',
+        );
+
+        // Clear compose fields
+        setSelectedEmailTo('');
+        setComposeSubject('');
+        setComposeBody('');
+        setSelectedSignature('');
+
+        // Close email compose modal
+        setShowEmailComposeModal(false);
+
+        // Scroll to latest message
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({
+            animated: true,
+          });
+        }, 200);
+      } else {
+        Alert.alert('Error', response.data?.message || 'Failed to send email.');
+      }
+    } catch (error) {
+      console.log('========== EMAIL ERROR ==========');
+      console.log('STATUS:', error?.response?.status);
+      console.log('DATA:', error?.response?.data);
+      console.log('MESSAGE:', error?.message);
+      console.log('=================================');
+
       Alert.alert(
-        'Missing Fields',
-        'Please fill in To, Subject and Body before sending.',
+        'Error',
+        error?.response?.data?.message ||
+          'Something went wrong while sending email.',
+      );
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleSendMobileSms = async () => {
+    // ============================
+    // VALIDATION
+    // ============================
+    if (!smsMessage?.trim()) {
+      Alert.alert('Missing Message', 'Please write a message before sending.');
+      return;
+    }
+
+    if (!selectedSmsSender) {
+      Alert.alert('Missing Sender', 'Please choose a sender before sending.');
+      return;
+    }
+
+    if (!selectedUserId) {
+      Alert.alert('Error', 'Receiver user ID is not available.');
+      return;
+    }
+
+    // Get receiver mobile number
+    const receiverMobileNo =
+      selectedSmsSender?.number ||
+      contacts.find(contact => String(contact.id) === String(selectedUserId))
+        ?.phone ||
+      '';
+
+    if (!receiverMobileNo?.trim()) {
+      Alert.alert(
+        'Missing Mobile Number',
+        'Receiver mobile number is not available.',
       );
       return;
     }
-    const fullBody = `${composeBody}\n\n${composeSignature}`;
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        senderId: 'me',
-        message: `${composeSubject} | ${fullBody}`,
-        type: 'email',
-        dateTime: new Date(),
-        isRead: true,
-        reactions: [],
-        translatedText: null,
-        translatedLang: null,
-      },
-    ]);
-    setShowEmailComposeModal(false);
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 200);
+
+    try {
+      setIsSendingMobileSms(true);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      if (!token) {
+        Alert.alert('Error', 'Authentication token not found.');
+        return;
+      }
+
+      // ============================
+      // PAYLOAD
+      // ============================
+      const payload = {
+        receiver_id: Number(selectedUserId),
+        message: smsMessage.trim(),
+        type: 'sms',
+        receiver_mobile_no: receiverMobileNo.trim(),
+      };
+
+      console.log('========== SMS REQUEST ==========');
+      console.log(
+        'URL:',
+        'https://leafcom.us/backend/api/chat-application/sendMessage',
+      );
+      console.log('PAYLOAD:', JSON.stringify(payload, null, 2));
+      console.log('=================================');
+
+      // ============================
+      // API CALL
+      // ============================
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/sendMessage',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('========== SMS RESPONSE ==========');
+      console.log(JSON.stringify(response.data, null, 2));
+      console.log('STATUS:', response.status);
+      console.log('==================================');
+
+      // ============================
+      // SUCCESS
+      // ============================
+      if (response.data?.success) {
+        Alert.alert(
+          'Success',
+          response.data.message || 'Message has been sent successfully.',
+        );
+
+        setSmsMessage('');
+
+        setShowSmsComposeModal(false);
+
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({
+            animated: true,
+          });
+        }, 200);
+      } else {
+        Alert.alert('Error', response.data?.message || 'Failed to send SMS.');
+      }
+    } catch (error) {
+      console.log('========== SMS ERROR ==========');
+      console.log('STATUS:', error?.response?.status);
+      console.log('DATA:', error?.response?.data);
+      console.log('MESSAGE:', error?.message);
+      console.log('================================');
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message ||
+          'Something went wrong while sending SMS.',
+      );
+    } finally {
+      setIsSendingMobileSms(false);
+    }
   };
 
   // -------- WHATSAPP --------
   const handleOpenWhatsappCompose = () => {
-    const defaultNumber = sender.whatsapp || contacts[0]?.whatsapp || '';
+    const defaultNumber =
+      sender?.whatsapp ||
+      contacts.find(contact => contact?.whatsapp)?.whatsapp ||
+      '';
+
     setSelectedWhatsappNumber(defaultNumber);
-    setSelectedWhatsappTemplate(WHATSAPP_TEMPLATES[0]);
+
+    if (whatsappTemplates.length > 0) {
+      setSelectedWhatsappTemplate(whatsappTemplates[0]);
+    } else {
+      setSelectedWhatsappTemplate(null);
+    }
+
     setWhatsappMessage('');
+
+    // Hide Send WhatsApp until Submit
+    setShowWhatsappSendButton(false);
+
     setShowWhatsappComposeModal(true);
   };
 
@@ -1359,12 +1861,25 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
 
   const handleChooseTemplate = tpl => {
     setSelectedWhatsappTemplate(tpl);
-    if (tpl.id !== 'custom') {
-      const name = sender.name.split(' ')[0] || 'there';
-      setWhatsappMessage(tpl.body.replace(/{{name}}/g, name));
-    } else {
+
+    // Custom Message
+    if (tpl.id === 'custom') {
       setWhatsappMessage('');
+      setShowWhatsappSendButton(false);
+      setWhatsappMessagePreview('');
+      setWhatsappTemplateModal(false);
+      return;
     }
+
+    // API template
+    const name = sender?.name?.split(' ')[0] || 'there';
+
+    const message = (tpl.body || '').replace(/{{first_name}}/gi, name);
+
+    setWhatsappMessagePreview(message);
+    setWhatsappMessage('');
+    setShowWhatsappSendButton(false);
+
     setWhatsappTemplateModal(false);
   };
 
@@ -1469,6 +1984,108 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
       );
     } finally {
       setIsSendingSms(false);
+    }
+  };
+
+  const handleSubmitWhatsappTemplate = async () => {
+    // ============================
+    // CUSTOM MESSAGE
+    // ============================
+    if (selectedWhatsappTemplate?.id === 'custom') {
+      if (!whatsappMessage.trim()) {
+        Alert.alert(
+          'Missing Message',
+          'Please write a WhatsApp message before submitting.',
+        );
+        return;
+      }
+
+      setShowWhatsappSendButton(true);
+      return;
+    }
+
+    // ============================
+    // TEMPLATE VALIDATION
+    // ============================
+    if (!selectedWhatsappTemplate?.templateId) {
+      Alert.alert('Missing Template', 'Please select a WhatsApp template.');
+      return;
+    }
+
+    if (!selectedUserId) {
+      Alert.alert('Missing Receiver', 'Receiver user ID is not available.');
+      return;
+    }
+
+    try {
+      setIsFetchingWhatsappContent(true);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const payload = {
+        template_id: Number(selectedWhatsappTemplate.templateId),
+        receiver_id: Number(selectedUserId),
+      };
+
+      console.log('========== WHATSAPP TEMPLATE CONTENT ==========');
+      console.log(
+        'URL:',
+        'https://leafcom.us/backend/api/chat-application/get_template_content',
+      );
+      console.log('PAYLOAD:', JSON.stringify(payload, null, 2));
+      console.log('===============================================');
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/get_template_content',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('========== TEMPLATE CONTENT RESPONSE ==========');
+      console.log(JSON.stringify(response.data, null, 2));
+      console.log('==============================================');
+
+      if (response.data?.success) {
+        const templateData = response.data?.data;
+
+        const messageBody = templateData?.body || '';
+
+        if (!messageBody.trim()) {
+          Alert.alert('Error', 'Template message content is empty.');
+          return;
+        }
+
+        // Put API body into Message Preview
+        setWhatsappMessage(messageBody);
+
+        // Now show Send WhatsApp button
+        setShowWhatsappSendButton(true);
+      } else {
+        Alert.alert(
+          'Error',
+          response.data?.message ||
+            'Unable to fetch WhatsApp template content.',
+        );
+      }
+    } catch (error) {
+      console.log('========== WHATSAPP TEMPLATE CONTENT ERROR ==========');
+      console.log('STATUS:', error?.response?.status);
+      console.log('DATA:', error?.response?.data);
+      console.log('MESSAGE:', error?.message);
+      console.log('=====================================================');
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message ||
+          'Something went wrong while fetching WhatsApp template.',
+      );
+    } finally {
+      setIsFetchingWhatsappContent(false);
     }
   };
 
@@ -1683,7 +2300,9 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
 
         Alert.alert(
           'Success',
-          isEditingContact ? 'Contact edit successful.' : 'Contact save successful.',
+          isEditingContact
+            ? 'Contact edit successful.'
+            : 'Contact save successful.',
         );
 
         fetchContacts();
@@ -2350,17 +2969,29 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
             </View>
 
             {/* Send Button */}
-            <TouchableOpacity style={styles.smsSendBtn} activeOpacity={0.85}>
-              <Image
-                source={require('../../asset/send.png')} // Update the path as needed
-                style={{
-                  width: 18,
-                  height: 18,
-                  resizeMode: 'contain',
-                  tintColor: COLORS.textInverse,
-                }}
-              />
-              <Text style={styles.smsSendBtnText}>Send SMS</Text>
+            <TouchableOpacity
+              style={styles.smsSendBtn}
+              activeOpacity={0.85}
+              onPress={handleSendMobileSms}
+              disabled={isSendingMobileSms}
+            >
+              {isSendingMobileSms ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Image
+                    source={require('../../asset/send.png')}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      resizeMode: 'contain',
+                      tintColor: '#fff',
+                    }}
+                  />
+
+                  <Text style={styles.smsSendBtnText}>Send SMS</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             <View style={{ height: 40 }} />
@@ -2596,7 +3227,7 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
 
             <View style={styles.composeBlock}>
               <View style={styles.composeBlockHeader}>
-                <Text style={styles.composeBlockLabel}>Message</Text>
+                <Text style={styles.composeBlockLabel}>Message Preview</Text>
                 {selectedWhatsappTemplate?.id !== 'custom' && (
                   <View style={styles.composeSignatureBadge}>
                     <Image
@@ -2613,6 +3244,52 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
                     </Text>
                   </View>
                 )}
+              </View>
+              <TextInput
+                style={styles.composeTextarea}
+                disabled={true}
+                placeholder="Write your WhatsApp message here..."
+                placeholderTextColor={COLORS.textTertiary}
+                value={whatsappMessagePreview}
+                onChangeText={setWhatsappMessagePreview}
+                multiline
+                textAlignVertical="top"
+              />
+            </View>
+            {!showWhatsappSendButton && (
+              <TouchableOpacity
+                style={[
+                  styles.whatsappSubmitBtn,
+                  isFetchingWhatsappContent && { opacity: 0.6 },
+                ]}
+                onPress={handleSubmitWhatsappTemplate}
+                activeOpacity={0.85}
+                disabled={isFetchingWhatsappContent}
+              >
+                {isFetchingWhatsappContent ? (
+                  <ActivityIndicator size="small" color={COLORS.textInverse} />
+                ) : (
+                  <>
+                    <Image
+                      source={require('../../asset/checkmark-circle.png')}
+                      style={{
+                        width: 18,
+                        height: 18,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.textInverse,
+                      }}
+                    />
+
+                    <Text style={styles.whatsappSubmitBtnText}>Submit</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.composeBlock}>
+              <View style={styles.composeBlockHeader}>
+                <Text style={styles.composeBlockLabel}>Message</Text>
+                
               </View>
               <TextInput
                 style={styles.composeTextarea}
@@ -2658,22 +3335,25 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={styles.whatsappSendBtn}
-              onPress={handleSendWhatsapp}
-              activeOpacity={0.85}
-            >
-              <Image
-                source={require('../../asset/send.png')} // Update the path as needed
-                style={{
-                  width: 18,
-                  height: 18,
-                  resizeMode: 'contain',
-                  tintColor: COLORS.textInverse,
-                }}
-              />
-              <Text style={styles.whatsappSendBtnText}>Send WhatsApp</Text>
-            </TouchableOpacity>
+            {showWhatsappSendButton && (
+              <TouchableOpacity
+                style={styles.whatsappSendBtn}
+                onPress={handleSendWhatsapp}
+                activeOpacity={0.85}
+              >
+                <Image
+                  source={require('../../asset/send.png')}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    resizeMode: 'contain',
+                    tintColor: COLORS.textInverse,
+                  }}
+                />
+
+                <Text style={styles.whatsappSendBtnText}>Send WhatsApp</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={{ height: 40 }} />
           </ScrollView>
@@ -2726,15 +3406,18 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
                   />
                 </TouchableOpacity>
               </View>
-              <ScrollView
-                style={styles.dropdownBody}
+              <FlatList
+                data={whatsappTemplates}
+                keyExtractor={item => String(item.id)}
                 showsVerticalScrollIndicator={false}
-              >
-                {WHATSAPP_TEMPLATES.map(tpl => {
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 10 }}
+                renderItem={({ item: tpl }) => {
                   const isActive = selectedWhatsappTemplate?.id === tpl.id;
+
                   return (
                     <TouchableOpacity
-                      key={tpl.id}
                       style={[
                         styles.whatsappTplOption,
                         isActive && styles.whatsappTplOptionActive,
@@ -2744,11 +3427,7 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
                     >
                       <View style={styles.whatsappTplOptionIconWrap}>
                         <Image
-                          source={
-                            tpl.id === 'custom'
-                              ? require('../../asset/create.png')
-                              : require('../../asset/document-text.png')
-                          }
+                          source={require('../../asset/document-text.png')}
                           style={{
                             width: 18,
                             height: 18,
@@ -2759,25 +3438,29 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
                           }}
                         />
                       </View>
+
                       <View style={{ flex: 1 }}>
                         <Text
                           style={[
                             styles.whatsappTplOptionName,
                             isActive && { color: COLORS.primary },
                           ]}
+                          numberOfLines={1}
                         >
                           {tpl.name}
                         </Text>
+
                         <Text
                           style={styles.whatsappTplOptionDesc}
                           numberOfLines={1}
                         >
-                          {tpl.description}
+                          {tpl.description || tpl.body || ''}
                         </Text>
                       </View>
+
                       {isActive && (
                         <Image
-                          source={require('../../asset/checkmark-circle.png')} // Update the path as needed
+                          source={require('../../asset/checkmark-circle.png')}
                           style={{
                             width: 20,
                             height: 20,
@@ -2788,8 +3471,8 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
                       )}
                     </TouchableOpacity>
                   );
-                })}
-              </ScrollView>
+                }}
+              />
             </View>
           </TouchableWithoutFeedback>
         </View>
@@ -3027,7 +3710,7 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
               />
             </View>
 
-            <View style={styles.composeBlock}>
+            {/* <View style={styles.composeBlock}>
               <View style={styles.composeBlockHeader}>
                 <Text style={styles.composeBlockLabel}>Signature</Text>
               </View>
@@ -3043,6 +3726,75 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
                 multiline
                 textAlignVertical="top"
               />
+            </View> */}
+
+            <View style={styles.composeBlock}>
+              <View style={styles.composeBlockHeader}>
+                <Text style={styles.composeBlockLabel}>Signature</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.signatureSelector}
+                onPress={() => {
+                  if (!isLoadingSignatures) {
+                    setShowSignatureModal(true);
+                  }
+                }}
+                activeOpacity={0.7}
+                disabled={isLoadingSignatures}
+              >
+                {isLoadingSignatures ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <ActivityIndicator size="small" color="#6C63FF" />
+
+                    <Text
+                      style={[
+                        styles.signatureSelectorText,
+                        {
+                          marginLeft: 10,
+                          color: '#999',
+                        },
+                      ]}
+                    >
+                      Loading signatures...
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.signatureSelectorText}>
+                      {selectedSignature
+                        ? signatures.find(s => s.id === selectedSignature)?.name
+                        : 'Select Signature'}
+                    </Text>
+
+                    <Image
+                      source={require('../../asset/chevron-down.png')}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        resizeMode: 'contain',
+                        tintColor: '#666',
+                      }}
+                    />
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {!isLoadingSignatures && selectedSignature && (
+                <View style={styles.signaturePreview}>
+                  <Text style={styles.signaturePreviewLabel}>Preview:</Text>
+
+                  <Text style={styles.signaturePreviewText} numberOfLines={2}>
+                    {signatures.find(s => s.id === selectedSignature)
+                      ?.content || 'Signature content is not available.'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             <TouchableOpacity
@@ -3050,16 +3802,23 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
               onPress={handleSendEmail}
               activeOpacity={0.85}
             >
-              <Image
-                source={require('../../asset/send.png')} // Update the path as needed
-                style={{
-                  width: 18,
-                  height: 18,
-                  resizeMode: 'contain',
-                  tintColor: COLORS.textInverse,
-                }}
-              />
-              <Text style={styles.composeSendBtnText}>Send Email</Text>
+              {isSendingEmail ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Image
+                    source={require('../../asset/send.png')}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      resizeMode: 'contain',
+                      tintColor: '#fff',
+                    }}
+                  />
+
+                  <Text style={styles.saveButton}>Send Email</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             <View style={{ height: 40 }} />
@@ -3126,7 +3885,10 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
                       }}
                       activeOpacity={0.7}
                     >
-                      <Image source={c.image} style={styles.emailToAvatar} />
+                      <Image
+                        source={require('../../asset/dummyuser.png')}
+                        style={styles.emailToAvatar}
+                      />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.emailToName}>{c.name}</Text>
                         <Text style={styles.emailToAddress} numberOfLines={1}>
@@ -3152,6 +3914,185 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
+    </Modal>
+  );
+
+  const renderSignatureModal = () => (
+    <Modal
+      visible={showSignatureModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowSignatureModal(false)}
+    >
+      <View style={styles.dialModalContainer}>
+        <View style={styles.dialModalContent}>
+          <View style={styles.dialModalHeader}>
+            <Text style={styles.dialModalTitle}>Select Signature</Text>
+            <Text style={styles.dialModalSubtitle}>
+              Choose a signature to add to your email
+            </Text>
+            <TouchableOpacity
+              style={styles.dialModalClose}
+              onPress={() => setShowSignatureModal(false)}
+            >
+              <Image
+                source={require('../../asset/close.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  resizeMode: 'contain',
+                  tintColor: '#666',
+                }}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.signatureListContainer}>
+            <FlatList
+              data={signatures}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.signatureItem,
+                    selectedSignature === item.id && styles.signatureItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedSignature(item.id);
+                    setShowSignatureModal(false);
+                  }}
+                >
+                  <View style={styles.signatureItemContent}>
+                    <Text style={styles.signatureItemName}>{item.name}</Text>
+                    <Text style={styles.signatureItemPreview} numberOfLines={2}>
+                      {item.content.replace(/<[^>]*>/g, '')}
+                    </Text>
+                  </View>
+                  {selectedSignature === item.id && (
+                    <Image
+                      source={require('../../asset/checkmark-circle.png')}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        resizeMode: 'contain',
+                        tintColor: '#6C63FF',
+                      }}
+                    />
+                  )}
+                </TouchableOpacity>
+              )}
+              ListFooterComponent={
+                <TouchableOpacity
+                  style={styles.addSignatureButton}
+                  onPress={() => {
+                    setShowSignatureModal(false);
+                    setShowAddSignatureModal(true);
+                  }}
+                >
+                  <Image
+                    source={require('../../asset/add-circle.png')}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      resizeMode: 'contain',
+                      tintColor: '#6C63FF',
+                    }}
+                  />
+                  <Text style={styles.addSignatureText}>Add New Signature</Text>
+                </TouchableOpacity>
+              }
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderAddSignatureModal = () => (
+    <Modal
+      visible={showAddSignatureModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowAddSignatureModal(false)}
+    >
+      <View style={styles.dialModalContainer}>
+        <View style={styles.dialModalContent}>
+          <View style={styles.dialModalHeader}>
+            <Text style={styles.dialModalTitle}>Add Signature</Text>
+            <Text style={styles.dialModalSubtitle}>Create a new signature</Text>
+            <TouchableOpacity
+              style={styles.dialModalClose}
+              onPress={() => setShowAddSignatureModal(false)}
+            >
+              <Image
+                source={require('../../asset/close.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  resizeMode: 'contain',
+                  tintColor: '#666',
+                }}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.addSignatureContainer}>
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Signature Name</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Enter signature name"
+                value={signatureName}
+                onChangeText={setSignatureName}
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>
+                Signature Content (HTML supported)
+              </Text>
+              <TextInput
+                style={[styles.formInput, styles.textAreaInput]}
+                placeholder="Enter signature content with HTML tags"
+                value={signatureContent}
+                onChangeText={setSignatureContent}
+                placeholderTextColor="#999"
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+              />
+              <Text style={styles.htmlHelperText}>
+                Example: &lt;p&gt;Best regards,&lt;br/&gt;John Doe&lt;/p&gt;
+              </Text>
+            </View>
+
+            <View style={styles.addSignatureActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => setShowAddSignatureModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  styles.saveButton,
+                  isSavingSignature && { opacity: 0.6 },
+                ]}
+                onPress={handleSaveSignature}
+                disabled={isSavingSignature}
+              >
+                {isSavingSignature ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save Signature</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
     </Modal>
   );
 
@@ -6522,6 +7463,8 @@ const [SMS_SENDERS, setSMSSenders] = useState([]);
       {showAddContactModal && renderAddContactModal()}
       {showReactionPicker && renderReactionPicker()}
       {showTranslateModal && renderTranslateModal()}
+      {showSignatureModal && renderSignatureModal()}
+      {showAddSignatureModal && renderAddSignatureModal()}
 
       {renderDropdownModal({
         visible: showTypeDropdown,
@@ -9662,6 +10605,222 @@ const styles = StyleSheet.create({
   fullScreenLoader: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  signatureSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  signatureSelectorText: {
+    fontSize: 14,
+    color: '#333',
+    fontFamily: 'sans-serif',
+  },
+  signaturePreview: {
+    marginTop: 8,
+    padding: 10,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+  },
+  signaturePreviewLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 4,
+    fontFamily: 'sans-serif',
+  },
+  signaturePreviewText: {
+    fontSize: 13,
+    color: '#666',
+    fontFamily: 'sans-serif',
+  },
+
+  dialModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  dialModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    maxHeight: SCREEN_HEIGHT * 0.9,
+    paddingBottom: 20,
+  },
+  dialModalHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f5',
+  },
+  dialModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'sans-serif',
+  },
+  dialModalSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 2,
+    fontFamily: 'sans-serif',
+  },
+  dialModalClose: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
+  dialTabs: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f5',
+  },
+  dialTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  dialTabActive: {
+    backgroundColor: '#f0edff',
+  },
+  dialTabText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    fontFamily: 'sans-serif',
+  },
+  dialTabTextActive: {
+    color: '#6C63FF',
+    fontWeight: '600',
+  },
+  dialNumberContainer: {
+    padding: 20,
+  },
+  signatureListContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    maxHeight: SCREEN_HEIGHT * 0.6,
+  },
+  signatureItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f1f3f5',
+    marginBottom: 8,
+    backgroundColor: '#fff',
+  },
+  signatureItemActive: {
+    borderColor: '#6C63FF',
+    backgroundColor: '#f0edff',
+  },
+  signatureItemContent: {
+    flex: 1,
+  },
+  signatureItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'sans-serif',
+  },
+  signatureItemPreview: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+    fontFamily: 'sans-serif',
+  },
+  addSignatureButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#6C63FF',
+    borderStyle: 'dashed',
+    gap: 8,
+    marginTop: 8,
+  },
+  addSignatureText: {
+    fontSize: 14,
+    color: '#6C63FF',
+    fontWeight: '500',
+    fontFamily: 'sans-serif',
+  },
+  addSignatureContainer: {
+    padding: 20,
+  },
+  addSignatureActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f1f3f5',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: 'sans-serif',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'sans-serif',
+  },
+  htmlHelperText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    fontStyle: 'italic',
+    fontFamily: 'sans-serif',
+  },
+  saveButton: {
+    backgroundColor: '#6C63FF',
+  },
+
+  textAreaInput: {
+    minHeight: 150,
+    textAlignVertical: 'top',
+  },
+
+  whatsappSubmitBtn: {
+    height: 48,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+    gap: 8,
+  },
+
+  whatsappSubmitBtnText: {
+    color: COLORS.textInverse,
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
 
