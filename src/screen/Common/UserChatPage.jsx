@@ -106,54 +106,6 @@ const MOCK_TRANSLATIONS = {
   en: 'This is a sample message translated to English.',
 };
 
-const WHATSAPP_TEMPLATES = [
-  {
-    id: 'custom',
-    name: 'Custom Template',
-    body: '',
-    description: 'Write your own message',
-  },
-  {
-    id: 'greeting',
-    name: 'Greeting',
-    body: 'Hi {{name}}, hope you are doing well! Just wanted to check in and see how things are going.',
-    description: 'Friendly greeting',
-  },
-  {
-    id: 'followup',
-    name: 'Follow-up',
-    body: 'Hi {{name}}, I wanted to follow up on our last conversation. Please let me know if you have any updates.',
-    description: 'Follow up on previous message',
-  },
-  {
-    id: 'meeting',
-    name: 'Meeting Reminder',
-    body: 'Hi {{name}}, this is a reminder about our scheduled meeting. Looking forward to connecting with you.',
-    description: 'Remind about a meeting',
-  },
-  {
-    id: 'thankyou',
-    name: 'Thank You',
-    body: 'Hi {{name}}, thank you so much for your time and support. It really means a lot!',
-    description: 'Express gratitude',
-  },
-  {
-    id: 'support',
-    name: 'Support Request',
-    body: 'Hi {{name}}, I need some assistance regarding my recent request. Could you please help?',
-    description: 'Ask for support',
-  },
-];
-
-// SMS sender numbers
-// const SMS_SENDERS = [
-//   { id: 'primary', label: 'Primary Number', number: '+1 234-567-8901' },
-//   { id: 'business', label: 'Business Line', number: '+1 800-555-0100' },
-//   { id: 'support', label: 'Support Line', number: '+1 800-555-0200' },
-//   { id: 'sales', label: 'Sales Line', number: '+1 800-555-0300' },
-//   { id: 'personal', label: 'Personal Number', number: '+1 415-555-0142' },
-// ];
-
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
@@ -163,6 +115,8 @@ const UserChatPage = ({ navigation, route }) => {
   // Selected user ID.
   // Ideally pass this from Dashboard:
   // navigation.navigate('UserChatPage', { userId: item.senderId })
+
+  const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
 
   const [whatsappTemplates, setWhatsappTemplates] = useState([]);
   const [isLoadingWhatsappTemplates, setIsLoadingWhatsappTemplates] =
@@ -198,6 +152,7 @@ const UserChatPage = ({ navigation, route }) => {
     email: '',
     phone: '',
     whatsapp: '',
+    commType: route?.params?.commType || 'inApp',
   });
   const [SMS_SENDERS, setSMSSenders] = useState([]);
   const [stateOptions, setStateOptions] = useState([]);
@@ -399,6 +354,9 @@ const UserChatPage = ({ navigation, route }) => {
   const inputRef = useRef(null);
   const initialScrollDoneRef = useRef(false);
   const reactionFocusIdRef = useRef(null);
+  const whatsappAutoOpenedRef = useRef(false);
+  const smsAutoOpenedRef = useRef(false);
+  const emailAutoOpenedRef = useRef(false);
 
   // ============================================================
   // KEYBOARD LISTENERS
@@ -794,6 +752,173 @@ const UserChatPage = ({ navigation, route }) => {
     fetchWhatsappTemplates();
     fetchContacts();
   }, []);
+
+  useEffect(() => {
+    const commType = route?.params?.commType;
+
+    // Only auto-open for WhatsApp
+    if (commType !== 'WP') {
+      return;
+    }
+
+    // Wait until contacts are fetched
+    if (!contacts || contacts.length === 0) {
+      return;
+    }
+
+    // Don't open multiple times
+    if (whatsappAutoOpenedRef.current) {
+      return;
+    }
+
+    // Find a contact having WhatsApp number
+    const whatsappContact = contacts.find(contact => contact?.whatsapp?.trim());
+
+    if (!whatsappContact) {
+      console.log('No WhatsApp number found for this user.');
+      return;
+    }
+
+    // Mark as opened
+    whatsappAutoOpenedRef.current = true;
+
+    // Set WhatsApp number
+    setSelectedWhatsappNumber(whatsappContact.whatsapp);
+
+    // Select first template
+    if (whatsappTemplates.length > 0) {
+      setSelectedWhatsappTemplate(whatsappTemplates[0]);
+    }
+
+    // Reset message
+    setWhatsappMessage('');
+    setWhatsappMessagePreview('');
+
+    // Hide Send button until Submit
+    setShowWhatsappSendButton(false);
+
+    // Open WhatsApp Compose Modal
+    setShowWhatsappComposeModal(true);
+
+    console.log(
+      'WhatsApp Compose Modal opened automatically:',
+      whatsappContact.whatsapp,
+    );
+
+  }, [contacts, whatsappTemplates, route?.params?.commType]);
+
+
+
+  useEffect(() => {
+  const commType = route?.params?.commType;
+
+  // Only auto-open SMS
+  if (commType !== 'sms') {
+    return;
+  }
+
+  // Wait until contacts are fetched
+  if (!contacts || contacts.length === 0) {
+    return;
+  }
+
+  // Prevent opening multiple times
+  if (smsAutoOpenedRef.current) {
+    return;
+  }
+
+  // Find first contact having a phone number
+  const smsContact = contacts.find(
+    contact => contact?.phoneNumber?.trim(),
+  );
+
+  if (!smsContact) {
+    console.log('No mobile number found for this user.');
+    return;
+  }
+
+  // Mark as opened
+  smsAutoOpenedRef.current = true;
+
+  // Set selected SMS sender
+  setSelectedSmsSender({
+    id: String(smsContact.id || ''),
+    label: smsContact.role || 'Contact',
+    number: smsContact.phoneNumber,
+  });
+
+  // Clear previous message
+  setSmsMessage('');
+
+  // Open SMS Compose Modal
+  setShowSmsComposeModal(true);
+
+  console.log(
+    'SMS Compose Modal opened automatically:',
+    smsContact.phoneNumber,
+  );
+}, [
+  contacts,
+  route?.params?.commType,
+]);
+
+
+useEffect(() => {
+  const commType = String(
+    route?.params?.commType || '',
+  ).toLowerCase();
+
+  // Only auto-open Email
+  if (commType !== 'email') {
+    return;
+  }
+
+  // Wait until contacts are fetched
+  if (!contacts || contacts.length === 0) {
+    return;
+  }
+
+  // Prevent opening multiple times
+  if (emailAutoOpenedRef.current) {
+    return;
+  }
+
+  // Find contact having an email
+  const emailContact = contacts.find(
+    contact => contact?.email?.trim(),
+  );
+
+  if (!emailContact) {
+    console.log('No email address found for this user.');
+    return;
+  }
+
+  // Mark as opened
+  emailAutoOpenedRef.current = true;
+
+  // Set recipient email
+  setSelectedEmailTo(emailContact.email);
+
+  // Clear compose fields
+  setComposeSubject('');
+  setComposeBody('');
+
+  // Set default signature
+  setComposeSignature(
+    'Best regards,\nJohn Smith\nSystem Admin\njohn.smith@example.com',
+  );
+
+  // Open Email Compose Modal
+  setShowEmailComposeModal(true);
+
+  console.log(
+    'Email Compose Modal opened automatically:',
+    emailContact.email,
+  );
+}, [
+  contacts,
+  route?.params?.commType,
+]);
 
   useEffect(() => {
     fetchSignatures();
@@ -1829,34 +1954,143 @@ const UserChatPage = ({ navigation, route }) => {
     setShowWhatsappComposeModal(true);
   };
 
-  const handleSendWhatsapp = () => {
-    if (!selectedWhatsappNumber) {
+  const handleSendWhatsapp = async () => {
+    // ============================
+    // VALIDATION
+    // ============================
+
+    if (!selectedWhatsappNumber?.trim()) {
       Alert.alert(
         'Missing Number',
         'Please choose a WhatsApp number before sending.',
       );
       return;
     }
-    if (!whatsappMessage.trim()) {
+
+    if (!whatsappMessage?.trim()) {
       Alert.alert('Missing Message', 'Please write a message before sending.');
       return;
     }
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        senderId: 'me',
-        message: whatsappMessage,
+
+    if (!selectedUserId) {
+      Alert.alert('Missing Receiver', 'Receiver user ID is not available.');
+      return;
+    }
+
+    // ============================
+    // TOKEN
+    // ============================
+
+    const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+    if (!token) {
+      Alert.alert('Error', 'Authentication token not found.');
+      return;
+    }
+
+    try {
+      setIsSendingWhatsapp(true);
+
+      // ============================
+      // PAYLOAD
+      // ============================
+
+      const payload = {
+        receiver_id: Number(selectedUserId),
+        message: whatsappMessage.trim(),
         type: 'whatsapp',
-        dateTime: new Date(),
-        isRead: true,
-        reactions: [],
-        translatedText: null,
-        translatedLang: null,
-      },
-    ]);
-    setShowWhatsappComposeModal(false);
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 200);
+        receiver_mobile_no: selectedWhatsappNumber.trim(),
+      };
+
+      // Add template_id only for an API template
+      if (
+        selectedWhatsappTemplate?.id !== 'custom' &&
+        selectedWhatsappTemplate?.templateId
+      ) {
+        payload.template_id = Number(selectedWhatsappTemplate.templateId);
+      }
+
+      console.log('========== WHATSAPP SEND REQUEST ==========');
+      console.log(
+        'URL:',
+        'https://leafcom.us/backend/api/chat-application/sendMessage',
+      );
+      console.log('PAYLOAD:', JSON.stringify(payload, null, 2));
+      console.log('============================================');
+
+      // ============================
+      // API CALL
+      // ============================
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/sendMessage',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('========== WHATSAPP SEND RESPONSE ==========');
+      console.log(JSON.stringify(response.data, null, 2));
+      console.log('STATUS:', response.status);
+      console.log('============================================');
+
+      // ============================
+      // SUCCESS
+      // ============================
+
+      if (response.data?.success) {
+        Alert.alert(
+          'Success',
+          response.data.message ||
+            'WhatsApp message has been sent successfully.',
+        );
+
+        // Add message to local chat
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({
+            animated: true,
+          });
+        }, 100);
+
+        // Clear WhatsApp fields
+        setWhatsappMessage('');
+        setWhatsappMessagePreview('');
+        setShowWhatsappSendButton(false);
+
+        // Close modal
+        setShowWhatsappComposeModal(false);
+
+        // Scroll to latest message
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({
+            animated: true,
+          });
+        }, 200);
+      } else {
+        Alert.alert(
+          'Error',
+          response.data?.message || 'Failed to send WhatsApp message.',
+        );
+      }
+    } catch (error) {
+      console.log('========== WHATSAPP SEND ERROR ==========');
+      console.log('STATUS:', error?.response?.status);
+      console.log('DATA:', error?.response?.data);
+      console.log('MESSAGE:', error?.message);
+      console.log('==========================================');
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message ||
+          'Something went wrong while sending WhatsApp message.',
+      );
+    } finally {
+      setIsSendingWhatsapp(false);
+    }
   };
 
   const handleChooseTemplate = tpl => {
@@ -1891,10 +2125,7 @@ const UserChatPage = ({ navigation, route }) => {
   };
 
   const handleSendSms = async () => {
-    if (!selectedSmsSender) {
-      Alert.alert('Missing Sender', 'Please choose a sender before sending.');
-      return;
-    }
+   
 
     if (!inputMessage.trim()) {
       Alert.alert('Missing Message', 'Please write a message before sending.');
@@ -3289,7 +3520,6 @@ const UserChatPage = ({ navigation, route }) => {
             <View style={styles.composeBlock}>
               <View style={styles.composeBlockHeader}>
                 <Text style={styles.composeBlockLabel}>Message</Text>
-                
               </View>
               <TextInput
                 style={styles.composeTextarea}
@@ -3341,17 +3571,25 @@ const UserChatPage = ({ navigation, route }) => {
                 onPress={handleSendWhatsapp}
                 activeOpacity={0.85}
               >
-                <Image
-                  source={require('../../asset/send.png')}
-                  style={{
-                    width: 18,
-                    height: 18,
-                    resizeMode: 'contain',
-                    tintColor: COLORS.textInverse,
-                  }}
-                />
+                {isSendingWhatsapp ? (
+                  <ActivityIndicator size="small" color={COLORS.textInverse} />
+                ) : (
+                  <>
+                    <Image
+                      source={require('../../asset/send.png')}
+                      style={{
+                        width: 18,
+                        height: 18,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.textInverse,
+                      }}
+                    />
 
-                <Text style={styles.whatsappSendBtnText}>Send WhatsApp</Text>
+                    <Text style={styles.whatsappSendBtnText}>
+                      Send WhatsApp
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             )}
 

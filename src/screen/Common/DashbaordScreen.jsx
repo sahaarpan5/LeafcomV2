@@ -3491,6 +3491,7 @@ const DashbaordScreen = ({ navigation }) => {
             userName: item.sender_name,
             userImage: item.sender_profile_picture,
             userType: item.sender_profile_type,
+            commType: 'inApp',
           })
         }
       >
@@ -3524,11 +3525,15 @@ const DashbaordScreen = ({ navigation }) => {
             <TouchableOpacity
               style={[styles.userIconSmall, { backgroundColor: '#6C63FF20' }]}
               onPress={() => {
-                setEmailTo(contact?.email || '');
-                setEmailSubject('');
-                setEmailBody('');
-                setActiveTab('email');
-              }}
+                  navigation.navigate('UserChatPage', {
+                    senderId: item.sender_id,
+                    userName: item.sender_name,
+                    userImage: item.sender_profile_picture,
+                    userType: item.sender_profile_type,
+                    commType: 'inApp',
+                  });
+                }}
+              
             >
               <Image
                 source={require('../../asset/chat.png')}
@@ -3543,10 +3548,13 @@ const DashbaordScreen = ({ navigation }) => {
               <TouchableOpacity
                 style={[styles.userIconSmall]}
                 onPress={() => {
-                  setEmailTo(contact?.email || '');
-                  setEmailSubject('');
-                  setEmailBody('');
-                  setActiveTab('email');
+                  navigation.navigate('UserChatPage', {
+                    senderId: item.sender_id,
+                    userName: item.sender_name,
+                    userImage: item.sender_profile_picture,
+                    userType: item.sender_profile_type,
+                    commType: 'email',
+                  });
                 }}
               >
                 <Image
@@ -3575,7 +3583,15 @@ const DashbaordScreen = ({ navigation }) => {
             {item.whatsapp_number && item.whatsapp_number.trim() !== '' && (
               <TouchableOpacity
                 style={[styles.userIconSmall]}
-                onPress={() => openModal('whatsapp')}
+                onPress={() => {
+                  navigation.navigate('UserChatPage', {
+                    senderId: item.sender_id,
+                    userName: item.sender_name,
+                    userImage: item.sender_profile_picture,
+                    userType: item.sender_profile_type,
+                    commType: 'WP',
+                  });
+                }}
               >
                 <Image
                   source={require('../../asset/whatsapp.png')}
@@ -3589,7 +3605,15 @@ const DashbaordScreen = ({ navigation }) => {
             )}
             <TouchableOpacity
               style={[styles.userIconSmall]}
-              onPress={() => openModal('message')}
+              onPress={() => {
+                  navigation.navigate('UserChatPage', {
+                    senderId: item.sender_id,
+                    userName: item.sender_name,
+                    userImage: item.sender_profile_picture,
+                    userType: item.sender_profile_type,
+                    commType: 'sms',
+                  });
+                }}
             >
               <Image
                 source={require('../../asset/message.png')}
