@@ -737,7 +737,7 @@ const DashbaordScreen = ({ navigation }) => {
     },
     {
       id: 'whatsapp',
-      icon: require('../../asset/whats-app.png'),
+      icon: require('../../asset/whatsapps.png'),
       label: 'WhatsApp',
       color: '#25D366',
     },
@@ -4384,7 +4384,7 @@ const DashbaordScreen = ({ navigation }) => {
                   style={[styles.callActionBtn, { backgroundColor: '#3dd417' }]}
                 >
                   <Image
-                    source={require('../../asset/whats-app.png')}
+                    source={require('../../asset/whatsapps.png')}
                     style={{
                       width: 24,
                       height: 24,
@@ -5213,7 +5213,7 @@ const DashbaordScreen = ({ navigation }) => {
         >
           <View style={[styles.bottomFixedIcon, styles.bottomFixedWhatsApp]}>
             <Image
-              source={require('../../asset/whats-app.png')}
+              source={require('../../asset/whatsapps.png')}
               style={{
                 width: 24,
                 height: 24,

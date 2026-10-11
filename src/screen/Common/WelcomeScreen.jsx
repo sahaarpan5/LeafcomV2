@@ -372,7 +372,7 @@ const WelcomeScreen = ({ onFinish }) => {
           <View style={styles.iconGlowWhatsApp} />
 
           <Image
-            source={require('../../asset/whats-app.png')}
+            source={require('../../asset/whatsapps.png')}
             style={{
               width: 32,
               height: 32,

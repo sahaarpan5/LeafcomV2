@@ -87,23 +87,8 @@ const REACTION_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '👎', '🔥
 const TRANSLATIONS = {
   en: 'English',
   es: 'Spanish',
-  fr: 'French',
+  pt: 'Portuguese',
   de: 'German',
-  hi: 'Hindi',
-  ar: 'Arabic',
-  zh: 'Chinese',
-  ja: 'Japanese',
-};
-
-const MOCK_TRANSLATIONS = {
-  es: 'Este es un mensaje de ejemplo traducido al español.',
-  fr: 'Ceci est un exemple de message traduit en français.',
-  de: 'Dies ist eine Beispielnachricht, die ins Deutsche übersetzt wurde.',
-  hi: 'यह हिंदी में अनुवादित एक नमूना संदेश है।',
-  ar: 'هذه رسالة نموذجية مترجمة إلى العربية.',
-  zh: '这是一条翻译成中文的示例消息。',
-  ja: 'これは日本語に翻訳されたサンプルメッセージです。',
-  en: 'This is a sample message translated to English.',
 };
 
 // ============================================================
@@ -216,8 +201,9 @@ const UserChatPage = ({ navigation, route }) => {
 
   const [showTranslateModal, setShowTranslateModal] = useState(false);
   const [translateTargetMessage, setTranslateTargetMessage] = useState(null);
-  const [selectedLanguage, setSelectedLanguage] = useState('es');
+  const [selectedLanguage, setSelectedLanguage] = useState('');
   const [translatedResult, setTranslatedResult] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
@@ -358,6 +344,8 @@ const UserChatPage = ({ navigation, route }) => {
   const smsAutoOpenedRef = useRef(false);
   const emailAutoOpenedRef = useRef(false);
 
+  const initialScrollTimerRef = useRef(null);
+
   // ============================================================
   // KEYBOARD LISTENERS
   // ============================================================
@@ -395,6 +383,13 @@ const UserChatPage = ({ navigation, route }) => {
     let unsubscribe = null;
     initialScrollDoneRef.current = false;
     reactionFocusIdRef.current = null;
+
+    if (initialScrollTimerRef.current) {
+      clearTimeout(initialScrollTimerRef.current);
+      initialScrollTimerRef.current = null;
+    }
+
+    setIsLoadingMessages(true);
 
     const loadChatMessages = () => {
       try {
@@ -580,14 +575,14 @@ const UserChatPage = ({ navigation, route }) => {
               }
 
               setMessages(firebaseMessages);
-              setIsLoadingMessages(false);
+              // setIsLoadingMessages(false);
 
-              // Scroll to latest message
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({
-                  animated: true,
-                });
-              }, 200);
+              // // Scroll to latest message
+              // setTimeout(() => {
+              //   flatListRef.current?.scrollToEnd({
+              //     animated: true,
+              //   });
+              // }, 200);
             } catch (error) {
               console.log('Error processing Firebase chat:', error);
 
@@ -615,6 +610,11 @@ const UserChatPage = ({ navigation, route }) => {
     return () => {
       initialScrollDoneRef.current = false;
       reactionFocusIdRef.current = null;
+
+      if (initialScrollTimerRef.current) {
+        clearTimeout(initialScrollTimerRef.current);
+        initialScrollTimerRef.current = null;
+      }
       if (unsubscribe) {
         unsubscribe();
       }
@@ -631,7 +631,7 @@ const UserChatPage = ({ navigation, route }) => {
     },
     {
       id: 'whatsapp',
-      icon: require('../../asset/whats-app.png'),
+      icon: require('../../asset/whatsapps.png'),
       label: 'WhatsApp',
       color: COLORS.whatsapp,
       bg: COLORS.whatsappSoft,
@@ -804,121 +804,105 @@ const UserChatPage = ({ navigation, route }) => {
       'WhatsApp Compose Modal opened automatically:',
       whatsappContact.whatsapp,
     );
-
   }, [contacts, whatsappTemplates, route?.params?.commType]);
 
+  useEffect(() => {
+    const commType = route?.params?.commType;
 
+    // Only auto-open SMS
+    if (commType !== 'sms') {
+      return;
+    }
+
+    // Wait until contacts are fetched
+    if (!contacts || contacts.length === 0) {
+      return;
+    }
+
+    // Prevent opening multiple times
+    if (smsAutoOpenedRef.current) {
+      return;
+    }
+
+    // Find first contact having a phone number
+    const smsContact = contacts.find(contact => contact?.phoneNumber?.trim());
+
+    if (!smsContact) {
+      console.log('No mobile number found for this user.');
+      return;
+    }
+
+    // Mark as opened
+    smsAutoOpenedRef.current = true;
+
+    // Set selected SMS sender
+    setSelectedSmsSender({
+      id: String(smsContact.id || ''),
+      label: smsContact.role || 'Contact',
+      number: smsContact.phoneNumber,
+    });
+
+    // Clear previous message
+    setSmsMessage('');
+
+    // Open SMS Compose Modal
+    setShowSmsComposeModal(true);
+
+    console.log(
+      'SMS Compose Modal opened automatically:',
+      smsContact.phoneNumber,
+    );
+  }, [contacts, route?.params?.commType]);
 
   useEffect(() => {
-  const commType = route?.params?.commType;
+    const commType = String(route?.params?.commType || '').toLowerCase();
 
-  // Only auto-open SMS
-  if (commType !== 'sms') {
-    return;
-  }
+    // Only auto-open Email
+    if (commType !== 'email') {
+      return;
+    }
 
-  // Wait until contacts are fetched
-  if (!contacts || contacts.length === 0) {
-    return;
-  }
+    // Wait until contacts are fetched
+    if (!contacts || contacts.length === 0) {
+      return;
+    }
 
-  // Prevent opening multiple times
-  if (smsAutoOpenedRef.current) {
-    return;
-  }
+    // Prevent opening multiple times
+    if (emailAutoOpenedRef.current) {
+      return;
+    }
 
-  // Find first contact having a phone number
-  const smsContact = contacts.find(
-    contact => contact?.phoneNumber?.trim(),
-  );
+    // Find contact having an email
+    const emailContact = contacts.find(contact => contact?.email?.trim());
 
-  if (!smsContact) {
-    console.log('No mobile number found for this user.');
-    return;
-  }
+    if (!emailContact) {
+      console.log('No email address found for this user.');
+      return;
+    }
 
-  // Mark as opened
-  smsAutoOpenedRef.current = true;
+    // Mark as opened
+    emailAutoOpenedRef.current = true;
 
-  // Set selected SMS sender
-  setSelectedSmsSender({
-    id: String(smsContact.id || ''),
-    label: smsContact.role || 'Contact',
-    number: smsContact.phoneNumber,
-  });
+    // Set recipient email
+    setSelectedEmailTo(emailContact.email);
 
-  // Clear previous message
-  setSmsMessage('');
+    // Clear compose fields
+    setComposeSubject('');
+    setComposeBody('');
 
-  // Open SMS Compose Modal
-  setShowSmsComposeModal(true);
+    // Set default signature
+    setComposeSignature(
+      'Best regards,\nJohn Smith\nSystem Admin\njohn.smith@example.com',
+    );
 
-  console.log(
-    'SMS Compose Modal opened automatically:',
-    smsContact.phoneNumber,
-  );
-}, [
-  contacts,
-  route?.params?.commType,
-]);
+    // Open Email Compose Modal
+    setShowEmailComposeModal(true);
 
-
-useEffect(() => {
-  const commType = String(
-    route?.params?.commType || '',
-  ).toLowerCase();
-
-  // Only auto-open Email
-  if (commType !== 'email') {
-    return;
-  }
-
-  // Wait until contacts are fetched
-  if (!contacts || contacts.length === 0) {
-    return;
-  }
-
-  // Prevent opening multiple times
-  if (emailAutoOpenedRef.current) {
-    return;
-  }
-
-  // Find contact having an email
-  const emailContact = contacts.find(
-    contact => contact?.email?.trim(),
-  );
-
-  if (!emailContact) {
-    console.log('No email address found for this user.');
-    return;
-  }
-
-  // Mark as opened
-  emailAutoOpenedRef.current = true;
-
-  // Set recipient email
-  setSelectedEmailTo(emailContact.email);
-
-  // Clear compose fields
-  setComposeSubject('');
-  setComposeBody('');
-
-  // Set default signature
-  setComposeSignature(
-    'Best regards,\nJohn Smith\nSystem Admin\njohn.smith@example.com',
-  );
-
-  // Open Email Compose Modal
-  setShowEmailComposeModal(true);
-
-  console.log(
-    'Email Compose Modal opened automatically:',
-    emailContact.email,
-  );
-}, [
-  contacts,
-  route?.params?.commType,
-]);
+    console.log(
+      'Email Compose Modal opened automatically:',
+      emailContact.email,
+    );
+  }, [contacts, route?.params?.commType]);
 
   useEffect(() => {
     fetchSignatures();
@@ -1772,11 +1756,7 @@ useEffect(() => {
       // SUCCESS
       // ============================
       if (response.data?.success) {
-        Alert.alert(
-          'Success',
-          response.data.message || 'Email sent successfully.',
-        );
-
+       
         // Clear compose fields
         setSelectedEmailTo('');
         setComposeSubject('');
@@ -1897,10 +1877,7 @@ useEffect(() => {
       // SUCCESS
       // ============================
       if (response.data?.success) {
-        Alert.alert(
-          'Success',
-          response.data.message || 'Message has been sent successfully.',
-        );
+        
 
         setSmsMessage('');
 
@@ -2043,11 +2020,7 @@ useEffect(() => {
       // ============================
 
       if (response.data?.success) {
-        Alert.alert(
-          'Success',
-          response.data.message ||
-            'WhatsApp message has been sent successfully.',
-        );
+        
 
         // Add message to local chat
         setTimeout(() => {
@@ -2125,8 +2098,6 @@ useEffect(() => {
   };
 
   const handleSendSms = async () => {
-   
-
     if (!inputMessage.trim()) {
       Alert.alert('Missing Message', 'Please write a message before sending.');
       return;
@@ -2642,17 +2613,63 @@ useEffect(() => {
 
   const handleTranslate = message => {
     setTranslateTargetMessage(message);
-    setSelectedLanguage('es');
+    setSelectedLanguage('');
     setTranslatedResult('');
     setShowTranslateModal(true);
   };
 
-  const performTranslation = lang => {
+  const performTranslation = async lang => {
+    const messageText = translateTargetMessage?.message?.trim();
+
+    if (!messageText) {
+      Alert.alert('Translation', 'No message available to translate.');
+      return;
+    }
+
     setSelectedLanguage(lang);
-    const result =
-      MOCK_TRANSLATIONS[lang] ||
-      `[Translated to ${TRANSLATIONS[lang]}]: ${translateTargetMessage?.message}`;
-    setTranslatedResult(result);
+    setTranslatedResult('');
+    setIsTranslating(true);
+
+    try {
+      // Use the same valid bearer token source as your other API calls.
+      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/translateMessage',
+        {
+          message: messageText,
+          target_language: lang,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (response.data?.success) {
+        setTranslatedResult(response.data.translated_text || '');
+      } else {
+        Alert.alert(
+          'Translation Failed',
+          response.data?.message || 'Unable to translate this message.',
+        );
+      }
+    } catch (error) {
+      console.log(
+        'Translate Message API Error:',
+        error?.response?.data || error?.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message ||
+          'Unable to translate the message. Please try again.',
+      );
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const handleSaveTranslation = () => {
@@ -6133,7 +6150,7 @@ useEffect(() => {
 
                     <View style={styles.contactDetailRow}>
                       <Image
-                        source={require('../../asset/whats-app.png')}
+                        source={require('../../asset/whatsapps.png')}
                         style={{
                           width: 13,
                           height: 13,
@@ -6314,11 +6331,18 @@ useEffect(() => {
                 })}
               </View>
 
-              {translatedResult ? (
+              {isTranslating ? (
+                <View style={styles.translationEmptyCard}>
+                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <Text style={styles.translationEmptyText}>
+                    Translating message...
+                  </Text>
+                </View>
+              ) : translatedResult ? (
                 <View style={styles.translationResultCard}>
                   <View style={styles.translationResultHeader}>
                     <Image
-                      source={require('../../asset/sparkles.png')} // Update the path as needed
+                      source={require('../../asset/sparkles.png')}
                       style={{
                         width: 16,
                         height: 16,
@@ -6326,10 +6350,12 @@ useEffect(() => {
                         tintColor: COLORS.primary,
                       }}
                     />
+
                     <Text style={styles.translationResultLabel}>
                       Translated to {TRANSLATIONS[selectedLanguage]}
                     </Text>
                   </View>
+
                   <Text style={styles.translationResultText}>
                     {translatedResult}
                   </Text>
@@ -6337,7 +6363,7 @@ useEffect(() => {
               ) : (
                 <View style={styles.translationEmptyCard}>
                   <Image
-                    source={require('../../asset/language-outline.png')} // Update the path as needed
+                    source={require('../../asset/language-outline.png')}
                     style={{
                       width: 32,
                       height: 32,
@@ -6345,13 +6371,14 @@ useEffect(() => {
                       tintColor: COLORS.textTertiary,
                     }}
                   />
+
                   <Text style={styles.translationEmptyText}>
                     Select a language above to see the translation
                   </Text>
                 </View>
               )}
 
-              {translatedResult ? (
+              {translatedResult && !isTranslating ? (
                 <TouchableOpacity
                   style={styles.translationSaveBtn}
                   onPress={handleSaveTranslation}
@@ -7619,7 +7646,7 @@ useEffect(() => {
             </Animated.View>
           )}
 
-          <View style={styles.messagesContainer}>
+          {/* <View style={styles.messagesContainer}>
             {isLoadingMessages ? (
               <View style={styles.messageLoaderContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -7658,6 +7685,73 @@ useEffect(() => {
                   }, 300);
                 }}
               />
+            )}
+          </View> */}
+
+          <View style={styles.messagesContainer}>
+            <FlatList
+              ref={flatListRef}
+              data={getFilteredMessages()}
+              renderItem={renderMessageBubble}
+              keyExtractor={item => item.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.messagesList}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              onContentSizeChange={() => {
+                // Keep scrolling to the latest message while initial loading is active.
+                if (messages.length > 0 && isLoadingMessages) {
+                  requestAnimationFrame(() => {
+                    flatListRef.current?.scrollToEnd({
+                      animated: false,
+                    });
+                  });
+
+                  // Start the loader timer only once.
+                  if (!initialScrollDoneRef.current) {
+                    initialScrollDoneRef.current = true;
+
+                    if (initialScrollTimerRef.current) {
+                      clearTimeout(initialScrollTimerRef.current);
+                    }
+
+                    initialScrollTimerRef.current = setTimeout(() => {
+                      setIsLoadingMessages(false);
+                      initialScrollTimerRef.current = null;
+                    }, 5000);
+                  }
+
+                  return;
+                }
+
+                // Preserve keyboard scrolling behavior.
+                if (isKeyboardVisible && !reactionFocusIdRef.current) {
+                  requestAnimationFrame(() => {
+                    flatListRef.current?.scrollToEnd({
+                      animated: false,
+                    });
+                  });
+                }
+              }}
+              onScrollToIndexFailed={info => {
+                setTimeout(() => {
+                  flatListRef.current?.scrollToIndex({
+                    index: info.index,
+                    animated: true,
+                    viewPosition: 0.5,
+                  });
+                }, 300);
+              }}
+            />
+
+            {/* Loader overlay */}
+            {isLoadingMessages && (
+              <View style={styles.messageLoaderContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.messageLoaderText}>
+                  Loading messages...
+                </Text>
+              </View>
             )}
           </View>
 
@@ -10826,10 +10920,15 @@ const styles = StyleSheet.create({
   },
 
   messageLoaderContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 30,
+    backgroundColor: COLORS.bgPrimary,
+    zIndex: 10,
   },
 
   messageLoaderText: {
