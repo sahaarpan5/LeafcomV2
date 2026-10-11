@@ -24,6 +24,11 @@ import Loader from '../../util/Loader';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../../config/firebaseConfig';
 
+import {
+  makeTelnyxCall,
+  endTelnyxCall,
+} from '../../services/telnyxCallService';
+
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ============================================================
@@ -103,72 +108,9 @@ const DashbaordScreen = ({ navigation }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
 
   // Message sidebar states
-  const [messages, setMessages] = useState([
-    {
-      id: '1',
-      userName: 'John Smith',
-      userImage: require('../../asset/dummyuser.png'),
-      lastMessage: 'Hey, how are you doing?',
-      dateTime: new Date(Date.now() - 1000 * 60 * 5),
-      isRead: false,
-      unreadCount: 3,
-    },
-    {
-      id: '2',
-      userName: 'Sarah Johnson',
-      userImage: require('../../asset/dummyuser.png'),
-      lastMessage: 'The design files are ready for review.',
-      dateTime: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      isRead: true,
-      unreadCount: 0,
-    },
-    {
-      id: '3',
-      userName: 'Michael Brown',
-      userImage: require('../../asset/dummyuser.png'),
-      lastMessage: 'Can we schedule a meeting for tomorrow?',
-      dateTime: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      isRead: false,
-      unreadCount: 1,
-    },
-    {
-      id: '4',
-      userName: 'Emily Davis',
-      userImage: require('../../asset/dummyuser.png'),
-      lastMessage: 'Thanks for the update!',
-      dateTime: new Date(Date.now() - 1000 * 60 * 60 * 48),
-      isRead: true,
-      unreadCount: 0,
-    },
-    {
-      id: '5',
-      userName: 'Robert Wilson',
-      userImage: require('../../asset/dummyuser.png'),
-      lastMessage: 'System maintenance completed successfully.',
-      dateTime: new Date(Date.now() - 1000 * 60 * 60 * 72),
-      isRead: false,
-      unreadCount: 2,
-    },
-    {
-      id: '6',
-      userName: 'Lisa Anderson',
-      userImage: require('../../asset/dummyuser.png'),
-      lastMessage: "I've reviewed the proposal. Looks good!",
-      dateTime: new Date(Date.now() - 1000 * 60 * 60 * 120),
-      isRead: true,
-      unreadCount: 0,
-    },
-    {
-      id: '7',
-      userName: 'David Martinez',
-      userImage: require('../../asset/dummyuser.png'),
-      lastMessage: 'Code review completed for sprint 3.',
-      dateTime: new Date(Date.now() - 1000 * 60 * 60 * 168),
-      isRead: false,
-      unreadCount: 4,
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
 
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   // Modal management states
   const [showDialModal, setShowDialModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -180,10 +122,19 @@ const DashbaordScreen = ({ navigation }) => {
   const [pendingModal, setPendingModal] = useState(null);
   const [parentModal, setParentModal] = useState(null);
 
+  const [conversationSearch, setConversationSearch] = useState('');
+
   // Dial modal states
   const [dialTab, setDialTab] = useState('number');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('+1');
+
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [countryCodes, setCountryCodes] = useState([]);
+  const [countryLoading, setCountryLoading] = useState(false);
+  const [selectedCountryName, setSelectedCountryName] =
+    useState('United States');
+  const [selectedCountryCode, setSelectedCountryCode] = useState('US');
 
   // Contact filter states
   const [contactSearch, setContactSearch] = useState('');
@@ -191,7 +142,7 @@ const DashbaordScreen = ({ navigation }) => {
 
   // Email states
   const [emailTo, setEmailTo] = useState('');
-  const [emailFrom] = useState('user@leafcom.com');
+  const [emailFrom, setEmailFrrom] = useState('user@leafcom.com');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [selectedSignature, setSelectedSignature] = useState('');
@@ -202,6 +153,22 @@ const DashbaordScreen = ({ navigation }) => {
 
   const [categories, setCategories] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  const [showInCallModal, setShowInCallModal] = useState(false);
+  const [callStatus, setCallStatus] = useState('Connecting...');
+  const [callPhoneNumber, setCallPhoneNumber] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCalling, setIsCalling] = useState(false);
+
+  const [isWPCalling, setIsWPCalling] = useState(false);
+
+  const [isSMSCalling, setIsSMSCalling] = useState(false);
+
+  const [profileInfo, setProfileInfo] = useState({
+    user_name: '',
+    email: '',
+    profile_picture: '',
+  });
 
   // Email history
   const [emailHistory, setEmailHistory] = useState([
@@ -325,6 +292,7 @@ const DashbaordScreen = ({ navigation }) => {
   }, [showMessageSidebar]);
 
   useEffect(() => {
+    fetchProfileInfo();
     fetchUsers(1, false);
     fetchContacts(1, false);
     fetchUserTypes();
@@ -351,7 +319,8 @@ const DashbaordScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    let unsubscribe = null;
+    let unsubscribeUser = null;
+    let unsubscribeGroup = null;
 
     const loadFirebaseNotifications = async () => {
       try {
@@ -364,264 +333,342 @@ const DashbaordScreen = ({ navigation }) => {
           return;
         }
 
-        const notificationPath = `leafnet_notifications/User_${userId}_2`;
+        // ============================================
+        // FIREBASE REFERENCES
+        // ============================================
 
-        console.log('Firebase notification path:', notificationPath);
+        const userNotificationRef = ref(
+          database,
+          `leafnet_notifications/User_${userId}_2`,
+        );
 
-        const notificationRef = ref(database, notificationPath);
+        const groupNotificationRef = ref(
+          database,
+          `leafnet_notifications/Group_2_${userId}`,
+        );
 
-        unsubscribe = onValue(
-          notificationRef,
-          snapshot => {
-            try {
-              if (!snapshot.exists()) {
-                setActivityData([]);
-                setIsLoadingActivity(false);
+        let userNotifications = {};
+        let groupNotifications = {};
+
+        let userLoaded = false;
+        let groupLoaded = false;
+
+        // ============================================
+        // PROCESS USER + GROUP NOTIFICATIONS
+        // ============================================
+
+        const processNotifications = () => {
+          // Wait until both Firebase listeners return data.
+          if (!userLoaded || !groupLoaded) {
+            return;
+          }
+
+          try {
+            const allRecords = [
+              ...Object.entries(userNotifications || {}).map(
+                ([firebaseKey, item]) => ({
+                  ...item,
+                  firebaseKey,
+                  source: 'user',
+                }),
+              ),
+
+              ...Object.entries(groupNotifications || {}).map(
+                ([firebaseKey, item]) => ({
+                  ...item,
+                  firebaseKey,
+                  source: 'group',
+                }),
+              ),
+            ];
+
+            const groupedNotifications = {};
+
+            // ============================================
+            // GROUP MESSAGES USER-WISE
+            // ============================================
+
+            allRecords.forEach(item => {
+              if (!item) {
                 return;
               }
 
-              const firebaseData = snapshot.val();
+              const senderId =
+                item.sender_id != null ? String(item.sender_id) : '';
 
-              console.log('Firebase notification data:', firebaseData);
+              // A sender ID is required for user-wise grouping.
+              if (!senderId) {
+                return;
+              }
+
+              const isGroup = item.source === 'group';
+
+              const groupName = item.group_name || 'Unknown Group';
+
+              // For normal notifications, group by sender.
+              // For group notifications, group by group + sender.
+              const groupingKey = isGroup
+                ? `group_${groupName}_${senderId}`
+                : `user_${senderId}`;
+
+              // ==========================================
+              // CARD TITLE
+              // ==========================================
+
+              const displayName = isGroup
+                ? groupName
+                : item.sender_name || 'Unknown User';
+
+              // ==========================================
+              // DESCRIPTION / LATEST MESSAGE
+              // ==========================================
+
+              const lastMessage =
+                item.description || item.title || 'New notification';
+
+              const displayMessage = isGroup
+                ? `${item.sender_name || 'Unknown User'}: ${lastMessage}`
+                : lastMessage;
+
+              // ==========================================
+              // TIMESTAMP
+              // ==========================================
+
+              const itemDateTime = item.dateTime || '';
+
+              const itemTimestamp = itemDateTime
+                ? new Date(itemDateTime).getTime() || 0
+                : 0;
+
+              // ==========================================
+              // UNREAD STATUS
+              // ==========================================
+
+              const isUnread = Number(item.is_read_status) === 0;
+
+              // ==========================================
+              // FIRST MESSAGE FROM THIS USER
+              // ==========================================
+
+              if (!groupedNotifications[groupingKey]) {
+                groupedNotifications[groupingKey] = {
+                  id: groupingKey,
+
+                  senderId: item.sender_id,
+
+                  source: item.source,
+
+                  // Group card title = group_name.
+                  // Normal card title = sender_name.
+                  userName: displayName,
+
+                  userTag:
+                    item.sender_profile_type_details ||
+                    item.sender_profile_type ||
+                    '',
+
+                  // Group: sender name + last message.
+                  // User: existing message description.
+                  message: displayMessage,
+
+                  dateTime: itemDateTime,
+
+                  date: item.date || '',
+
+                  time: item.time || '',
+
+                  latestTimestamp: itemTimestamp,
+
+                  notSeenCount: isUnread ? 1 : 0,
+
+                  unreadCount: isUnread ? 1 : 0,
+
+                  avatar:
+                    item.sender_profile_picture ||
+                    item.receiver_profile_picture ||
+                    null,
+
+                  channelTypes: item.type
+                    ? [String(item.type).trim().toLowerCase()]
+                    : [],
+
+                  type: item.type || 'inapp',
+
+                  title: item.title || '',
+
+                  event: item.event || '',
+
+                  receiverId: item.receiver_id || '',
+
+                  isReadStatus: Number(item.is_read_status),
+
+                  firebaseKey: item.firebaseKey,
+
+                  originalData: item,
+                };
+
+                return;
+              }
 
               // ============================================
-              // GROUP BY USER
+              // EXISTING USER'S MESSAGE
               // ============================================
 
-              const groupedNotifications = {};
+              const existing = groupedNotifications[groupingKey];
 
-              Object.entries(firebaseData || {}).forEach(
-                ([firebaseKey, item]) => {
-                  const senderId = String(item.sender_id);
+              // ============================================
+              // COUNT ALL UNREAD MESSAGES
+              // ============================================
 
-                  // ----------------------------------------
-                  // USE Firebase dateTime DIRECTLY
-                  // ----------------------------------------
+              if (isUnread) {
+                existing.unreadCount += 1;
+                existing.notSeenCount += 1;
+              }
 
-                  const itemDateTime = item.dateTime || '';
+              // ============================================
+              // COLLECT CHANNEL TYPES
+              // ============================================
 
-                  const itemTimestamp = itemDateTime
-                    ? new Date(itemDateTime).getTime()
-                    : 0;
+              const currentChannel = String(item.type || '')
+                .trim()
+                .toLowerCase();
 
-                  // ----------------------------------------
-                  // IS THIS MESSAGE UNREAD?
-                  // ----------------------------------------
+              if (
+                currentChannel &&
+                !existing.channelTypes.includes(currentChannel)
+              ) {
+                existing.channelTypes.push(currentChannel);
+              }
 
-                  const isUnread = Number(item.is_read_status) === 0;
+              // ============================================
+              // UPDATE LATEST MESSAGE ONLY
+              // ============================================
 
-                  // ========================================
-                  // FIRST MESSAGE FROM THIS USER
-                  // ========================================
+              if (itemTimestamp > existing.latestTimestamp) {
+                existing.userName = displayName;
 
-                  if (!groupedNotifications[senderId]) {
-                    groupedNotifications[senderId] = {
-                      id: senderId,
+                existing.userTag =
+                  item.sender_profile_type_details ||
+                  item.sender_profile_type ||
+                  existing.userTag ||
+                  '';
 
-                      senderId: item.sender_id,
+                existing.message = displayMessage;
 
-                      userName: item.sender_name || 'Unknown User',
+                existing.dateTime = itemDateTime;
 
-                      userTag:
-                        item.sender_profile_type_details ||
-                        item.sender_profile_type ||
-                        '',
+                existing.date = item.date || '';
 
-                      message:
-                        item.description || item.title || 'New notification',
+                existing.time = item.time || '';
 
-                      // Firebase dateTime
-                      dateTime: itemDateTime,
+                existing.latestTimestamp = itemTimestamp;
 
-                      // Keep Firebase date/time
-                      date: item.date || '',
+                existing.avatar =
+                  item.sender_profile_picture ||
+                  item.receiver_profile_picture ||
+                  existing.avatar ||
+                  null;
 
-                      time: item.time || '',
+                existing.type = item.type || 'notification';
 
-                      // Latest message timestamp
-                      latestTimestamp: itemTimestamp,
+                existing.title = item.title || '';
 
-                      // ====================================
-                      // IMPORTANT
-                      // Count ALL unread messages
-                      // ====================================
+                existing.event = item.event || '';
 
-                      notSeenCount: isUnread ? 1 : 0,
+                existing.receiverId = item.receiver_id || '';
 
-                      unreadCount: isUnread ? 1 : 0,
+                existing.isReadStatus = Number(item.is_read_status);
 
-                      avatar:
-                        item.sender_profile_picture ||
-                        item.receiver_profile_picture ||
-                        null,
-                      channelTypes: item.type
-                        ? [String(item.type).trim().toLowerCase()]
-                        : [],
+                existing.firebaseKey = item.firebaseKey;
 
-                      type: item.type || 'inapp',
+                existing.originalData = item;
+              }
+            });
 
-                      title: item.title || '',
+            // ============================================
+            // CONVERT TO ARRAY
+            // ============================================
 
-                      event: item.event || '',
+            const notifications = Object.values(groupedNotifications);
 
-                      receiverId: item.receiver_id || '',
+            // ============================================
+            // SORT
+            // 1. Unread notifications first.
+            // 2. Newest message first.
+            // ============================================
 
-                      // Status of latest message
-                      isReadStatus: Number(item.is_read_status),
+            notifications.sort((a, b) => {
+              const aUnread = Number(a.unreadCount || 0);
+              const bUnread = Number(b.unreadCount || 0);
 
-                      firebaseKey,
+              if (aUnread > 0 && bUnread === 0) {
+                return -1;
+              }
 
-                      originalData: item,
-                    };
+              if (aUnread === 0 && bUnread > 0) {
+                return 1;
+              }
 
-                    return;
-                  }
-
-                  // ========================================
-                  // EXISTING USER
-                  // ========================================
-
-                  const existing = groupedNotifications[senderId];
-
-                  // ========================================
-                  // COUNT UNREAD
-                  // ========================================
-
-                  if (isUnread) {
-                    existing.unreadCount += 1;
-                    existing.notSeenCount += 1;
-                  }
-
-                  const currentChannel = String(item.type || '')
-                    .trim()
-                    .toLowerCase();
-
-                  if (
-                    currentChannel &&
-                    !existing.channelTypes.includes(currentChannel)
-                  ) {
-                    existing.channelTypes.push(currentChannel);
-                  }
-
-                  // ========================================
-                  // CHECK LATEST MESSAGE
-                  // ========================================
-
-                  if (itemTimestamp > existing.latestTimestamp) {
-                    existing.message =
-                      item.description || item.title || 'New notification';
-
-                    existing.dateTime = itemDateTime;
-
-                    existing.date = item.date || '';
-
-                    existing.time = item.time || '';
-
-                    if (itemTimestamp > existing.latestTimestamp) {
-                      existing.latestTimestamp = itemTimestamp;
-
-                      // latest message information
-                      existing.message =
-                        item.description || item.title || 'New notification';
-
-                      existing.dateTime = itemDateTime;
-                      existing.date = item.date || '';
-                      existing.time = item.time || '';
-                    }
-
-                    existing.avatar =
-                      item.sender_profile_picture ||
-                      item.receiver_profile_picture ||
-                      existing.avatar ||
-                      null;
-
-                    existing.type = item.type || 'notification';
-
-                    existing.title = item.title || '';
-
-                    existing.event = item.event || '';
-
-                    existing.receiverId = item.receiver_id || '';
-
-                    // VERY IMPORTANT:
-                    // Status of latest message
-                    existing.isReadStatus = Number(item.is_read_status);
-
-                    existing.firebaseKey = firebaseKey;
-
-                    existing.originalData = item;
-                  }
-                },
+              return (
+                Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0)
               );
+            });
 
-              // ============================================
-              // CONVERT TO ARRAY
-              // ============================================
+            console.log('FINAL ACTIVITY NOTIFICATIONS:', notifications);
 
-              // const notifications = Object.values(groupedNotifications);
-
-              // // ============================================
-              // // SORT
-              // //
-              // // 1. Users having unread messages first
-              // // 2. Users with no unread messages after
-              // // 3. Latest message first
-              // // ============================================
-
-              // notifications.sort((a, b) => {
-              //   const aUnread = a.unreadCount > 0 ? 0 : 1;
-
-              //   const bUnread = b.unreadCount > 0 ? 0 : 1;
-
-              //   if (aUnread !== bUnread) {
-              //     return aUnread - bUnread;
-              //   }
-
-              //   return b.latestTimestamp - a.latestTimestamp;
-              // });
-
-              // console.log('FINAL ACTIVITY DATA:', notifications);
-
-              // setActivityData(notifications);
-              // setIsLoadingActivity(false);
-
-              const notifications = Object.values(groupedNotifications);
-
-              notifications.sort((a, b) => {
-                // 1. Users with unread messages first
-                const aUnread = Number(a.unreadCount || 0);
-                const bUnread = Number(b.unreadCount || 0);
-
-                if (aUnread > 0 && bUnread === 0) {
-                  return -1;
-                }
-
-                if (aUnread === 0 && bUnread > 0) {
-                  return 1;
-                }
-
-                // 2. Within the same unread/read group,
-                // latest message first
-                return (
-                  Number(b.latestTimestamp || 0) -
-                  Number(a.latestTimestamp || 0)
-                );
-              });
-
-              setActivityData(notifications);
-              setIsLoadingActivity(false);
-            } catch (error) {
-              console.log('Error processing Firebase notifications:', error);
-
-              setActivityData([]);
-              setIsLoadingActivity(false);
-            }
-          },
-          error => {
-            console.log('Firebase notification listener error:', error);
+            setActivityData(notifications);
+            setIsLoadingActivity(false);
+          } catch (error) {
+            console.log('Error processing Firebase notifications:', error);
 
             setActivityData([]);
             setIsLoadingActivity(false);
+          }
+        };
+
+        // ============================================
+        // LISTENER 1: NORMAL USER NOTIFICATIONS
+        // ============================================
+
+        unsubscribeUser = onValue(
+          userNotificationRef,
+          snapshot => {
+            userNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+
+            userLoaded = true;
+
+            processNotifications();
+          },
+          error => {
+            console.log('User notification listener error:', error);
+
+            userNotifications = {};
+            userLoaded = true;
+
+            processNotifications();
+          },
+        );
+
+        // ============================================
+        // LISTENER 2: GROUP NOTIFICATIONS
+        // ============================================
+
+        unsubscribeGroup = onValue(
+          groupNotificationRef,
+          snapshot => {
+            groupNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+
+            groupLoaded = true;
+
+            processNotifications();
+          },
+          error => {
+            console.log('Group notification listener error:', error);
+
+            groupNotifications = {};
+            groupLoaded = true;
+
+            processNotifications();
           },
         );
       } catch (error) {
@@ -634,12 +681,439 @@ const DashbaordScreen = ({ navigation }) => {
 
     loadFirebaseNotifications();
 
+    // ============================================
+    // CLEANUP FIREBASE LISTENERS
+    // ============================================
+
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
+      if (unsubscribeUser) {
+        unsubscribeUser();
+      }
+
+      if (unsubscribeGroup) {
+        unsubscribeGroup();
       }
     };
   }, []);
+
+  // useEffect(() => {
+  //   let unsubscribeUser = null;
+  //   let unsubscribeGroup = null;
+
+  //   const loadFirebaseNotifications = async () => {
+  //     try {
+  //       const userId = 2467;
+
+  //       if (!userId) {
+  //         setActivityData([]);
+  //         setIsLoadingActivity(false);
+  //         return;
+  //       }
+
+  //       const userNotificationRef = ref(
+  //         database,
+  //         `leafnet_notifications/User_${userId}_2`,
+  //       );
+
+  //       const groupNotificationRef = ref(
+  //         database,
+  //         `leafnet_notifications/Group_2_${userId}`,
+  //       );
+
+  //       let userData = {};
+  //       let groupData = {};
+  //       let userLoaded = false;
+  //       let groupLoaded = false;
+
+  //       const processNotifications = () => {
+  //         if (!userLoaded || !groupLoaded) {
+  //           return;
+  //         }
+
+  //         const allNotifications = [
+  //           ...Object.entries(userData).map(([firebaseKey, item]) => ({
+  //             ...item,
+  //             firebaseKey,
+  //             source: 'user',
+  //           })),
+
+  //           ...Object.entries(groupData).map(([firebaseKey, item]) => ({
+  //             ...item,
+  //             firebaseKey,
+  //             source: 'group',
+  //           })),
+  //         ];
+
+  //         const groupedNotifications = {};
+
+  //         allNotifications.forEach(item => {
+  //           if (!item) {
+  //             return;
+  //           }
+
+  //           // Preserve the existing user grouping.
+  //           // Group records can use group_name/group_id when sender_id is absent.
+  //           const senderId =
+  //             item.source === 'group'
+  //               ? String(
+  //                   item.group_id ||
+  //                     item.group_name ||
+  //                     item.sender_id ||
+  //                     item.firebaseKey,
+  //                 )
+  //               : String(item.sender_id ?? '');
+
+  //           if (!senderId) {
+  //             return;
+  //           }
+
+  //           // Keep user and group notifications separate.
+  //           const conversationId = `${item.source}_${senderId}`;
+
+  //           const itemDateTime = item.dateTime || '';
+  //           const itemTimestamp = itemDateTime
+  //             ? new Date(itemDateTime).getTime() || 0
+  //             : 0;
+
+  //           const isUnread = Number(item.is_read_status) === 0;
+  //           const currentChannel = String(item.type || '')
+  //             .trim()
+  //             .toLowerCase();
+
+  //           const displayName =
+  //             item.source === 'group'
+  //               ? item.group_name || 'Unknown Group'
+  //               : item.sender_name || 'Unknown User';
+
+  //           const message =
+  //             item.description || item.title || 'New notification';
+
+  //           if (!groupedNotifications[conversationId]) {
+  //             groupedNotifications[conversationId] = {
+  //               id: conversationId,
+  //               senderId: item.sender_id || item.group_id || senderId,
+  //               source: item.source,
+
+  //               // Group notifications show group_name.
+  //               userName: displayName,
+
+  //               userTag:
+  //                 item.sender_profile_type_details ||
+  //                 item.sender_profile_type ||
+  //                 '',
+
+  //               message,
+  //               dateTime: itemDateTime,
+  //               date: item.date || '',
+  //               time: item.time || '',
+  //               latestTimestamp: itemTimestamp,
+
+  //               notSeenCount: isUnread ? 1 : 0,
+  //               unreadCount: isUnread ? 1 : 0,
+
+  //               avatar:
+  //                 item.sender_profile_picture ||
+  //                 item.receiver_profile_picture ||
+  //                 null,
+
+  //               channelTypes: currentChannel ? [currentChannel] : [],
+  //               type: item.type || 'inapp',
+  //               title: item.title || '',
+  //               event: item.event || '',
+  //               receiverId: item.receiver_id || '',
+  //               isReadStatus: Number(item.is_read_status),
+
+  //               firebaseKey: item.firebaseKey,
+  //               originalData: item,
+  //             };
+
+  //             return;
+  //           }
+
+  //           const existing = groupedNotifications[conversationId];
+
+  //           // Existing unread-count logic remains the same.
+  //           if (isUnread) {
+  //             existing.unreadCount += 1;
+  //             existing.notSeenCount += 1;
+  //           }
+
+  //           if (
+  //             currentChannel &&
+  //             !existing.channelTypes.includes(currentChannel)
+  //           ) {
+  //             existing.channelTypes.push(currentChannel);
+  //           }
+
+  //           // Keep the newest notification.
+  //           if (itemTimestamp > existing.latestTimestamp) {
+  //             existing.userName = displayName;
+  //             existing.message = message;
+  //             existing.dateTime = itemDateTime;
+  //             existing.date = item.date || '';
+  //             existing.time = item.time || '';
+  //             existing.latestTimestamp = itemTimestamp;
+
+  //             existing.avatar =
+  //               item.sender_profile_picture ||
+  //               item.receiver_profile_picture ||
+  //               existing.avatar;
+
+  //             existing.type = item.type || 'inapp';
+  //             existing.title = item.title || '';
+  //             existing.event = item.event || '';
+  //             existing.receiverId = item.receiver_id || '';
+  //             existing.isReadStatus = Number(item.is_read_status);
+  //             existing.firebaseKey = item.firebaseKey;
+  //             existing.originalData = item;
+  //           }
+  //         });
+
+  //         const notifications = Object.values(groupedNotifications);
+
+  //         // Keep your existing sorting logic:
+  //         // unread notifications first, then newest first.
+  //         notifications.sort((a, b) => {
+  //           const aUnread = Number(a.unreadCount || 0);
+  //           const bUnread = Number(b.unreadCount || 0);
+
+  //           if (aUnread > 0 && bUnread === 0) {
+  //             return -1;
+  //           }
+
+  //           if (aUnread === 0 && bUnread > 0) {
+  //             return 1;
+  //           }
+
+  //           return (
+  //             Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0)
+  //           );
+  //         });
+
+  //         setActivityData(notifications);
+  //         setIsLoadingActivity(false);
+  //       };
+
+  //       // Listen to individual-user notifications.
+  //       unsubscribeUser = onValue(
+  //         userNotificationRef,
+  //         snapshot => {
+  //           userData = snapshot.exists() ? snapshot.val() || {} : {};
+  //           userLoaded = true;
+  //           processNotifications();
+  //         },
+  //         error => {
+  //           console.log('User notification listener error:', error);
+  //           userData = {};
+  //           userLoaded = true;
+  //           processNotifications();
+  //         },
+  //       );
+
+  //       // Listen to group notifications.
+  //       unsubscribeGroup = onValue(
+  //         groupNotificationRef,
+  //         snapshot => {
+  //           groupData = snapshot.exists() ? snapshot.val() || {} : {};
+  //           groupLoaded = true;
+  //           processNotifications();
+  //         },
+  //         error => {
+  //           console.log('Group notification listener error:', error);
+  //           groupData = {};
+  //           groupLoaded = true;
+  //           processNotifications();
+  //         },
+  //       );
+  //     } catch (error) {
+  //       console.log('Error loading Firebase notifications:', error);
+  //       setActivityData([]);
+  //       setIsLoadingActivity(false);
+  //     }
+  //   };
+
+  //   loadFirebaseNotifications();
+
+  //   return () => {
+  //     if (unsubscribeUser) {
+  //       unsubscribeUser();
+  //     }
+
+  //     if (unsubscribeGroup) {
+  //       unsubscribeGroup();
+  //     }
+  //   };
+  // }, []);
+  useEffect(() => {
+    const userId = 2467; // Replace with logged-in user ID
+
+    const userNotificationRef = ref(
+      database,
+      `leafnet_notifications/User_${userId}_2`,
+    );
+
+    const groupNotificationRef = ref(
+      database,
+      `leafnet_notifications/Group_2_${userId}`,
+    );
+
+    let userNotifications = {};
+    let groupNotifications = {};
+    let userLoaded = false;
+    let groupLoaded = false;
+
+    const processMessages = () => {
+      // Wait until both Firebase listeners have returned data.
+      if (!userLoaded || !groupLoaded) {
+        return;
+      }
+
+      const allRecords = [
+        ...Object.entries(userNotifications).map(([key, item]) => ({
+          ...item,
+          firebaseKey: key,
+          source: 'user',
+        })),
+        ...Object.entries(groupNotifications).map(([key, item]) => ({
+          ...item,
+          firebaseKey: key,
+          source: 'group',
+        })),
+      ];
+
+      const groupedMessages = {};
+
+      allRecords.forEach(item => {
+        if (!item || item.sender_id == null) {
+          return;
+        }
+
+        // Keep user and group conversations separate.
+        const senderId = String(item.sender_id);
+        const conversationId = `${item.source}_${senderId}`;
+
+        const rawDateTime = item.dateTime || '';
+        const timestamp = rawDateTime
+          ? new Date(rawDateTime).getTime() || 0
+          : 0;
+
+        const isUnread = Number(item.is_read_status) === 0;
+        const messageText =
+          item.description || item.title || 'New notification';
+
+        if (!groupedMessages[conversationId]) {
+          groupedMessages[conversationId] = {
+            id: conversationId,
+            senderId,
+            source: item.source,
+            userName:
+              item.source === 'group'
+                ? item.group_name || 'Unknown Group'
+                : item.sender_name || 'Unknown User',
+            userImage: item.sender_profile_picture
+              ? { uri: item.sender_profile_picture }
+              : require('../../asset/dummyuser.png'),
+            lastMessage: messageText,
+            dateTime: rawDateTime,
+            timestamp,
+            isRead: !isUnread,
+            unreadCount: isUnread ? 1 : 0,
+            firebaseKey: item.firebaseKey,
+            originalData: item,
+          };
+          return;
+        }
+
+        const existing = groupedMessages[conversationId];
+
+        if (isUnread) {
+          existing.unreadCount += 1;
+        }
+
+        if (timestamp > existing.timestamp) {
+          existing.userName =
+            item.source === 'group'
+              ? item.group_name || existing.userName || 'Unknown Group'
+              : item.sender_name || existing.userName || 'Unknown User';
+          existing.userImage = item.sender_profile_picture
+            ? { uri: item.sender_profile_picture }
+            : existing.userImage;
+          existing.lastMessage = messageText;
+          existing.dateTime = rawDateTime;
+          existing.timestamp = timestamp;
+          existing.isRead = !isUnread;
+          existing.firebaseKey = item.firebaseKey;
+          existing.originalData = item;
+        }
+      });
+
+      const sortedMessages = Object.values(groupedMessages).sort((a, b) => {
+        // Unread conversations first.
+        const aUnread = a.unreadCount > 0;
+        const bUnread = b.unreadCount > 0;
+
+        if (aUnread !== bUnread) {
+          return aUnread ? -1 : 1;
+        }
+
+        // Then newest message first.
+        return b.timestamp - a.timestamp;
+      });
+
+      setMessages(sortedMessages);
+      setIsLoadingMessages(false);
+    };
+
+    const unsubscribeUser = onValue(
+      userNotificationRef,
+      snapshot => {
+        userNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+        userLoaded = true;
+        processMessages();
+      },
+      error => {
+        console.log('User notification listener error:', error);
+        userNotifications = {};
+        userLoaded = true;
+        processMessages();
+      },
+    );
+
+    const unsubscribeGroup = onValue(
+      groupNotificationRef,
+      snapshot => {
+        groupNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+        groupLoaded = true;
+        processMessages();
+      },
+      error => {
+        console.log('Group notification listener error:', error);
+        groupNotifications = {};
+        groupLoaded = true;
+        processMessages();
+      },
+    );
+
+    return () => {
+      unsubscribeUser();
+      unsubscribeGroup();
+    };
+  }, []);
+
+  const handleRecentFirst = () => {
+    setSelectedTimeFilter('recent');
+
+    setMessages(prevMessages =>
+      [...prevMessages].sort((a, b) => {
+        const dateA = new Date(a.dateTime || 0).getTime();
+        const dateB = new Date(b.dateTime || 0).getTime();
+
+        return dateB - dateA; // Latest date/time first
+      }),
+    );
+
+    setShowTimeModal(false);
+  };
 
   const createNotificationDateTime = (date, time) => {
     if (!date) {
@@ -735,24 +1209,6 @@ const DashbaordScreen = ({ navigation }) => {
       label: 'Email',
       color: '#6C63FF',
     },
-    {
-      id: 'whatsapp',
-      icon: require('../../asset/whatsapps.png'),
-      label: 'WhatsApp',
-      color: '#25D366',
-    },
-    {
-      id: 'sms',
-      icon: require('../../asset/messages.png'),
-      label: 'SMS',
-      color: '#2196F3',
-    },
-    {
-      id: 'call',
-      icon: require('../../asset/call.png'),
-      label: 'Call',
-      color: '#4CAF50',
-    },
   ];
 
   // ============================================================
@@ -821,6 +1277,22 @@ const DashbaordScreen = ({ navigation }) => {
       filtered = filtered.filter(user => user.unread > 0);
     }
 
+    const search = conversationSearch.trim().toLowerCase();
+
+    if (search) {
+      filtered = filtered.filter(user => {
+        const name = String(user.name || user.user_name || '').toLowerCase();
+        const email = String(user.email || '').toLowerCase();
+        const tag = String(user.tag || '').toLowerCase();
+
+        return (
+          name.includes(search) ||
+          email.includes(search) ||
+          tag.includes(search)
+        );
+      });
+    }
+
     return filtered;
   };
 
@@ -849,6 +1321,12 @@ const DashbaordScreen = ({ navigation }) => {
   //   }
   //   return filtered;
   // };
+
+  const handleSortChange = value => {
+    console.log('Selected Sort Filter:', value);
+
+    setActivitySortBy(value);
+  };
 
   const getFilteredContacts = type => {
     let filtered = contacts;
@@ -1104,19 +1582,39 @@ const DashbaordScreen = ({ navigation }) => {
     return messages.filter(msg => !msg.isRead).length;
   };
 
-  const getTimeAgo = date => {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const getTimeAgo = dateTime => {
+    if (!dateTime) return '';
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-    return `${Math.floor(diffDays / 30)}mo ago`;
+    // Firebase format: "2026-10-06T07:13:52"
+    const messageDate = new Date(dateTime);
+
+    if (isNaN(messageDate.getTime())) return '';
+
+    const now = new Date();
+    const diffMs = Math.max(0, now.getTime() - messageDate.getTime());
+
+    const seconds = Math.floor(diffMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    const weeks = Math.floor(days / 7);
+    const months = Math.floor(days / 30);
+    const years = Math.floor(days / 365);
+
+    if (seconds < 60) return 'Just now';
+    if (minutes === 1) return 'a minute ago';
+    if (minutes < 60) return `${minutes} minutes ago`;
+    if (hours === 1) return 'an hour ago';
+    if (hours < 24) return `${hours} hours ago`;
+    if (days === 1) return 'a day ago';
+    if (days < 7) return `${days} days ago`;
+    if (weeks === 1) return 'a week ago';
+    if (days < 30) return `${weeks} weeks ago`;
+    if (months === 1) return 'a month ago';
+    if (days < 365) return `${months} months ago`;
+    if (years === 1) return 'a year ago';
+
+    return `${years} years ago`;
   };
 
   const deleteMessage = id => {
@@ -1303,6 +1801,90 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // LOAD MORE USERS
   // ============================================================
+
+  // Use your existing authentication token variable here.
+  const fetchCountryCodes = async () => {
+    try {
+      const COUNTRY_CODES_API =
+        'https://leafcom.us/backend/api/chat-application/countryCodes';
+
+      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      setCountryLoading(true);
+
+      const response = await axios.get(COUNTRY_CODES_API, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data?.success) {
+        const countries = response.data.data || [];
+
+        setCountryCodes(
+          countries.filter(
+            item =>
+              item.name &&
+              item.country_phone_code &&
+              item.country_phone_code.trim() !== '',
+          ),
+        );
+      } else {
+        Alert.alert('Error', 'Unable to fetch country codes.');
+      }
+    } catch (error) {
+      console.log(
+        'Country codes API error:',
+        error.response?.data || error.message,
+      );
+      Alert.alert('Error', 'Failed to load country codes.');
+    } finally {
+      setCountryLoading(false);
+    }
+  };
+
+  const openCountryModal = () => {
+    setCountryModalVisible(true);
+
+    if (countryCodes.length === 0) {
+      fetchCountryCodes();
+    }
+  };
+
+  const handleCountrySelect = item => {
+    setSelectedCountry(item.country_phone_code);
+    setSelectedCountryName(item.name);
+    setSelectedCountryCode(item.country_code);
+    setCountryModalVisible(false);
+  };
+
+  const fetchProfileInfo = async () => {
+    try {
+      setIsLoadingCategories(true);
+      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+
+      if (!token) {
+        console.log('Authentication token not found');
+        return;
+      }
+
+      const response = await axios.get(
+        'https://leafcom.us/backend/api/chat-application/profileInfo',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        },
+      );
+
+      if (response.data?.success && response.data?.user_info) {
+        setProfileInfo(response.data.user_info);
+      }
+    } catch (error) {
+      console.log('Profile API error:', error.response?.data || error.message);
+    }
+  };
   const fetchUsers = async (
     pageNumber = 1,
     loadMore = false,
@@ -1350,6 +1932,7 @@ const DashbaordScreen = ({ navigation }) => {
         const newUsers = res.data.map(item => ({
           id: String(item.sender_id),
           name: item.user_name || '',
+          user_name: item.user_name || '',
 
           avatar: item.profile_picture
             ? { uri: item.profile_picture }
@@ -1828,6 +2411,329 @@ const DashbaordScreen = ({ navigation }) => {
       selectedSubType === 'All Users' ? '' : selectedSubType,
     );
   };
+
+  const handleDialerCall = async () => {
+    if (!phoneNumber?.trim()) {
+      Alert.alert('Validation', 'Please enter a phone number.');
+      return;
+    }
+
+    if (isCalling) return;
+
+    // Build the international number from the selected country code.
+    const enteredNumber = `${selectedCountry || ''}${phoneNumber}`.replace(
+      /[\s()-]/g,
+      '',
+    );
+
+    let modalOpened = false;
+
+    try {
+      setIsCalling(true);
+
+      // Use the same authentication token retrieval as your existing API calls.
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      if (!token) {
+        Alert.alert('Authentication Error', 'Authentication token not found.');
+        return;
+      }
+
+      // STEP 1: Find or create the dialer contact.
+      const contactResponse = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/findOrCreateDialerContact',
+        {
+          phone: enteredNumber,
+          user_type: 'Users',
+          channel: 'inapp',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('Dialer Contact Response:', contactResponse.data);
+
+      if (!contactResponse.data?.success || !contactResponse.data?.data) {
+        throw new Error(
+          contactResponse.data?.message || 'Unable to find or create contact.',
+        );
+      }
+
+      const contact = contactResponse.data.data;
+
+      if (!contact.sender_id) {
+        throw new Error('Contact ID is missing from the API response.');
+      }
+
+      // STEP 2: Prepare the same in-call UI used by UserChatPage.
+      setCallPhoneNumber(enteredNumber);
+      setCallStatus('Connecting...');
+      setIsMuted(false);
+      setShowDialModal(false);
+      setShowInCallModal(true);
+      modalOpened = true;
+
+      // STEP 3: Start the existing Telnyx call service.
+      await makeTelnyxCall({
+        receiverId: contact.sender_id,
+        receiverName: contact.user_name || enteredNumber,
+        receiverType: contact.user_type || 'Users',
+        toNumber: enteredNumber,
+        authToken: token,
+
+        onCallState: state => {
+          const normalizedState = String(state || '').toUpperCase();
+
+          if (normalizedState.includes('ACTIVE')) {
+            setCallStatus('Connected');
+          } else if (normalizedState.includes('RINGING')) {
+            setCallStatus('Ringing...');
+          } else if (
+            normalizedState.includes('ENDED') ||
+            normalizedState.includes('FAILED')
+          ) {
+            const failed = normalizedState.includes('FAILED');
+
+            setCallStatus(failed ? 'Call failed' : 'Call ended');
+
+            setTimeout(() => {
+              setShowInCallModal(false);
+            }, 1000);
+          } else if (normalizedState.includes('CONNECTING')) {
+            setCallStatus('Connecting...');
+          }
+        },
+      });
+    } catch (error) {
+      console.log(
+        'Dialer Call Error:',
+        error?.response?.data || error?.message || error,
+      );
+
+      if (modalOpened) {
+        setShowInCallModal(false);
+      }
+
+      Alert.alert(
+        'Call Failed',
+        error?.response?.data?.message ||
+          error?.message ||
+          'Unable to initiate the call.',
+      );
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
+  const handleHangUp = async () => {
+    try {
+      await endTelnyxCall();
+    } catch (error) {
+      console.log('Hangup error:', error?.message || error);
+    } finally {
+      setShowInCallModal(false);
+      setIsMuted(false);
+      setCallStatus('Call ended');
+    }
+  };
+
+  const handleToggleMute = async () => {
+    const call = getCurrentTelnyxCall();
+
+    if (!call) {
+      Alert.alert('Call Unavailable', 'No active call was found.');
+      return;
+    }
+
+    try {
+      if (!isMuted) {
+        if (typeof call.muteAudio === 'function') {
+          await call.muteAudio();
+        } else if (typeof call.mute === 'function') {
+          await call.mute();
+        } else {
+          Alert.alert('Mute Unavailable', 'Mute is not supported.');
+          return;
+        }
+
+        setIsMuted(true);
+      } else {
+        if (typeof call.unmuteAudio === 'function') {
+          await call.unmuteAudio();
+        } else if (typeof call.unmute === 'function') {
+          await call.unmute();
+        } else {
+          Alert.alert('Unmute Unavailable', 'Unmute is not supported.');
+          return;
+        }
+
+        setIsMuted(false);
+      }
+    } catch (error) {
+      console.log('Mute error:', error?.message || error);
+      Alert.alert('Error', 'Unable to change microphone state.');
+    }
+  };
+
+  const handleDialerWhatsApp = async () => {
+    if (!phoneNumber?.trim()) {
+      Alert.alert('Validation', 'Please enter a phone number.');
+      return;
+    }
+
+    const enteredNumber = `${selectedCountry || ''}${phoneNumber}`.replace(
+      /[\s()-]/g,
+      '',
+    );
+
+    try {
+      setIsWPCalling(true);
+
+      // Use the same token as your existing handleDialerCall.
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/findOrCreateDialerContact',
+        {
+          phone: enteredNumber,
+          user_type: 'Users',
+          channel: 'inapp',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('Dialer WhatsApp Contact:', response.data);
+
+      if (!response.data?.success || !response.data?.data) {
+        throw new Error(
+          response.data?.message || 'Unable to find or create contact.',
+        );
+      }
+
+      const contact = response.data.data;
+
+      if (!contact.sender_id) {
+        throw new Error('Contact sender_id is missing from the API response.');
+      }
+
+      const whatsappNumber = contact.whatsapp_number || enteredNumber;
+
+      // Close dialer and open UserChatPage.
+      setShowDialModal(false);
+      setActiveTab('directory');
+
+      navigation.navigate('UserChatPage', {
+        senderId: contact.sender_id,
+        sender_id: contact.sender_id,
+
+        userName: contact.user_name || enteredNumber,
+        userImage: contact.sender_profile_picture || '',
+        userType: contact.user_type || 'Users',
+
+        whatsapp_number: whatsappNumber,
+        whatsappNumber: whatsappNumber,
+        phone: enteredNumber,
+
+        user_type_details: contact.user_type_details || 'Dialer Contact',
+
+        commType: 'WP',
+        showChatBubble: item.user_type_details !== 'Dialer Contact',
+        showEmailIcon: isValidEmail(item.email),
+        showWhatsAppIcon:
+          !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+      });
+    } catch (error) {
+      console.error(
+        'Dialer WhatsApp Error:',
+        error.response?.data || error.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          error.message ||
+          'Unable to open WhatsApp chat.',
+      );
+    } finally {
+      setIsWPCalling(false);
+    }
+  };
+
+  const handleDialerMessage = async () => {
+    const enteredNumber = `${selectedCountry || ''}${phoneNumber}`.replace(
+      /[\s()-]/g,
+      '',
+    );
+
+    if (!phoneNumber?.trim()) {
+      Alert.alert('Validation', 'Please enter a phone number.');
+      return;
+    }
+
+    setIsSMSCalling(true);
+
+    try {
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/findOrCreateDialerContact',
+        {
+          phone: enteredNumber,
+          user_type: 'Users',
+          channel: 'inapp',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const contact = response?.data?.data;
+
+      if (!contact?.sender_id) {
+        Alert.alert('Error', 'Unable to find or create the contact.');
+        return;
+      }
+
+      navigation.navigate('UserChatPage', {
+        senderId: contact.sender_id,
+        sender_id: contact.sender_id,
+        userName: contact.user_name || enteredNumber,
+        userImage: contact.sender_profile_picture || '',
+        userType: contact.user_type || 'Users',
+        whatsapp_number: contact.whatsapp_number || enteredNumber,
+        whatsappNumber: contact.whatsapp_number || enteredNumber,
+        phone: enteredNumber,
+        user_type_details: contact.user_type_details || 'Dialer Contact',
+        commType: 'SMS',
+        showChatBubble: item.user_type_details !== 'Dialer Contact',
+        showEmailIcon: isValidEmail(item.email),
+        showWhatsAppIcon:
+          !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+      });
+    } catch (error) {
+      console.error('Dialer message error:', error?.response?.data || error);
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message || 'Unable to open the message chat.',
+      );
+    } finally {
+      setIsSMSCalling(false);
+    }
+  };
+
   // ============================================================
   // MODAL MANAGEMENT
   // ============================================================
@@ -1963,12 +2869,18 @@ const DashbaordScreen = ({ navigation }) => {
               onPress={() => setShowSideNav(!showSideNav)}
             >
               <Image
-                source={require('../../asset/user.png')}
+                source={
+                  profileInfo.profile_picture
+                    ? { uri: profileInfo.profile_picture }
+                    : require('../../asset/user.png')
+                }
                 style={{
                   width: 24,
                   height: 24,
                   resizeMode: 'contain',
-                  tintColor: '#FFFFFF',
+                  tintColor: profileInfo.profile_picture
+                    ? undefined
+                    : '#FFFFFF',
                 }}
               />
             </TouchableOpacity>
@@ -2427,7 +3339,25 @@ const DashbaordScreen = ({ navigation }) => {
         animationType="slide"
         onRequestClose={() => setVisible(false)}
       >
-        <View style={styles.dialModalContainer}>
+        <View
+          style={styles.dialModalContainer}
+          onPress={() =>
+            navigation.navigate('UserChatPage', {
+              senderId: item.sender_id,
+              userName: item.sender_name || item.user_name,
+              userImage: item.sender_profile_picture,
+              userType: item.sender_profile_type,
+              commType: 'inApp',
+              whatsapp_number: item.whatsapp_number,
+              whatsappNumber: item.whatsapp_number,
+              phone: item.mobile_no,
+              showChatBubble: item.user_type_details !== 'Dialer Contact',
+              showEmailIcon: isValidEmail(item.email),
+              showWhatsAppIcon:
+                !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+            })
+          }
+        >
           <View style={styles.dialModalContent}>
             <View style={styles.dialModalHeader}>
               <View style={styles.whatsappHeaderContent}>
@@ -2546,7 +3476,27 @@ const DashbaordScreen = ({ navigation }) => {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.whatsappContactCard}>
+                  <TouchableOpacity
+                    style={styles.whatsappContactCard}
+                    onPress={() =>
+                      navigation.navigate('UserChatPage', {
+                        senderId: item.sender_id,
+                        userName: item.sender_name || item.user_name,
+                        userImage: item.sender_profile_picture,
+                        userType: item.sender_profile_type,
+                        commType: 'inApp',
+                        showChatBubble:
+                          item.user_type_details !== 'Dialer Contact',
+                        showEmailIcon: isValidEmail(item.email),
+                        showWhatsAppIcon:
+                          !!item.whatsapp_number &&
+                          item.whatsapp_number.trim() !== '',
+                        whatsapp_number: item.whatsapp_number,
+                        whatsappNumber: item.whatsapp_number,
+                        phone: item.mobile_no,
+                      })
+                    }
+                  >
                     {/* <View style={styles.whatsappContactAvatar}>
                       <Text style={styles.whatsappContactAvatarText}>
                         {item.name?.charAt(0)?.toUpperCase() || '?'}
@@ -2605,28 +3555,58 @@ const DashbaordScreen = ({ navigation }) => {
                         </View>
                       </View>
                       <View style={styles.contactIconsRow}>
-                        <TouchableOpacity
-                          style={[styles.contactIconSmall]}
-                          onPress={() => {
-                            setEmailTo(item.email || '');
-                            setActiveTab('email');
-                          }}
-                        >
-                          <Image
-                            source={require('../../asset/chat.png')}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              resizeMode: 'contain',
+                        {item.user_type_details !== 'Dialer Contact' && (
+                          <TouchableOpacity
+                            style={[styles.contactIconSmall]}
+                            onPress={() => {
+                              navigation.navigate('UserChatPage', {
+                                senderId: item.sender_id,
+                                userName: item.sender_name || item.user_name,
+                                userImage: item.sender_profile_picture,
+                                userType: item.sender_profile_type,
+                                commType: 'inApp',
+                                showChatBubble:
+                                  item.user_type_details !== 'Dialer Contact',
+                                showEmailIcon: isValidEmail(item.email),
+                                showWhatsAppIcon:
+                                  !!item.whatsapp_number &&
+                                  item.whatsapp_number.trim() !== '',
+                                whatsapp_number: item.whatsapp_number,
+                                whatsappNumber: item.whatsapp_number,
+                                phone: item.mobile_no,
+                              });
                             }}
-                          />
-                        </TouchableOpacity>
+                          >
+                            <Image
+                              source={require('../../asset/chat.png')}
+                              style={{
+                                width: 20,
+                                height: 20,
+                                resizeMode: 'contain',
+                              }}
+                            />
+                          </TouchableOpacity>
+                        )}
                         {isValidEmail(item.email) && (
                           <TouchableOpacity
                             style={[styles.contactIconSmall]}
                             onPress={() => {
-                              setEmailTo(item.email || '');
-                              setActiveTab('email');
+                              navigation.navigate('UserChatPage', {
+                                senderId: item.sender_id,
+                                userName: item.sender_name || item.user_name,
+                                userImage: item.sender_profile_picture,
+                                userType: item.sender_profile_type,
+                                commType: 'email',
+                                showChatBubble:
+                                  item.user_type_details !== 'Dialer Contact',
+                                showEmailIcon: isValidEmail(item.email),
+                                showWhatsAppIcon:
+                                  !!item.whatsapp_number &&
+                                  item.whatsapp_number.trim() !== '',
+                                whatsapp_number: item.whatsapp_number,
+                                whatsappNumber: item.whatsapp_number,
+                                phone: item.mobile_no,
+                              });
                             }}
                           >
                             <Image
@@ -2660,7 +3640,24 @@ const DashbaordScreen = ({ navigation }) => {
                           item.whatsapp_number.trim() !== '' && (
                             <TouchableOpacity
                               style={[styles.contactIconSmall]}
-                              onPress={() => openModal('whatsapp')}
+                              onPress={() => {
+                                navigation.navigate('UserChatPage', {
+                                  senderId: item.sender_id,
+                                  userName: item.sender_name || item.user_name,
+                                  userImage: item.sender_profile_picture,
+                                  userType: item.sender_profile_type,
+                                  commType: 'WP',
+                                  showChatBubble:
+                                    item.user_type_details !== 'Dialer Contact',
+                                  showEmailIcon: isValidEmail(item.email),
+                                  showWhatsAppIcon:
+                                    !!item.whatsapp_number &&
+                                    item.whatsapp_number.trim() !== '',
+                                  whatsapp_number: item.whatsapp_number,
+                                  whatsappNumber: item.whatsapp_number,
+                                  phone: item.mobile_no,
+                                });
+                              }}
                             >
                               <Image
                                 source={require('../../asset/whatsapp.png')}
@@ -2674,7 +3671,24 @@ const DashbaordScreen = ({ navigation }) => {
                           )}
                         <TouchableOpacity
                           style={[styles.contactIconSmall]}
-                          onPress={() => openModal('message')}
+                          onPress={() => {
+                            navigation.navigate('UserChatPage', {
+                              senderId: item.sender_id,
+                              userName: item.sender_name || item.user_name,
+                              userImage: item.sender_profile_picture,
+                              userType: item.sender_profile_type,
+                              commType: 'sms',
+                              showChatBubble:
+                                item.user_type_details !== 'Dialer Contact',
+                              showEmailIcon: isValidEmail(item.email),
+                              showWhatsAppIcon:
+                                !!item.whatsapp_number &&
+                                item.whatsapp_number.trim() !== '',
+                              whatsapp_number: item.whatsapp_number,
+                              whatsappNumber: item.whatsapp_number,
+                              phone: item.mobile_no,
+                            });
+                          }}
                         >
                           <Image
                             source={require('../../asset/message.png')}
@@ -3064,8 +4078,8 @@ const DashbaordScreen = ({ navigation }) => {
                 >
                   {renderDropdown(
                     sortOptions,
-                    activitySort,
-                    setActivitySort,
+                    activitySortBy,
+                    setActivitySortBy,
                     'Sort',
                     'sort',
                   )}
@@ -3488,10 +4502,17 @@ const DashbaordScreen = ({ navigation }) => {
         onPress={() =>
           navigation.navigate('UserChatPage', {
             senderId: item.sender_id,
-            userName: item.sender_name,
+            userName: item.sender_name || item.user_name,
             userImage: item.sender_profile_picture,
             userType: item.sender_profile_type,
             commType: 'inApp',
+            showChatBubble: item.user_type_details !== 'Dialer Contact',
+            showEmailIcon: isValidEmail(item.email),
+            showWhatsAppIcon:
+              !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+            whatsapp_number: item.whatsapp_number,
+            whatsappNumber: item.whatsapp_number,
+            phone: item.mobile_no,
           })
         }
       >
@@ -3522,38 +4543,55 @@ const DashbaordScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.userIconsRow}>
-            <TouchableOpacity
-              style={[styles.userIconSmall, { backgroundColor: '#6C63FF20' }]}
-              onPress={() => {
+            {item.user_type_details !== 'Dialer Contact' && (
+              <TouchableOpacity
+                style={[styles.userIconSmall, { backgroundColor: '#6C63FF20' }]}
+                onPress={() => {
                   navigation.navigate('UserChatPage', {
                     senderId: item.sender_id,
-                    userName: item.sender_name,
+                    userName: item.sender_name || item.user_name,
                     userImage: item.sender_profile_picture,
                     userType: item.sender_profile_type,
                     commType: 'inApp',
+                    showChatBubble: item.user_type_details !== 'Dialer Contact',
+                    showEmailIcon: isValidEmail(item.email),
+                    showWhatsAppIcon:
+                      !!item.whatsapp_number &&
+                      item.whatsapp_number.trim() !== '',
+                    whatsapp_number: item.whatsapp_number,
+                    whatsappNumber: item.whatsapp_number,
+                    phone: item.mobile_no,
                   });
                 }}
-              
-            >
-              <Image
-                source={require('../../asset/chat.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-                }}
-              />
-            </TouchableOpacity>
+              >
+                <Image
+                  source={require('../../asset/chat.png')}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    resizeMode: 'contain',
+                  }}
+                />
+              </TouchableOpacity>
+            )}
             {isValidEmail(item.email) && (
               <TouchableOpacity
                 style={[styles.userIconSmall]}
                 onPress={() => {
                   navigation.navigate('UserChatPage', {
                     senderId: item.sender_id,
-                    userName: item.sender_name,
+                    userName: item.sender_name || item.user_name,
                     userImage: item.sender_profile_picture,
                     userType: item.sender_profile_type,
                     commType: 'email',
+                    showChatBubble: item.user_type_details !== 'Dialer Contact',
+                    showEmailIcon: isValidEmail(item.email),
+                    showWhatsAppIcon:
+                      !!item.whatsapp_number &&
+                      item.whatsapp_number.trim() !== '',
+                    whatsapp_number: item.whatsapp_number,
+                    whatsappNumber: item.whatsapp_number,
+                    phone: item.mobile_no,
                   });
                 }}
               >
@@ -3586,10 +4624,18 @@ const DashbaordScreen = ({ navigation }) => {
                 onPress={() => {
                   navigation.navigate('UserChatPage', {
                     senderId: item.sender_id,
-                    userName: item.sender_name,
+                    userName: item.sender_name || item.user_name,
                     userImage: item.sender_profile_picture,
                     userType: item.sender_profile_type,
                     commType: 'WP',
+                    showChatBubble: item.user_type_details !== 'Dialer Contact',
+                    showEmailIcon: isValidEmail(item.email),
+                    showWhatsAppIcon:
+                      !!item.whatsapp_number &&
+                      item.whatsapp_number.trim() !== '',
+                    whatsapp_number: item.whatsapp_number,
+                    whatsappNumber: item.whatsapp_number,
+                    phone: item.mobile_no,
                   });
                 }}
               >
@@ -3606,14 +4652,22 @@ const DashbaordScreen = ({ navigation }) => {
             <TouchableOpacity
               style={[styles.userIconSmall]}
               onPress={() => {
-                  navigation.navigate('UserChatPage', {
-                    senderId: item.sender_id,
-                    userName: item.sender_name,
-                    userImage: item.sender_profile_picture,
-                    userType: item.sender_profile_type,
-                    commType: 'sms',
-                  });
-                }}
+                navigation.navigate('UserChatPage', {
+                  senderId: item.sender_id,
+                  userName: item.sender_name || item.user_name,
+                  userImage: item.sender_profile_picture,
+                  userType: item.sender_profile_type,
+                  commType: 'sms',
+                  showChatBubble: item.user_type_details !== 'Dialer Contact',
+                  showEmailIcon: isValidEmail(item.email),
+                  showWhatsAppIcon:
+                    !!item.whatsapp_number &&
+                    item.whatsapp_number.trim() !== '',
+                  whatsapp_number: item.whatsapp_number,
+                  whatsappNumber: item.whatsapp_number,
+                  phone: item.mobile_no,
+                });
+              }}
             >
               <Image
                 source={require('../../asset/message.png')}
@@ -4335,7 +5389,11 @@ const DashbaordScreen = ({ navigation }) => {
           {dialTab === 'number' ? (
             <View style={styles.dialNumberContainer}>
               <View style={styles.phoneInputContainer}>
-                <TouchableOpacity style={styles.countrySelector}>
+                <TouchableOpacity
+                  style={styles.countrySelector}
+                  onPress={openCountryModal}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.countryCode}>{selectedCountry}</Text>
                   <Image
                     source={require('../../asset/chevron-down.png')}
@@ -4367,45 +5425,74 @@ const DashbaordScreen = ({ navigation }) => {
 
               <View style={styles.callActions}>
                 <TouchableOpacity
-                  style={[styles.callActionBtn, { backgroundColor: '#6C63FF' }]}
+                  style={[
+                    styles.callActionBtn,
+                    { backgroundColor: '#6C63FF' },
+                    isCalling && { opacity: 0.6 },
+                  ]}
+                  onPress={handleDialerCall}
+                  disabled={isCalling}
+                  activeOpacity={0.8}
                 >
-                  <Image
-                    source={require('../../asset/call.png')}
-                    style={{
-                      width: 24,
-                      height: 24,
-                      resizeMode: 'contain',
-                      tintColor: '#fff',
-                    }}
-                  />
+                  {isCalling ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Image
+                      source={require('../../asset/call.png')}
+                      style={{ width: 25, height: 25, tintColor: '#FFFFFF' }}
+                      resizeMode="contain"
+                    />
+                  )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.callActionBtn, { backgroundColor: '#3dd417' }]}
+                  style={[
+                    styles.callActionBtn,
+                    { backgroundColor: '#3dd417' },
+                    isWPCalling && { opacity: 0.6 },
+                  ]}
+                  onPress={handleDialerWhatsApp}
+                  disabled={isWPCalling}
+                  activeOpacity={0.8}
                 >
-                  <Image
-                    source={require('../../asset/whatsapps.png')}
-                    style={{
-                      width: 24,
-                      height: 24,
-                      resizeMode: 'contain',
-                      tintColor: '#fff',
-                    }}
-                  />
+                  {isWPCalling ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Image
+                      source={require('../../asset/whatsapps.png')}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        resizeMode: 'contain',
+                        tintColor: '#fff',
+                      }}
+                    />
+                  )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.callActionBtn, { backgroundColor: '#FF9800' }]}
+                  style={[
+                    styles.callActionBtn,
+                    { backgroundColor: '#3dd417' },
+                    isSMSCalling && { opacity: 0.6 },
+                  ]}
+                  onPress={handleDialerMessage}
+                  disabled={isSMSCalling}
+                  activeOpacity={0.8}
                 >
-                  <Image
-                    source={require('../../asset/chatbubbles.png')}
-                    style={{
-                      width: 24,
-                      height: 24,
-                      resizeMode: 'contain',
-                      tintColor: '#fff',
-                    }}
-                  />
+                  {isSMSCalling ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Image
+                      source={require('../../asset/chatbubbles.png')}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        resizeMode: 'contain',
+                        tintColor: '#fff',
+                      }}
+                    />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -4888,7 +5975,7 @@ const DashbaordScreen = ({ navigation }) => {
               <Text style={styles.formLabel}>From</Text>
               <TextInput
                 style={[styles.formInput, styles.disabledInput]}
-                value={emailFrom}
+                value={profileInfo.email || 'No email available'}
                 editable={false}
               />
             </View>
@@ -5014,7 +6101,7 @@ const DashbaordScreen = ({ navigation }) => {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={[styles.emailActionBtn, styles.historyBtn]}
                 onPress={() => openModal('emailHistory')}
               >
@@ -5029,7 +6116,7 @@ const DashbaordScreen = ({ navigation }) => {
                 />
 
                 <Text style={styles.historyBtnText}>History</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
 
             {/* Extra bottom space so last buttons can scroll above modal edge */}
@@ -5055,11 +6142,20 @@ const DashbaordScreen = ({ navigation }) => {
         <View style={styles.sideNavModal}>
           <View style={styles.sideNavHeader}>
             <Image
-              source={require('../../asset/dummyuser.png')}
+              source={
+                profileInfo.profile_picture
+                  ? { uri: profileInfo.profile_picture }
+                  : require('../../asset/dummyuser.png')
+              }
               style={styles.sideNavAvatar}
             />
-            <Text style={styles.sideNavName}>John Doe</Text>
-            <Text style={styles.sideNavEmail}>john@leafcom.com</Text>
+            <Text style={styles.sideNavName}>
+              {profileInfo.user_name || 'User'}
+            </Text>
+
+            <Text style={styles.sideNavEmail}>
+              {profileInfo.email || 'No email available'}
+            </Text>
           </View>
           <TouchableOpacity
             style={[
@@ -5432,6 +6528,10 @@ const DashbaordScreen = ({ navigation }) => {
                 style={styles.searchInput}
                 placeholder="Search conversations..."
                 placeholderTextColor="#999"
+                value={conversationSearch}
+                onChangeText={setConversationSearch}
+                autoCapitalize="none"
+                returnKeyType="search"
               />
             </View>
 
@@ -5635,6 +6735,117 @@ const DashbaordScreen = ({ navigation }) => {
       {renderEmailHistoryModal()}
       {renderActivityTimeModal()}
       {renderActivityQuickFilterModal()}
+
+      <Modal
+        visible={countryModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCountryModalVisible(false)}
+      >
+        <View style={styles.countryModalOverlay}>
+          <View style={styles.countryModalContainer}>
+            <View style={styles.countryModalHeader}>
+              <Text style={styles.countryModalTitle}>Select Country</Text>
+
+              <TouchableOpacity onPress={() => setCountryModalVisible(false)}>
+                <Text style={styles.countryModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {countryLoading ? (
+              <ActivityIndicator
+                size="large"
+                color="#76577F"
+                style={{ marginVertical: 30 }}
+              />
+            ) : (
+              <FlatList
+                data={countryCodes}
+                keyExtractor={item => String(item.id)}
+                keyboardShouldPersistTaps="handled"
+                initialNumToRender={15}
+                renderItem={({ item }) => {
+                  const isSelected =
+                    selectedCountryCode === item.country_code &&
+                    selectedCountry === item.country_phone_code;
+
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.countryItem,
+                        isSelected && styles.selectedCountryItem,
+                      ]}
+                      onPress={() => handleCountrySelect(item)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.countryItemDetails}>
+                        <Text style={styles.countryItemName}>{item.name}</Text>
+
+                        <Text style={styles.countryItemISO}>
+                          {item.country_code}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.countryItemPhoneCode}>
+                        {item.country_phone_code}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+                ListEmptyComponent={
+                  <Text style={styles.emptyCountryText}>
+                    No countries available.
+                  </Text>
+                }
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showInCallModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleHangUp}
+      >
+        <View style={styles.inCallOverlay}>
+          <View style={styles.inCallCard}>
+            <Image
+              source={require('../../asset/call.png')}
+              style={styles.inCallPhoneIcon}
+              resizeMode="contain"
+            />
+
+            <Text style={styles.inCallTitle}>Call in progress</Text>
+
+            <Text style={styles.inCallNumber}>{callPhoneNumber}</Text>
+
+            <Text style={styles.inCallStatus}>{callStatus}</Text>
+
+            <View style={styles.inCallActions}>
+              <TouchableOpacity
+                style={[styles.muteButton, isMuted && styles.muteButtonActive]}
+                onPress={handleToggleMute}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.muteButtonText}>
+                  {isMuted ? 'Unmute' : 'Mute'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.hangupButton}
+                onPress={handleHangUp}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.hangupButtonText}>Hang Up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -5642,113 +6853,6 @@ const DashbaordScreen = ({ navigation }) => {
 // ============================================================
 // INITIAL USER DATA
 // ============================================================
-const initialUsers = [
-  {
-    id: '1',
-    name: 'John Smith',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'System Admin',
-    unread: 3,
-  },
-  {
-    id: '2',
-    name: 'Sarah Johnson',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Dialer Contact',
-    unread: 0,
-  },
-  {
-    id: '3',
-    name: 'Michael Brown',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Client - ABC Corp',
-    unread: 2,
-  },
-  {
-    id: '4',
-    name: 'Emily Davis',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Team',
-    unread: 0,
-  },
-  {
-    id: '5',
-    name: 'Robert Wilson',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'System Admin',
-    unread: 1,
-  },
-  {
-    id: '6',
-    name: 'Lisa Anderson',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Client - Tech Solutions',
-    unread: 0,
-  },
-  {
-    id: '7',
-    name: 'David Martinez',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Dialer Contact',
-    unread: 4,
-  },
-  {
-    id: '8',
-    name: 'Jennifer Taylor',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Client - Global Inc',
-    unread: 0,
-  },
-  {
-    id: '9',
-    name: 'James Anderson',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Team',
-    unread: 0,
-  },
-  {
-    id: '10',
-    name: 'Maria Garcia',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'System Admin',
-    unread: 2,
-  },
-  {
-    id: '11',
-    name: 'Thomas Lee',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Client - Star Ltd',
-    unread: 0,
-  },
-  {
-    id: '12',
-    name: 'Patricia White',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Dialer Contact',
-    unread: 1,
-  },
-  {
-    id: '13',
-    name: 'Christopher Hall',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'System Admin',
-    unread: 0,
-  },
-  {
-    id: '14',
-    name: 'Amanda Scott',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Client - Nexus Corp',
-    unread: 0,
-  },
-  {
-    id: '15',
-    name: 'Daniel Green',
-    avatar: require('../../asset/dummyuser.png'),
-    tag: 'Team',
-    unread: 3,
-  },
-];
 
 // ============================================================
 // STYLES
@@ -8400,6 +9504,176 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 25,
     resizeMode: 'cover',
+  },
+
+  countryModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+
+  countryModalContainer: {
+    backgroundColor: '#FFFFFF',
+    height: '75%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+    overflow: 'hidden',
+  },
+
+  countryModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+
+  countryModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#222222',
+  },
+
+  countryModalClose: {
+    fontSize: 22,
+    color: '#666666',
+    paddingHorizontal: 5,
+  },
+
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F1F1',
+  },
+
+  selectedCountryItem: {
+    backgroundColor: '#F5EFF8',
+  },
+
+  countryItemDetails: {
+    flex: 1,
+    marginRight: 12,
+  },
+
+  countryItemName: {
+    fontSize: 15,
+    color: '#222222',
+    fontWeight: '500',
+  },
+
+  countryItemISO: {
+    fontSize: 12,
+    color: '#888888',
+    marginTop: 3,
+  },
+
+  countryItemPhoneCode: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#76577F',
+  },
+
+  emptyCountryText: {
+    textAlign: 'center',
+    marginTop: 30,
+    color: '#777777',
+    fontSize: 14,
+  },
+
+  inCallOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+
+  inCallCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#126D64',
+    borderRadius: 18,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    alignItems: 'center',
+    elevation: 12,
+  },
+
+  inCallPhoneIcon: {
+    width: 26,
+    height: 26,
+    tintColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+
+  inCallTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+
+  inCallNumber: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+
+  inCallStatus: {
+    color: '#D5F0EA',
+    fontSize: 13,
+    marginBottom: 20,
+  },
+
+  inCallActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  muteButton: {
+    minWidth: 85,
+    height: 54,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    backgroundColor: '#E7EEF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  muteButtonActive: {
+    backgroundColor: '#C9D9EA',
+  },
+
+  muteButtonText: {
+    color: '#222222',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  hangupButton: {
+    minWidth: 85,
+    height: 54,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    backgroundColor: '#E32323',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  hangupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
 

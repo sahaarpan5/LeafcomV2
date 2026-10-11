@@ -28,6 +28,11 @@ import axios from 'axios';
 import EmojiPicker, { tr } from 'rn-emoji-keyboard';
 import Loader from '../../util/Loader';
 
+import {
+  makeTelnyxCall,
+  endTelnyxCall,
+} from '../../services/telnyxCallService';
+
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const BOTTOM_SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.92;
 
@@ -101,6 +106,14 @@ const UserChatPage = ({ navigation, route }) => {
   // Ideally pass this from Dashboard:
   // navigation.navigate('UserChatPage', { userId: item.senderId })
 
+  const [showInCallModal, setShowInCallModal] = useState(false);
+  const [callStatus, setCallStatus] = useState('Calling...');
+  const [callPhoneNumber, setCallPhoneNumber] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [selectedCallContact, setSelectedCallContact] = useState(null);
+  const [isCalling, setIsCalling] = useState(false);
+  const [isCallActive, setIsCallActive] = useState(false);
+
   const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
 
   const [whatsappTemplates, setWhatsappTemplates] = useState([]);
@@ -135,10 +148,16 @@ const UserChatPage = ({ navigation, route }) => {
     type: route?.params?.userType || '',
     status: 'online',
     email: '',
-    phone: '',
-    whatsapp: '',
+    phone: route?.params?.phone || '',
+    whatsapp: route?.params?.whatsappNumber || '',
     commType: route?.params?.commType || 'inApp',
   });
+
+  const {
+    showChatBubble = false,
+    showWhatsAppIcon = false,
+    showEmailIcon = false,
+  } = route?.params || {};
   const [SMS_SENDERS, setSMSSenders] = useState([]);
   const [stateOptions, setStateOptions] = useState([]);
   const [stateLoading, setStateLoading] = useState(false);
@@ -1306,6 +1325,195 @@ const UserChatPage = ({ navigation, route }) => {
     }
   };
 
+  const handleHangUp = async () => {
+    try {
+      await endTelnyxCall();
+    } catch (error) {
+      console.log('Hangup error:', error?.message || error);
+    } finally {
+      setShowInCallModal(false);
+      setIsMuted(false);
+      setCallStatus('Call ended');
+    }
+  };
+
+  const handleToggleMute = async () => {
+    const call = getCurrentTelnyxCall();
+
+    if (!call) {
+      Alert.alert('Call Unavailable', 'No active call was found.');
+      return;
+    }
+
+    try {
+      // Use the mute/unmute methods supported by your installed
+      // Telnyx SDK version. Do not toggle UI state unless successful.
+      if (!isMuted) {
+        if (typeof call.muteAudio === 'function') {
+          await call.muteAudio();
+        } else if (typeof call.mute === 'function') {
+          await call.mute();
+        } else {
+          Alert.alert(
+            'Mute Unavailable',
+            'Check the mute method supported by your Telnyx SDK version.',
+          );
+          return;
+        }
+
+        setIsMuted(true);
+      } else {
+        if (typeof call.unmuteAudio === 'function') {
+          await call.unmuteAudio();
+        } else if (typeof call.unmute === 'function') {
+          await call.unmute();
+        } else {
+          Alert.alert(
+            'Unmute Unavailable',
+            'Check the unmute method supported by your Telnyx SDK version.',
+          );
+          return;
+        }
+
+        setIsMuted(false);
+      }
+    } catch (error) {
+      console.log('Mute error:', error?.message || error);
+      Alert.alert('Error', 'Unable to change microphone state.');
+    }
+  };
+
+  const handleOpenCallModal = () => {
+    const availableContacts = (contacts || []).filter(contact =>
+      String(contact?.phoneNumber || '').trim(),
+    );
+
+    if (availableContacts.length === 0) {
+      Alert.alert(
+        'No Phone Number',
+        'No contacts with phone numbers are available.',
+      );
+      return;
+    }
+
+    setSelectedCallContact(null);
+    setShowCallModal(true);
+  };
+
+  const handleSelectCallContact = contact => {
+    setSelectedCallContact(contact);
+  };
+
+  const handleStartTelnyxCall = async () => {
+    if (!selectedCallContact?.phoneNumber) {
+      Alert.alert('Select Contact', 'Please select a phone number first.');
+      return;
+    }
+
+    if (isCalling) {
+      return;
+    }
+
+    try {
+      const selectedNumber = String(selectedCallContact.phoneNumber).trim();
+      setCallPhoneNumber(selectedNumber);
+      setCallStatus('Connecting...');
+      setIsMuted(false);
+      setShowCallModal(false);
+      setShowInCallModal(true);
+      setIsCalling(true);
+
+      // Use your existing authentication-token retrieval logic.
+      const authToken = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      await makeTelnyxCall({
+        receiverId: selectedUserId,
+        receiverName: selectedCallContact.name || '',
+        receiverType: selectedCallContact.role || 'Support',
+        toNumber: selectedNumber,
+        authToken,
+
+        onCallState: state => {
+          const normalizedState = String(state || '').toUpperCase();
+
+          if (normalizedState.includes('ACTIVE')) {
+            setCallStatus('Connected');
+          } else if (normalizedState.includes('RINGING')) {
+            setCallStatus('Ringing...');
+          } else if (
+            normalizedState.includes('ENDED') ||
+            normalizedState.includes('FAILED')
+          ) {
+            setCallStatus(
+              normalizedState.includes('FAILED') ? 'Call failed' : 'Call ended',
+            );
+
+            setTimeout(() => {
+              setShowInCallModal(false);
+            }, 1000);
+          } else if (normalizedState.includes('CONNECTING')) {
+            setCallStatus('Connecting...');
+          }
+        },
+      });
+    } catch (error) {
+      console.log(
+        'Telnyx call error:',
+        error?.response?.data || error?.message || error,
+      );
+
+      Alert.alert(
+        'Call Failed',
+        error?.response?.data?.message ||
+          error?.message ||
+          'Unable to initiate the call.',
+      );
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
+  const handleTelnyxCall = async () => {
+    if (isCalling || isCallActive) {
+      return;
+    }
+
+    try {
+      setIsCalling(true);
+
+      // Use your existing authenticated API token here.
+      const authToken = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const call = await makeTelnyxCall({
+        receiverId: selectedUserId,
+        authToken,
+      });
+
+      if (call) {
+        setIsCallActive(true);
+        Alert.alert('Call Connected', `Calling ${sender.name || 'user'}...`);
+      }
+    } catch (error) {
+      console.log('Telnyx call error:', error?.message || error);
+
+      Alert.alert('Call Failed', error?.message || 'Unable to start the call.');
+    } finally {
+      setIsCalling(false);
+    }
+  };
+
+  const handleEndTelnyxCall = async () => {
+    try {
+      await endTelnyxCall();
+    } catch (error) {
+      console.log('Telnyx hangup error:', error?.message || error);
+      Alert.alert('Error', 'Unable to end the call.');
+    } finally {
+      setIsCallActive(false);
+      setIsCalling(false);
+    }
+  };
+
   const fetchCountryCodes = async () => {
     try {
       setIsLoadingContacts(true);
@@ -1756,7 +1964,6 @@ const UserChatPage = ({ navigation, route }) => {
       // SUCCESS
       // ============================
       if (response.data?.success) {
-       
         // Clear compose fields
         setSelectedEmailTo('');
         setComposeSubject('');
@@ -1877,8 +2084,6 @@ const UserChatPage = ({ navigation, route }) => {
       // SUCCESS
       // ============================
       if (response.data?.success) {
-        
-
         setSmsMessage('');
 
         setShowSmsComposeModal(false);
@@ -2020,8 +2225,6 @@ const UserChatPage = ({ navigation, route }) => {
       // ============================
 
       if (response.data?.success) {
-        
-
         // Add message to local chat
         setTimeout(() => {
           flatListRef.current?.scrollToEnd({
@@ -6461,10 +6664,6 @@ const UserChatPage = ({ navigation, route }) => {
                 <Text style={styles.senderName} numberOfLines={1}>
                   {sender.name}
                 </Text>
-
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>{sender.status}</Text>
-                </View>
               </View>
 
               <TouchableOpacity
@@ -6521,45 +6720,55 @@ const UserChatPage = ({ navigation, route }) => {
 
               {/* Action Buttons */}
               <View style={styles.actionsRow}>
-                {messageTypes.slice(0, 4).map(type => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={styles.actionBtn}
-                    onPress={() => {
-                      if (type.id === 'email') handleOpenEmailCompose();
-                      else if (type.id === 'whatsapp')
-                        handleOpenWhatsappCompose();
-                      else if (type.id === 'sms') handleOpenSmsCompose();
-                      else if (type.id === 'call') setShowCallModal(true);
-                      else {
-                        setSelectedMessageType(type.id);
-                        inputRef.current?.focus();
-                      }
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View
-                      style={[
-                        styles.actionBtnIcon,
-                        { backgroundColor: type.bg },
-                      ]}
+                {messageTypes
+                  .slice(0, 4)
+                  .filter(type => {
+                    if (type.id === 'inapp') return showChatBubble === true;
+                    if (type.id === 'whatsapp')
+                      return showWhatsAppIcon === true;
+                    if (type.id === 'email') return showEmailIcon === true;
+                    return true;
+                  })
+                  .map(type => (
+                    <TouchableOpacity
+                      key={type.id}
+                      style={styles.actionBtn}
+                      onPress={() => {
+                        if (type.id === 'email') handleOpenEmailCompose();
+                        else if (type.id === 'whatsapp')
+                          handleOpenWhatsappCompose();
+                        else if (type.id === 'sms') handleOpenSmsCompose();
+                        else if (type.id === 'call') {
+                          handleOpenCallModal();
+                        } else {
+                          setSelectedMessageType(type.id);
+                          inputRef.current?.focus();
+                        }
+                      }}
+                      activeOpacity={0.7}
                     >
-                      <Image
-                        source={type.icon}
-                        style={{
-                          width: 15,
-                          height: 15,
-                          resizeMode: 'contain',
-                          tintColor: type.color,
-                        }}
-                      />
-                    </View>
+                      <View
+                        style={[
+                          styles.actionBtnIcon,
+                          { backgroundColor: type.bg },
+                        ]}
+                      >
+                        <Image
+                          source={type.icon}
+                          style={{
+                            width: 15,
+                            height: 15,
+                            resizeMode: 'contain',
+                            tintColor: type.color,
+                          }}
+                        />
+                      </View>
 
-                    {/* <Text style={styles.actionBtnLabel}>
+                      {/* <Text style={styles.actionBtnLabel}>
                                             {type.label}
                                         </Text> */}
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  ))}
               </View>
             </View>
           </View>
@@ -7212,46 +7421,58 @@ const UserChatPage = ({ navigation, route }) => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.typeSelectorContent}
       >
-        {messageTypes.map(type => {
-          const isActive = selectedMessageType === type.id;
-          return (
-            <TouchableOpacity
-              key={type.id}
-              style={[
-                styles.typeChip,
-                isActive && {
-                  backgroundColor: type.color,
-                  borderColor: type.color,
-                },
-              ]}
-              onPress={() => {
-                setSelectedMessageType(type.id);
-                if (type.id === 'email') handleOpenEmailCompose();
-                else if (type.id === 'whatsapp') handleOpenWhatsappCompose();
-                else if (type.id === 'sms') handleOpenSmsCompose();
-              }}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={type.icon}
-                style={{
-                  width: 14,
-                  height: 14,
-                  resizeMode: 'contain',
-                  tintColor: isActive ? COLORS.textInverse : type.color,
-                }}
-              />
-              <Text
+        {messageTypes
+          .filter(type => {
+            if (type.id === 'inapp') return showChatBubble === true;
+            if (type.id === 'whatsapp') return showWhatsAppIcon === true;
+            if (type.id === 'email') return showEmailIcon === true;
+
+            // SMS and Call remain unchanged
+            return true;
+          })
+          .map(type => {
+            const isActive = selectedMessageType === type.id;
+            return (
+              <TouchableOpacity
+                key={type.id}
                 style={[
-                  styles.typeChipText,
-                  isActive && { color: COLORS.textInverse },
+                  styles.typeChip,
+                  isActive && {
+                    backgroundColor: type.color,
+                    borderColor: type.color,
+                  },
                 ]}
+                onPress={() => {
+                  setSelectedMessageType(type.id);
+                  if (type.id === 'email') handleOpenEmailCompose();
+                  else if (type.id === 'whatsapp') handleOpenWhatsappCompose();
+                  else if (type.id === 'sms') handleOpenSmsCompose();
+                  else if (type.id === 'call') {
+                    handleOpenCallModal();
+                  }
+                }}
+                activeOpacity={0.7}
               >
-                {type.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Image
+                  source={type.icon}
+                  style={{
+                    width: 14,
+                    height: 14,
+                    resizeMode: 'contain',
+                    tintColor: isActive ? COLORS.textInverse : type.color,
+                  }}
+                />
+                <Text
+                  style={[
+                    styles.typeChipText,
+                    isActive && { color: COLORS.textInverse },
+                  ]}
+                >
+                  {type.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
       </ScrollView>
     </View>
   );
@@ -7797,6 +8018,159 @@ const UserChatPage = ({ navigation, route }) => {
       {showTranslateModal && renderTranslateModal()}
       {showSignatureModal && renderSignatureModal()}
       {showAddSignatureModal && renderAddSignatureModal()}
+
+      <Modal
+        visible={showCallModal}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setShowCallModal(false)}
+      >
+        <View style={styles.callModalOverlay}>
+          <TouchableWithoutFeedback onPress={() => setShowCallModal(false)}>
+            <View style={styles.callModalBackdrop} />
+          </TouchableWithoutFeedback>
+
+          <View style={styles.callModalContainer}>
+            <View style={styles.callModalHeader}>
+              <View>
+                <Text style={styles.callModalTitle}>Select Contact</Text>
+
+                <Text style={styles.callModalSubtitle}>
+                  Choose a phone number to call
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowCallModal(false)}
+                style={styles.callCloseButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.callCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={(contacts || []).filter(contact =>
+                String(contact?.phoneNumber || '').trim(),
+              )}
+              keyExtractor={item => String(item.id)}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <Text style={styles.callEmptyText}>
+                  No phone numbers available.
+                </Text>
+              }
+              renderItem={({ item }) => {
+                const isSelected =
+                  String(selectedCallContact?.id) === String(item.id);
+
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.callContactItem,
+                      isSelected && styles.callContactItemSelected,
+                    ]}
+                    onPress={() => handleSelectCallContact(item)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.callContactAvatar}>
+                      <Text style={styles.callContactAvatarText}>
+                        {(item.name || 'C').charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+
+                    <View style={styles.callContactInfo}>
+                      <Text style={styles.callContactName}>
+                        {item.name || 'Unnamed Contact'}
+                      </Text>
+
+                      {!!item.role && (
+                        <Text style={styles.callContactRole}>{item.role}</Text>
+                      )}
+
+                      <Text style={styles.callContactNumber}>
+                        {item.phoneNumber}
+                      </Text>
+                    </View>
+
+                    <View style={styles.callRadioOuter}>
+                      {isSelected && <View style={styles.callRadioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.startCallButton,
+                (!selectedCallContact || isCalling) &&
+                  styles.startCallButtonDisabled,
+              ]}
+              onPress={handleStartTelnyxCall}
+              disabled={!selectedCallContact || isCalling}
+              activeOpacity={0.8}
+            >
+              {isCalling ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Text style={styles.startCallIcon}>☎</Text>
+                  <Text style={styles.startCallButtonText}>
+                    Call Selected Number
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showInCallModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleHangUp}
+      >
+        <View style={styles.inCallOverlay}>
+          <View style={styles.inCallCard}>
+            <Image
+              source={require('../../asset/call.png')}
+              style={styles.inCallPhoneIcon}
+              resizeMode="contain"
+            />
+
+            <Text style={styles.inCallTitle}>Call in progress</Text>
+
+            <Text style={styles.inCallNumber}>{callPhoneNumber}</Text>
+
+            <Text style={styles.inCallStatus}>{callStatus}</Text>
+
+            <View style={styles.inCallActions}>
+              <TouchableOpacity
+                style={[styles.muteButton, isMuted && styles.muteButtonActive]}
+                onPress={handleToggleMute}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.muteButtonText}>
+                  {isMuted ? 'Unmute' : 'Mute'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.hangupButton}
+                onPress={handleHangUp}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.hangupButtonText}>Hang Up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {renderDropdownModal({
         visible: showTypeDropdown,
@@ -11157,6 +11531,252 @@ const styles = StyleSheet.create({
   whatsappSubmitBtnText: {
     color: COLORS.textInverse,
     fontSize: 15,
+    fontWeight: '700',
+  },
+
+  callModalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+
+  callModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+
+  callModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 22,
+    maxHeight: '75%',
+  },
+
+  callModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  callModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#222222',
+  },
+
+  callModalSubtitle: {
+    fontSize: 13,
+    color: '#777777',
+    marginTop: 5,
+  },
+
+  callCloseButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F1F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  callCloseText: {
+    fontSize: 17,
+    color: '#444444',
+  },
+
+  callContactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E8E8EE',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+  },
+
+  callContactItemSelected: {
+    borderColor: '#76577F',
+    backgroundColor: '#F7F2FA',
+  },
+
+  callContactAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E9DFF0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  callContactAvatarText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#76577F',
+  },
+
+  callContactInfo: {
+    flex: 1,
+  },
+
+  callContactName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#252525',
+  },
+
+  callContactRole: {
+    fontSize: 12,
+    color: '#777777',
+    marginTop: 3,
+  },
+
+  callContactNumber: {
+    fontSize: 13,
+    color: '#555555',
+    marginTop: 4,
+  },
+
+  callRadioOuter: {
+    width: 21,
+    height: 21,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#76577F',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+
+  callRadioInner: {
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: '#76577F',
+  },
+
+  callEmptyText: {
+    textAlign: 'center',
+    color: '#777777',
+    paddingVertical: 30,
+  },
+
+  startCallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#76577F',
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginTop: 12,
+    gap: 9,
+  },
+
+  startCallButtonDisabled: {
+    opacity: 0.5,
+  },
+
+  startCallIcon: {
+    fontSize: 19,
+    color: '#FFFFFF',
+  },
+
+  startCallButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  inCallOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+
+  inCallCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#126D64',
+    borderRadius: 18,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    alignItems: 'center',
+    elevation: 12,
+  },
+
+  inCallPhoneIcon: {
+    width: 26,
+    height: 26,
+    tintColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+
+  inCallTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+
+  inCallNumber: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+
+  inCallStatus: {
+    color: '#D5F0EA',
+    fontSize: 13,
+    marginBottom: 20,
+  },
+
+  inCallActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  muteButton: {
+    minWidth: 85,
+    height: 54,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    backgroundColor: '#E7EEF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  muteButtonActive: {
+    backgroundColor: '#C9D9EA',
+  },
+
+  muteButtonText: {
+    color: '#222222',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  hangupButton: {
+    minWidth: 85,
+    height: 54,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    backgroundColor: '#E32323',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  hangupButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '700',
   },
 });
