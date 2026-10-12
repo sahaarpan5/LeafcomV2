@@ -28,6 +28,7 @@ import {
   makeTelnyxCall,
   endTelnyxCall,
 } from '../../services/telnyxCallService';
+import FAQModal from '../../util/FAQModal';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -38,7 +39,7 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // STATE MANAGEMENT
   // ============================================================
-
+  const [faqVisible, setFaqVisible] = useState(false);
   const [contacts, setContacts] = useState([]);
 
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
@@ -696,254 +697,6 @@ const DashbaordScreen = ({ navigation }) => {
     };
   }, []);
 
-  // useEffect(() => {
-  //   let unsubscribeUser = null;
-  //   let unsubscribeGroup = null;
-
-  //   const loadFirebaseNotifications = async () => {
-  //     try {
-  //       const userId = 2467;
-
-  //       if (!userId) {
-  //         setActivityData([]);
-  //         setIsLoadingActivity(false);
-  //         return;
-  //       }
-
-  //       const userNotificationRef = ref(
-  //         database,
-  //         `leafnet_notifications/User_${userId}_2`,
-  //       );
-
-  //       const groupNotificationRef = ref(
-  //         database,
-  //         `leafnet_notifications/Group_2_${userId}`,
-  //       );
-
-  //       let userData = {};
-  //       let groupData = {};
-  //       let userLoaded = false;
-  //       let groupLoaded = false;
-
-  //       const processNotifications = () => {
-  //         if (!userLoaded || !groupLoaded) {
-  //           return;
-  //         }
-
-  //         const allNotifications = [
-  //           ...Object.entries(userData).map(([firebaseKey, item]) => ({
-  //             ...item,
-  //             firebaseKey,
-  //             source: 'user',
-  //           })),
-
-  //           ...Object.entries(groupData).map(([firebaseKey, item]) => ({
-  //             ...item,
-  //             firebaseKey,
-  //             source: 'group',
-  //           })),
-  //         ];
-
-  //         const groupedNotifications = {};
-
-  //         allNotifications.forEach(item => {
-  //           if (!item) {
-  //             return;
-  //           }
-
-  //           // Preserve the existing user grouping.
-  //           // Group records can use group_name/group_id when sender_id is absent.
-  //           const senderId =
-  //             item.source === 'group'
-  //               ? String(
-  //                   item.group_id ||
-  //                     item.group_name ||
-  //                     item.sender_id ||
-  //                     item.firebaseKey,
-  //                 )
-  //               : String(item.sender_id ?? '');
-
-  //           if (!senderId) {
-  //             return;
-  //           }
-
-  //           // Keep user and group notifications separate.
-  //           const conversationId = `${item.source}_${senderId}`;
-
-  //           const itemDateTime = item.dateTime || '';
-  //           const itemTimestamp = itemDateTime
-  //             ? new Date(itemDateTime).getTime() || 0
-  //             : 0;
-
-  //           const isUnread = Number(item.is_read_status) === 0;
-  //           const currentChannel = String(item.type || '')
-  //             .trim()
-  //             .toLowerCase();
-
-  //           const displayName =
-  //             item.source === 'group'
-  //               ? item.group_name || 'Unknown Group'
-  //               : item.sender_name || 'Unknown User';
-
-  //           const message =
-  //             item.description || item.title || 'New notification';
-
-  //           if (!groupedNotifications[conversationId]) {
-  //             groupedNotifications[conversationId] = {
-  //               id: conversationId,
-  //               senderId: item.sender_id || item.group_id || senderId,
-  //               source: item.source,
-
-  //               // Group notifications show group_name.
-  //               userName: displayName,
-
-  //               userTag:
-  //                 item.sender_profile_type_details ||
-  //                 item.sender_profile_type ||
-  //                 '',
-
-  //               message,
-  //               dateTime: itemDateTime,
-  //               date: item.date || '',
-  //               time: item.time || '',
-  //               latestTimestamp: itemTimestamp,
-
-  //               notSeenCount: isUnread ? 1 : 0,
-  //               unreadCount: isUnread ? 1 : 0,
-
-  //               avatar:
-  //                 item.sender_profile_picture ||
-  //                 item.receiver_profile_picture ||
-  //                 null,
-
-  //               channelTypes: currentChannel ? [currentChannel] : [],
-  //               type: item.type || 'inapp',
-  //               title: item.title || '',
-  //               event: item.event || '',
-  //               receiverId: item.receiver_id || '',
-  //               isReadStatus: Number(item.is_read_status),
-
-  //               firebaseKey: item.firebaseKey,
-  //               originalData: item,
-  //             };
-
-  //             return;
-  //           }
-
-  //           const existing = groupedNotifications[conversationId];
-
-  //           // Existing unread-count logic remains the same.
-  //           if (isUnread) {
-  //             existing.unreadCount += 1;
-  //             existing.notSeenCount += 1;
-  //           }
-
-  //           if (
-  //             currentChannel &&
-  //             !existing.channelTypes.includes(currentChannel)
-  //           ) {
-  //             existing.channelTypes.push(currentChannel);
-  //           }
-
-  //           // Keep the newest notification.
-  //           if (itemTimestamp > existing.latestTimestamp) {
-  //             existing.userName = displayName;
-  //             existing.message = message;
-  //             existing.dateTime = itemDateTime;
-  //             existing.date = item.date || '';
-  //             existing.time = item.time || '';
-  //             existing.latestTimestamp = itemTimestamp;
-
-  //             existing.avatar =
-  //               item.sender_profile_picture ||
-  //               item.receiver_profile_picture ||
-  //               existing.avatar;
-
-  //             existing.type = item.type || 'inapp';
-  //             existing.title = item.title || '';
-  //             existing.event = item.event || '';
-  //             existing.receiverId = item.receiver_id || '';
-  //             existing.isReadStatus = Number(item.is_read_status);
-  //             existing.firebaseKey = item.firebaseKey;
-  //             existing.originalData = item;
-  //           }
-  //         });
-
-  //         const notifications = Object.values(groupedNotifications);
-
-  //         // Keep your existing sorting logic:
-  //         // unread notifications first, then newest first.
-  //         notifications.sort((a, b) => {
-  //           const aUnread = Number(a.unreadCount || 0);
-  //           const bUnread = Number(b.unreadCount || 0);
-
-  //           if (aUnread > 0 && bUnread === 0) {
-  //             return -1;
-  //           }
-
-  //           if (aUnread === 0 && bUnread > 0) {
-  //             return 1;
-  //           }
-
-  //           return (
-  //             Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0)
-  //           );
-  //         });
-
-  //         setActivityData(notifications);
-  //         setIsLoadingActivity(false);
-  //       };
-
-  //       // Listen to individual-user notifications.
-  //       unsubscribeUser = onValue(
-  //         userNotificationRef,
-  //         snapshot => {
-  //           userData = snapshot.exists() ? snapshot.val() || {} : {};
-  //           userLoaded = true;
-  //           processNotifications();
-  //         },
-  //         error => {
-  //           console.log('User notification listener error:', error);
-  //           userData = {};
-  //           userLoaded = true;
-  //           processNotifications();
-  //         },
-  //       );
-
-  //       // Listen to group notifications.
-  //       unsubscribeGroup = onValue(
-  //         groupNotificationRef,
-  //         snapshot => {
-  //           groupData = snapshot.exists() ? snapshot.val() || {} : {};
-  //           groupLoaded = true;
-  //           processNotifications();
-  //         },
-  //         error => {
-  //           console.log('Group notification listener error:', error);
-  //           groupData = {};
-  //           groupLoaded = true;
-  //           processNotifications();
-  //         },
-  //       );
-  //     } catch (error) {
-  //       console.log('Error loading Firebase notifications:', error);
-  //       setActivityData([]);
-  //       setIsLoadingActivity(false);
-  //     }
-  //   };
-
-  //   loadFirebaseNotifications();
-
-  //   return () => {
-  //     if (unsubscribeUser) {
-  //       unsubscribeUser();
-  //     }
-
-  //     if (unsubscribeGroup) {
-  //       unsubscribeGroup();
-  //     }
-  //   };
-  // }, []);
   useEffect(() => {
     const userId = 2467; // Replace with logged-in user ID
 
@@ -1690,75 +1443,254 @@ const DashbaordScreen = ({ navigation }) => {
     fetchUsers(1, false, selectedType, selectedSubType, sortBy);
   };
 
+  // const fetchUserTypes = async () => {
+  //   try {
+  //     setIsLoadingCategories(true);
+
+  //     const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+
+  //     const response = await axios.get(
+  //       'https://leafcom.us/backend/api/chat-application/userType',
+  //       {
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       },
+  //     );
+
+  //     const res = response.data;
+
+  //     if (res.success && Array.isArray(res.data)) {
+  //       const dynamicCategories = res.data.map((item, index) => ({
+  //         id: item.type.toLowerCase().replace(/\s+/g, '_'),
+
+  //         name: item.type,
+
+  //         readCount: Number(item.user_count || 0),
+
+  //         unreadCount: Number(item.unread_count || 0),
+
+  //         // Generic icon for every category
+  //         icon: require('../../asset/people.png'),
+
+  //         color: '#76577F',
+
+  //         subtitle: `${item.type} Contacts`,
+
+  //         // Dynamic sub-categories from API
+  //         children: (item.sub_types || []).map((subType, childIndex) => ({
+  //           id: `${item.type.toLowerCase().replace(/\s+/g, '_')}_${childIndex}`,
+
+  //           name: subType,
+
+  //           // Generic icon for every sub-category
+  //           icon: require('../../asset/people.png'),
+  //         })),
+  //       }));
+
+  //       setCategories(dynamicCategories);
+
+  //       const apiData = res.data;
+
+  //       const formattedUserTypes = apiData.map((item, index) => {
+  //         let icon = require('../../asset/people.png');
+
+  //         if (item.type === 'All') {
+  //           icon = require('../../asset/people.png');
+  //         } else if (item.type === 'Clients') {
+  //           icon = require('../../asset/business.png');
+  //         } else if (item.type === 'Users') {
+  //           icon = require('../../asset/people.png');
+  //         } else if (item.type === 'Sales Agent') {
+  //           icon = require('../../asset/group-chat.png');
+  //         } else if (item.type === 'Department') {
+  //           icon = require('../../asset/business.png');
+  //         } else if (item.type === 'Support') {
+  //           icon = require('../../asset/settings.png');
+  //         } else if (item.type === 'Leads') {
+  //           icon = require('../../asset/people.png');
+  //         } else {
+  //           icon = require('../../asset/people.png');
+  //         }
+
+  //         return {
+  //           id: item.type.toLowerCase().replace(/\s+/g, '_'),
+  //           name: item.type,
+  //           icon,
+  //           userCount: Number(item.user_count || 0),
+  //           unreadCount: Number(item.unread_count || 0),
+  //         };
+  //       });
+
+  //       // Dynamic sub user types
+  //       const formattedSubUserTypes = {};
+
+  //       apiData.forEach(item => {
+  //         const typeId = item.type.toLowerCase().replace(/\s+/g, '_');
+
+  //         formattedSubUserTypes[typeId] = [...(item.sub_types || [])];
+  //       });
+
+  //       setUserTypes(formattedUserTypes);
+  //       setSubUserTypes(formattedSubUserTypes);
+  //     } else {
+  //       setCategories([]);
+  //       setUserTypes([]);
+  //       setSubUserTypes({});
+  //     }
+  //   } catch (error) {
+  //     console.log(
+  //       'User Type API Error:',
+  //       error.response?.data || error.message,
+  //     );
+
+  //     setCategories([]);
+  //   } finally {
+  //     setIsLoadingCategories(false);
+  //   }
+  // };
+
+  // ============================================================
+  // LOAD MORE USERS
+  // ============================================================
+
+  // Use your existing authentication token variable here.
+
   const fetchUserTypes = async () => {
     try {
       setIsLoadingCategories(true);
 
       const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
 
-      const response = await axios.get(
-        'https://leafcom.us/backend/api/chat-application/userType',
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+      if (!token) {
+        console.log('Authentication token not found');
+        setCategories([]);
+        return;
+      }
+
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      };
+
+      // Call both APIs simultaneously
+      const [userTypeResponse, groupResponse] = await Promise.all([
+        axios.get('https://leafcom.us/backend/api/chat-application/userType', {
+          headers,
+        }),
+
+        axios.post(
+          'https://leafcom.us/backend/api/chat-application/listOfChatGroup',
+          {
+            group_id: '',
+            search_text: '',
           },
-        },
-      );
+          { headers },
+        ),
+      ]);
 
-      const res = response.data;
+      const userTypeData = userTypeResponse.data;
+      const groupData = groupResponse.data;
 
-      if (res.success && Array.isArray(res.data)) {
-        const dynamicCategories = res.data.map((item, index) => ({
-          id: item.type.toLowerCase().replace(/\s+/g, '_'),
+      // ------------------------------------------
+      // 1. USER TYPE API
+      // ------------------------------------------
+      const userTypeCategories =
+        userTypeData.success && Array.isArray(userTypeData.data)
+          ? userTypeData.data.map(item => {
+              const typeId = item.type.toLowerCase().replace(/\s+/g, '_');
 
-          name: item.type,
+              return {
+                id: typeId,
+                name: item.type,
+                readCount: Number(item.user_count || 0),
+                unreadCount: Number(item.unread_count || 0),
+                icon: require('../../asset/people.png'),
+                color: '#76577F',
+                subtitle: `${item.type} Contacts`,
+                children: (item.sub_types || []).map((subType, index) => ({
+                  id: `${typeId}_${index}`,
+                  name: subType,
+                  icon: require('../../asset/people.png'),
+                })),
+              };
+            })
+          : [];
 
-          readCount: Number(item.user_count || 0),
+      // ------------------------------------------
+      // 2. GROUP API
+      // ------------------------------------------
+      const groupList =
+        groupData.success && Array.isArray(groupData.data)
+          ? groupData.data
+          : [];
 
-          unreadCount: Number(item.unread_count || 0),
+      let groupsCategory = [];
 
-          // Generic icon for every category
-          icon: require('../../asset/people.png'),
+      // Add Groups only when at least one group exists
+      if (groupList.length > 0) {
+        const totalUnreadMessages = groupList.reduce(
+          (total, group) =>
+            total + Number(group.total_unread_message_count || 0),
+          0,
+        );
 
-          color: '#76577F',
+        groupsCategory = [
+          {
+            id: 'groups',
+            name: 'Groups',
 
-          subtitle: `${item.type} Contacts`,
+            // Total number of groups
+            readCount: groupList.length,
 
-          // Dynamic sub-categories from API
-          children: (item.sub_types || []).map((subType, childIndex) => ({
-            id: `${item.type.toLowerCase().replace(/\s+/g, '_')}_${childIndex}`,
+            // Sum of unread messages across all groups
+            unreadCount: totalUnreadMessages,
 
-            name: subType,
+            icon: require('../../asset/group-chat.png'),
+            color: '#76577F',
+            subtitle: `${groupList.length} Groups`,
+            isChatGroup: true,
 
-            // Generic icon for every sub-category
-            icon: require('../../asset/people.png'),
-          })),
-        }));
+            // Individual groups are children of Groups
+            children: groupList.map(group => ({
+              id: `group_${group.id}`,
+              groupId: group.group_id,
+              name: group.group_name,
+              readCount: Number(group.total_leads || 0),
+              unreadCount: Number(group.total_unread_message_count || 0),
+              icon: require('../../asset/group-chat.png'),
+              isChatGroup: true,
+              groupImage: group.group_image,
+              description: group.description,
+              assignedUsers: group.assigned_users,
+              users: group.users || [],
+              leads: group.leads || [],
+            })),
+          },
+        ];
+      }
 
-        setCategories(dynamicCategories);
+      // ------------------------------------------
+      // 3. COMBINE BOTH API RESULTS
+      // ------------------------------------------
+      const dynamicCategories = [...userTypeCategories, ...groupsCategory];
 
-        const apiData = res.data;
+      setCategories(dynamicCategories);
 
-        const formattedUserTypes = apiData.map((item, index) => {
+      // ------------------------------------------
+      // 4. UPDATE EXISTING USER TYPE STATES
+      // ------------------------------------------
+      if (userTypeData.success && Array.isArray(userTypeData.data)) {
+        const formattedUserTypes = userTypeData.data.map(item => {
           let icon = require('../../asset/people.png');
 
-          if (item.type === 'All') {
-            icon = require('../../asset/people.png');
-          } else if (item.type === 'Clients') {
+          if (item.type === 'Clients' || item.type === 'Department') {
             icon = require('../../asset/business.png');
-          } else if (item.type === 'Users') {
-            icon = require('../../asset/people.png');
           } else if (item.type === 'Sales Agent') {
             icon = require('../../asset/group-chat.png');
-          } else if (item.type === 'Department') {
-            icon = require('../../asset/business.png');
           } else if (item.type === 'Support') {
             icon = require('../../asset/settings.png');
-          } else if (item.type === 'Leads') {
-            icon = require('../../asset/people.png');
-          } else {
-            icon = require('../../asset/people.png');
           }
 
           return {
@@ -1770,10 +1702,9 @@ const DashbaordScreen = ({ navigation }) => {
           };
         });
 
-        // Dynamic sub user types
         const formattedSubUserTypes = {};
 
-        apiData.forEach(item => {
+        userTypeData.data.forEach(item => {
           const typeId = item.type.toLowerCase().replace(/\s+/g, '_');
 
           formattedSubUserTypes[typeId] = [...(item.sub_types || [])];
@@ -1781,28 +1712,28 @@ const DashbaordScreen = ({ navigation }) => {
 
         setUserTypes(formattedUserTypes);
         setSubUserTypes(formattedSubUserTypes);
-      } else {
-        setCategories([]);
-        setUserTypes([]);
-        setSubUserTypes({});
       }
+
+      console.log('Categories loaded:', dynamicCategories);
+      console.log('Total groups:', groupList.length);
+      console.log(
+        'Total unread group messages:',
+        groupList.reduce(
+          (total, group) =>
+            total + Number(group.total_unread_message_count || 0),
+          0,
+        ),
+      );
     } catch (error) {
       console.log(
-        'User Type API Error:',
+        'Fetch Categories API Error:',
         error.response?.data || error.message,
       );
-
-      setCategories([]);
     } finally {
       setIsLoadingCategories(false);
     }
   };
 
-  // ============================================================
-  // LOAD MORE USERS
-  // ============================================================
-
-  // Use your existing authentication token variable here.
   const fetchCountryCodes = async () => {
     try {
       const COUNTRY_CODES_API =
@@ -2254,6 +2185,58 @@ const DashbaordScreen = ({ navigation }) => {
       );
     } finally {
       setIsSendingEmail(false);
+    }
+  };
+
+  const fetchGroups = async () => {
+    try {
+      setIsLoadingUsers(true);
+      setUserList([]);
+      setHasMorePages(false);
+
+      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/listOfChatGroup',
+        {
+          group_id: '',
+          search_text: '',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('GROUP API RESPONSE:', response.data);
+
+      if (response.data?.success && Array.isArray(response.data?.data)) {
+        const groups = response.data.data.map(group => ({
+          id: String(group.id),
+          name: group.group_name || 'Unnamed Group',
+          user_name: group.group_name || 'Unnamed Group',
+          tag: 'Groups',
+          type: 'Groups',
+          unread: Number(group.total_unread_message_count || 0),
+          profile_picture: group.group_image || '',
+          group_id: group.group_id,
+          group_name: group.group_name,
+          users: group.users || [],
+          isChatGroup: true,
+        }));
+
+        setUserList(groups);
+        console.log('MAPPED GROUPS:', groups);
+      } else {
+        setUserList([]);
+        console.log('No groups returned by API');
+      }
+    } catch (error) {
+      console.log('GROUP API ERROR:', error.response?.data || error.message);
+      setUserList([]);
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
@@ -3240,30 +3223,62 @@ const DashbaordScreen = ({ navigation }) => {
           </View>
         </View>
         <View style={styles.contactIconsRow}>
-          <TouchableOpacity
-            style={[styles.contactIconSmall, { backgroundColor: '#6C63FF20' }]}
-            onPress={() => {
-              setEmailTo(item.email || '');
-              setActiveTab('email');
-            }}
-          >
-            <Image
-              source={require('../../asset/chat.png')}
-              style={{
-                width: 22,
-                height: 22,
-                resizeMode: 'contain',
+          {item.user_type_details !== 'Dialer Contact' && (
+            <TouchableOpacity
+              style={[
+                styles.contactIconSmall,
+                { backgroundColor: '#6C63FF20' },
+              ]}
+              onPress={() => {
+                navigation.navigate('UserChatPage', {
+                  senderId: item.id,
+                  userName: item.name || item.user_name,
+                  userImage: item.profile_picture,
+                  userType: item.type,
+                  commType: 'inApp',
+                  showChatBubble: item.user_type_details !== 'Dialer Contact',
+                  showEmailIcon: isValidEmail(item.email),
+                  showWhatsAppIcon:
+                    !!item.whatsapp_number &&
+                    item.whatsapp_number.trim() !== '',
+                  whatsapp_number: item.whatsapp_number || item.user_name,
+                  whatsappNumber: item.whatsapp_number || item.user_name,
+                  phone: item.number,
+                });
               }}
-            />
-          </TouchableOpacity>
+            >
+              <Image
+                source={require('../../asset/chat.png')}
+                style={{
+                  width: 22,
+                  height: 22,
+                  resizeMode: 'contain',
+                }}
+              />
+            </TouchableOpacity>
+          )}
           {isValidEmail(item.email) && (
             <TouchableOpacity
               style={[styles.contactIconSmall]}
               onPress={() => {
-                setEmailTo(item.email || '');
-                setActiveTab('email');
+                navigation.navigate('UserChatPage', {
+                  senderId: item.id,
+                  userName: item.name || item.user_name,
+                  userImage: item.profile_picture,
+                  userType: item.type,
+                  commType: 'email',
+                  showChatBubble: item.user_type_details !== 'Dialer Contact',
+                  showEmailIcon: isValidEmail(item.email),
+                  showWhatsAppIcon:
+                    !!item.whatsapp_number &&
+                    item.whatsapp_number.trim() !== '',
+                  whatsapp_number: item.whatsapp_number || item.user_name,
+                  whatsappNumber: item.whatsapp_number || item.user_name,
+                  phone: item.number,
+                });
               }}
             >
+              >
               <Image
                 source={require('../../asset/mail.png')}
                 style={{
@@ -3290,8 +3305,25 @@ const DashbaordScreen = ({ navigation }) => {
           {item.whatsapp_number && item.whatsapp_number.trim() !== '' && (
             <TouchableOpacity
               style={[styles.contactIconSmall]}
-              onPress={() => openModal('whatsapp')}
+              onPress={() => {
+                navigation.navigate('UserChatPage', {
+                  senderId: item.id,
+                  userName: item.name || item.user_name,
+                  userImage: item.profile_picture,
+                  userType: item.type,
+                  commType: 'WP',
+                  showChatBubble: item.user_type_details !== 'Dialer Contact',
+                  showEmailIcon: isValidEmail(item.email),
+                  showWhatsAppIcon:
+                    !!item.whatsapp_number &&
+                    item.whatsapp_number.trim() !== '',
+                  whatsapp_number: item.whatsapp_number || item.user_name,
+                  whatsappNumber: item.whatsapp_number || item.user_name,
+                  phone: item.number,
+                });
+              }}
             >
+              >
               <Image
                 source={require('../../asset/whatsapp.png')}
                 style={{
@@ -3304,8 +3336,24 @@ const DashbaordScreen = ({ navigation }) => {
           )}
           <TouchableOpacity
             style={[styles.contactIconSmall]}
-            onPress={() => openModal('message')}
+            onPress={() => {
+              navigation.navigate('UserChatPage', {
+                senderId: item.id,
+                userName: item.name || item.user_name,
+                userImage: item.profile_picture,
+                userType: item.type,
+                commType: 'sms',
+                showChatBubble: item.user_type_details !== 'Dialer Contact',
+                showEmailIcon: isValidEmail(item.email),
+                showWhatsAppIcon:
+                  !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+                whatsapp_number: item.whatsapp_number || item.user_name,
+                whatsappNumber: item.whatsapp_number || item.user_name,
+                phone: item.number,
+              });
+            }}
           >
+            >
             <Image
               source={require('../../asset/message.png')}
               style={{
@@ -4469,6 +4517,13 @@ const DashbaordScreen = ({ navigation }) => {
     const contact = contacts.find(c => c.name === item.name);
     const hasUnread = item.unread > 0;
 
+    const isGroup =
+      item.isChatGroup === true ||
+      item.tag === 'Groups' ||
+      item.type === 'Groups' ||
+      item.user_type === 'Groups' ||
+      item.group_id != null;
+
     const getBorderColor = () => {
       if (hasUnread) return '#6C63FF';
       if (item.tag.includes('System Admin')) return '#4CAF50';
@@ -4499,22 +4554,32 @@ const DashbaordScreen = ({ navigation }) => {
             elevation: 4,
           },
         ]}
-        onPress={() =>
-          navigation.navigate('UserChatPage', {
-            senderId: item.sender_id,
-            userName: item.sender_name || item.user_name,
-            userImage: item.sender_profile_picture,
-            userType: item.sender_profile_type,
-            commType: 'inApp',
-            showChatBubble: item.user_type_details !== 'Dialer Contact',
-            showEmailIcon: isValidEmail(item.email),
-            showWhatsAppIcon:
-              !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
-            whatsapp_number: item.whatsapp_number,
-            whatsappNumber: item.whatsapp_number,
-            phone: item.mobile_no,
-          })
-        }
+        onPress={() => {
+          console.log('Clicked item:', item);
+          console.log('Is group:', isGroup);
+          if (isGroup) {
+            navigation.navigate('GroupChat', {
+              senderId: item.id,
+              userName: item.name,
+              users: item.users || [],
+            });
+          } else {
+            navigation.navigate('UserChatPage', {
+              senderId: item.sender_id,
+              userName: item.sender_name || item.user_name,
+              userImage: item.sender_profile_picture,
+              userType: item.sender_profile_type,
+              commType: 'inApp',
+              showChatBubble: item.user_type_details !== 'Dialer Contact',
+              showEmailIcon: isValidEmail(item.email),
+              showWhatsAppIcon:
+                !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+              whatsapp_number: item.whatsapp_number || item.user_name,
+              whatsappNumber: item.whatsapp_number || item.user_name,
+              phone: item.mobile_no,
+            });
+          }
+        }}
       >
         <View style={styles.avatarContainer}>
           <Image source={item.avatar} style={styles.avatar} />
@@ -4541,31 +4606,81 @@ const DashbaordScreen = ({ navigation }) => {
             </View>
             {hasUnread && <View style={styles.unreadDot} />}
           </View>
-
-          <View style={styles.userIconsRow}>
-            {item.user_type_details !== 'Dialer Contact' && (
+          {!isGroup && (
+            <View style={styles.userIconsRow}>
+              {item.user_type_details !== 'Dialer Contact' && (
+                <TouchableOpacity
+                  style={[
+                    styles.userIconSmall,
+                    { backgroundColor: '#6C63FF20' },
+                  ]}
+                  onPress={() => {
+                    navigation.navigate('UserChatPage', {
+                      senderId: item.sender_id,
+                      userName: item.sender_name || item.user_name,
+                      userImage: item.sender_profile_picture,
+                      userType: item.sender_profile_type,
+                      commType: 'inApp',
+                      showChatBubble:
+                        item.user_type_details !== 'Dialer Contact',
+                      showEmailIcon: isValidEmail(item.email),
+                      showWhatsAppIcon:
+                        !!item.whatsapp_number &&
+                        item.whatsapp_number.trim() !== '',
+                      whatsapp_number: item.whatsapp_number || item.user_name,
+                      whatsappNumber: item.whatsapp_number || item.user_name,
+                      phone: item.mobile_no,
+                    });
+                  }}
+                >
+                  <Image
+                    source={require('../../asset/chat.png')}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      resizeMode: 'contain',
+                    }}
+                  />
+                </TouchableOpacity>
+              )}
+              {isValidEmail(item.email) && (
+                <TouchableOpacity
+                  style={[styles.userIconSmall]}
+                  onPress={() => {
+                    navigation.navigate('UserChatPage', {
+                      senderId: item.sender_id,
+                      userName: item.sender_name || item.user_name,
+                      userImage: item.sender_profile_picture,
+                      userType: item.sender_profile_type,
+                      commType: 'email',
+                      showChatBubble:
+                        item.user_type_details !== 'Dialer Contact',
+                      showEmailIcon: isValidEmail(item.email),
+                      showWhatsAppIcon:
+                        !!item.whatsapp_number &&
+                        item.whatsapp_number.trim() !== '',
+                      whatsapp_number: item.whatsapp_number || item.user_name,
+                      whatsappNumber: item.whatsapp_number || item.user_name,
+                      phone: item.mobile_no,
+                    });
+                  }}
+                >
+                  <Image
+                    source={require('../../asset/mail.png')}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      resizeMode: 'contain',
+                    }}
+                  />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
-                style={[styles.userIconSmall, { backgroundColor: '#6C63FF20' }]}
-                onPress={() => {
-                  navigation.navigate('UserChatPage', {
-                    senderId: item.sender_id,
-                    userName: item.sender_name || item.user_name,
-                    userImage: item.sender_profile_picture,
-                    userType: item.sender_profile_type,
-                    commType: 'inApp',
-                    showChatBubble: item.user_type_details !== 'Dialer Contact',
-                    showEmailIcon: isValidEmail(item.email),
-                    showWhatsAppIcon:
-                      !!item.whatsapp_number &&
-                      item.whatsapp_number.trim() !== '',
-                    whatsapp_number: item.whatsapp_number,
-                    whatsappNumber: item.whatsapp_number,
-                    phone: item.mobile_no,
-                  });
-                }}
+                style={[styles.userIconSmall, { backgroundColor: '#4CAF5020' }]}
+                onPress={() => openModal('dial')}
               >
                 <Image
-                  source={require('../../asset/chat.png')}
+                  source={require('../../asset/circle-call.png')}
                   style={{
                     width: 24,
                     height: 24,
@@ -4573,8 +4688,38 @@ const DashbaordScreen = ({ navigation }) => {
                   }}
                 />
               </TouchableOpacity>
-            )}
-            {isValidEmail(item.email) && (
+              {item.whatsapp_number && item.whatsapp_number.trim() !== '' && (
+                <TouchableOpacity
+                  style={[styles.userIconSmall]}
+                  onPress={() => {
+                    navigation.navigate('UserChatPage', {
+                      senderId: item.sender_id,
+                      userName: item.sender_name || item.user_name,
+                      userImage: item.sender_profile_picture,
+                      userType: item.sender_profile_type,
+                      commType: 'WP',
+                      showChatBubble:
+                        item.user_type_details !== 'Dialer Contact',
+                      showEmailIcon: isValidEmail(item.email),
+                      showWhatsAppIcon:
+                        !!item.whatsapp_number &&
+                        item.whatsapp_number.trim() !== '',
+                      whatsapp_number: item.whatsapp_number || item.user_name,
+                      whatsappNumber: item.whatsapp_number || item.user_name,
+                      phone: item.mobile_no,
+                    });
+                  }}
+                >
+                  <Image
+                    source={require('../../asset/whatsapp.png')}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      resizeMode: 'contain',
+                    }}
+                  />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.userIconSmall]}
                 onPress={() => {
@@ -4583,20 +4728,20 @@ const DashbaordScreen = ({ navigation }) => {
                     userName: item.sender_name || item.user_name,
                     userImage: item.sender_profile_picture,
                     userType: item.sender_profile_type,
-                    commType: 'email',
+                    commType: 'sms',
                     showChatBubble: item.user_type_details !== 'Dialer Contact',
                     showEmailIcon: isValidEmail(item.email),
                     showWhatsAppIcon:
                       !!item.whatsapp_number &&
                       item.whatsapp_number.trim() !== '',
-                    whatsapp_number: item.whatsapp_number,
-                    whatsappNumber: item.whatsapp_number,
+                    whatsapp_number: item.whatsapp_number || item.user_name,
+                    whatsappNumber: item.whatsapp_number || item.user_name,
                     phone: item.mobile_no,
                   });
                 }}
               >
                 <Image
-                  source={require('../../asset/mail.png')}
+                  source={require('../../asset/message.png')}
                   style={{
                     width: 24,
                     height: 24,
@@ -4604,81 +4749,8 @@ const DashbaordScreen = ({ navigation }) => {
                   }}
                 />
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.userIconSmall, { backgroundColor: '#4CAF5020' }]}
-              onPress={() => openModal('dial')}
-            >
-              <Image
-                source={require('../../asset/circle-call.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-                }}
-              />
-            </TouchableOpacity>
-            {item.whatsapp_number && item.whatsapp_number.trim() !== '' && (
-              <TouchableOpacity
-                style={[styles.userIconSmall]}
-                onPress={() => {
-                  navigation.navigate('UserChatPage', {
-                    senderId: item.sender_id,
-                    userName: item.sender_name || item.user_name,
-                    userImage: item.sender_profile_picture,
-                    userType: item.sender_profile_type,
-                    commType: 'WP',
-                    showChatBubble: item.user_type_details !== 'Dialer Contact',
-                    showEmailIcon: isValidEmail(item.email),
-                    showWhatsAppIcon:
-                      !!item.whatsapp_number &&
-                      item.whatsapp_number.trim() !== '',
-                    whatsapp_number: item.whatsapp_number,
-                    whatsappNumber: item.whatsapp_number,
-                    phone: item.mobile_no,
-                  });
-                }}
-              >
-                <Image
-                  source={require('../../asset/whatsapp.png')}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    resizeMode: 'contain',
-                  }}
-                />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[styles.userIconSmall]}
-              onPress={() => {
-                navigation.navigate('UserChatPage', {
-                  senderId: item.sender_id,
-                  userName: item.sender_name || item.user_name,
-                  userImage: item.sender_profile_picture,
-                  userType: item.sender_profile_type,
-                  commType: 'sms',
-                  showChatBubble: item.user_type_details !== 'Dialer Contact',
-                  showEmailIcon: isValidEmail(item.email),
-                  showWhatsAppIcon:
-                    !!item.whatsapp_number &&
-                    item.whatsapp_number.trim() !== '',
-                  whatsapp_number: item.whatsapp_number,
-                  whatsappNumber: item.whatsapp_number,
-                  phone: item.mobile_no,
-                });
-              }}
-            >
-              <Image
-                source={require('../../asset/message.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-                }}
-              />
-            </TouchableOpacity>
-          </View>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -4810,7 +4882,12 @@ const DashbaordScreen = ({ navigation }) => {
           )}
         </View>
 
-        {filteredActivities.length > 0 ? (
+        {isLoadingActivity ? (
+          <View style={styles.activityEmptyContainer}>
+            <ActivityIndicator size="large" color="#6C63FF" />
+            <Text style={styles.activityEmptyText}>Loading activities...</Text>
+          </View>
+        ) : filteredActivities.length > 0 ? (
           <FlatList
             data={filteredActivities}
             renderItem={renderActivityItem}
@@ -4835,6 +4912,7 @@ const DashbaordScreen = ({ navigation }) => {
             <Text style={styles.activityEmptySubtext}>
               Try changing your filters
             </Text>
+
             <TouchableOpacity
               style={styles.resetFiltersEmptyBtn}
               onPress={resetActivityFilters}
@@ -5154,6 +5232,10 @@ const DashbaordScreen = ({ navigation }) => {
 
                     case 'contacts':
                       setActiveTab('contacts');
+                      break;
+
+                    case 'faq':
+                      setFaqVisible(true);
                       break;
 
                     default:
@@ -5647,27 +5729,303 @@ const DashbaordScreen = ({ navigation }) => {
     </Modal>
   );
 
+  // const renderFilterModal = () => (
+  //   <Modal
+  //     visible={showFilterModal}
+  //     transparent
+  //     animationType="fade"
+  //     onRequestClose={() => setShowFilterModal(false)}
+  //   >
+  //     <TouchableOpacity
+  //       style={styles.modalOverlay}
+  //       activeOpacity={1}
+  //       onPress={() => setShowFilterModal(false)}
+  //     >
+  //       <View style={styles.filterModal}>
+  //         <View style={styles.filterModalHeader}>
+  //           <Text style={styles.filterModalTitle}>Filter by Category</Text>
+  //           <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+  //             <Image
+  //               source={require('../../asset/close.png')}
+  //               style={{
+  //                 width: 14,
+  //                 height: 14,
+  //                 resizeMode: 'contain',
+  //                 tintColor: '#666',
+  //               }}
+  //             />
+  //           </TouchableOpacity>
+  //         </View>
+  //         {/*
+  //         <ScrollView
+  //           style={styles.filterModalContent}
+  //           showsVerticalScrollIndicator={false}
+  //         >
+  //           {categories.map(cat => (
+  //             <View key={cat.id} style={styles.categorySection}>
+  //               <View
+  //                 style={[
+  //                   styles.filterModalItem,
+  //                   selectedCategory === cat.name &&
+  //                     styles.filterModalItemActive,
+  //                 ]}
+  //               >
+  //                 <View style={styles.filterModalItemLeft}>
+  //                   <View
+  //                     style={[
+  //                       styles.categoryIcon,
+  //                       { backgroundColor: cat.color + '20' },
+  //                     ]}
+  //                   >
+  //                     <Image
+  //                       source={cat.icon}
+  //                       style={{
+  //                         width: 20,
+  //                         height: 20,
+  //                         resizeMode: 'contain',
+  //                         tintColor: cat.color,
+  //                       }}
+  //                     />
+  //                   </View>
+  //                   <View>
+  //                     <Text
+  //                       style={[
+  //                         styles.filterModalItemText,
+  //                         selectedCategory === cat.name &&
+  //                           styles.filterModalItemTextActive,
+  //                       ]}
+  //                     >
+  //                       {cat.name}
+  //                     </Text>
+  //                     <Text style={styles.filterModalSubText}>
+  //                       {cat.subtitle}
+  //                     </Text>
+  //                   </View>
+  //                 </View>
+  //                 <View style={styles.filterModalItemRight}>
+  //                   <View style={styles.countContainer}>
+  //                     <View
+  //                       style={[
+  //                         styles.countBadge,
+  //                         { backgroundColor: '#4a08b3fd' },
+  //                       ]}
+  //                     >
+  //                       <Text style={[styles.countText, { color: '#FFF' }]}>
+  //                         {cat.readCount}
+  //                       </Text>
+  //                     </View>
+  //                     <View
+  //                       style={[
+  //                         styles.countBadge,
+  //                         { backgroundColor: '#d30f20f8' },
+  //                       ]}
+  //                     >
+  //                       <Text style={[styles.countText, { color: '#FFF' }]}>
+  //                         {cat.unreadCount}
+  //                       </Text>
+  //                     </View>
+  //                   </View>
+  //                   <TouchableOpacity
+  //                     style={styles.expandButton}
+  //                     onPress={e => {
+  //                       e.stopPropagation();
+  //                       toggleCategoryExpand(cat.id);
+  //                     }}
+  //                   >
+  //                     <Image
+  //                       source={
+  //                         expandedCategories[cat.id]
+  //                           ? require('../../asset/chevron_up.png')
+  //                           : require('../../asset/chevron-down.png')
+  //                       }
+  //                       style={{
+  //                         width: 20,
+  //                         height: 20,
+  //                         resizeMode: 'contain',
+  //                         tintColor: '#666',
+  //                       }}
+  //                     />
+  //                   </TouchableOpacity>
+  //                 </View>
+  //               </View>
+
+  //               {expandedCategories[cat.id] && (
+  //                 <View style={styles.childContainer}>
+  //                   {cat.children.map((child, index) => (
+  //                     <TouchableOpacity
+  //                       key={index}
+  //                       style={styles.childItem}
+  //                       onPress={() => handleSubTypePress(cat.name, child.name)}
+  //                     >
+  //                       <View style={styles.childItemLeft}>
+  //                         <Image
+  //                           source={child.icon}
+  //                           style={{
+  //                             width: 18,
+  //                             height: 18,
+  //                             resizeMode: 'contain',
+  //                             tintColor: cat.color,
+  //                           }}
+  //                         />
+  //                         <Text style={styles.childItemText}>{child.name}</Text>
+  //                       </View>
+  //                     </TouchableOpacity>
+  //                   ))}
+  //                 </View>
+  //               )}
+  //             </View>
+  //           ))}
+  //         </ScrollView> */}
+
+  //         <FlatList
+  //           data={categories}
+  //           keyExtractor={item => String(item.id)}
+  //           style={styles.filterModalContent}
+  //           showsVerticalScrollIndicator={false}
+  //           nestedScrollEnabled
+  //           renderItem={({ item: cat }) => (
+  //             <View style={styles.categorySection}>
+  //               <View
+  //                 style={[
+  //                   styles.filterModalItem,
+  //                   selectedCategory === cat.name &&
+  //                     styles.filterModalItemActive,
+  //                 ]}
+  //               >
+  //                 <View style={styles.filterModalItemLeft}>
+  //                   <View
+  //                     style={[
+  //                       styles.categoryIcon,
+  //                       { backgroundColor: cat.color + '20' },
+  //                     ]}
+  //                   >
+  //                     <Image
+  //                       source={cat.icon}
+  //                       style={{
+  //                         width: 20,
+  //                         height: 20,
+  //                         resizeMode: 'contain',
+  //                         tintColor: cat.color,
+  //                       }}
+  //                     />
+  //                   </View>
+
+  //                   <View>
+  //                     <Text
+  //                       style={[
+  //                         styles.filterModalItemText,
+  //                         selectedCategory === cat.name &&
+  //                           styles.filterModalItemTextActive,
+  //                       ]}
+  //                     >
+  //                       {cat.name}
+  //                     </Text>
+
+  //                     <Text style={styles.filterModalSubText}>
+  //                       {cat.subtitle}
+  //                     </Text>
+  //                   </View>
+  //                 </View>
+
+  //                 <View style={styles.filterModalItemRight}>
+  //                   <View style={styles.countContainer}>
+  //                     <View
+  //                       style={[
+  //                         styles.countBadge,
+  //                         { backgroundColor: '#4a08b3fd' },
+  //                       ]}
+  //                     >
+  //                       <Text style={[styles.countText, { color: '#FFF' }]}>
+  //                         {cat.readCount}
+  //                       </Text>
+  //                     </View>
+
+  //                     <View
+  //                       style={[
+  //                         styles.countBadge,
+  //                         { backgroundColor: '#d30f20f8' },
+  //                       ]}
+  //                     >
+  //                       <Text style={[styles.countText, { color: '#FFF' }]}>
+  //                         {cat.unreadCount}
+  //                       </Text>
+  //                     </View>
+  //                   </View>
+
+  //                   <TouchableOpacity
+  //                     style={styles.expandButton}
+  //                     onPress={() => toggleCategoryExpand(cat.id)}
+  //                   >
+  //                     <Image
+  //                       source={
+  //                         expandedCategories[cat.id]
+  //                           ? require('../../asset/chevron_up.png')
+  //                           : require('../../asset/chevron-down.png')
+  //                       }
+  //                       style={{
+  //                         width: 20,
+  //                         height: 20,
+  //                         resizeMode: 'contain',
+  //                         tintColor: '#666',
+  //                       }}
+  //                     />
+  //                   </TouchableOpacity>
+  //                 </View>
+  //               </View>
+
+  //               {expandedCategories[cat.id] && (
+  //                 <View style={styles.childContainer}>
+  //                   {cat.children.map((child, index) => (
+  //                     <TouchableOpacity
+  //                       key={`${cat.id}-${index}`}
+  //                       style={styles.childItem}
+  //                       onPress={() => handleSubTypePress(cat.name, child.name)}
+  //                     >
+  //                       <View style={styles.childItemLeft}>
+  //                         <Image
+  //                           source={child.icon}
+  //                           style={{
+  //                             width: 18,
+  //                             height: 18,
+  //                             resizeMode: 'contain',
+  //                             tintColor: cat.color,
+  //                           }}
+  //                         />
+
+  //                         <Text style={styles.childItemText}>{child.name}</Text>
+  //                       </View>
+  //                     </TouchableOpacity>
+  //                   ))}
+  //                 </View>
+  //               )}
+  //             </View>
+  //           )}
+  //         />
+  //       </View>
+  //     </TouchableOpacity>
+  //   </Modal>
+  // );
+
   const renderFilterModal = () => (
     <Modal
       visible={showFilterModal}
       transparent
       animationType="fade"
       onRequestClose={() => setShowFilterModal(false)}
+      statusBarTranslucent
     >
-      <TouchableOpacity
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setShowFilterModal(false)}
-      >
+      <View style={styles.filerModalOverlay}>
         <View style={styles.filterModal}>
+          {/* Header */}
           <View style={styles.filterModalHeader}>
             <Text style={styles.filterModalTitle}>Filter by Category</Text>
+
             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
               <Image
                 source={require('../../asset/close.png')}
                 style={{
-                  width: 14,
-                  height: 14,
+                  width: 20,
+                  height: 20,
                   resizeMode: 'contain',
                   tintColor: '#666',
                 }}
@@ -5675,18 +6033,32 @@ const DashbaordScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            style={styles.filterModalContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {categories.map(cat => (
-              <View key={cat.id} style={styles.categorySection}>
-                <View
+          {/* Scrollable categories */}
+          <FlatList
+            data={categories}
+            keyExtractor={item => String(item.id)}
+            renderItem={({ item: cat }) => (
+              <View style={styles.categorySection}>
+                {/* Category row */}
+                <TouchableOpacity
                   style={[
                     styles.filterModalItem,
                     selectedCategory === cat.name &&
                       styles.filterModalItemActive,
                   ]}
+                  onPress={() => {
+                    if (
+                      cat.id === 'groups' ||
+                      cat.name?.toLowerCase() === 'groups'
+                    ) {
+                      setSelectedCategory('Groups');
+                      setShowFilterModal(false);
+                      fetchGroups();
+                    } else {
+                      setSelectedCategory(cat.name);
+                      handleSubTypePress(cat.name);
+                    }
+                  }}
                 >
                   <View style={styles.filterModalItemLeft}>
                     <View
@@ -5705,7 +6077,8 @@ const DashbaordScreen = ({ navigation }) => {
                         }}
                       />
                     </View>
-                    <View>
+
+                    <View style={{ flex: 1 }}>
                       <Text
                         style={[
                           styles.filterModalItemText,
@@ -5715,11 +6088,13 @@ const DashbaordScreen = ({ navigation }) => {
                       >
                         {cat.name}
                       </Text>
+
                       <Text style={styles.filterModalSubText}>
                         {cat.subtitle}
                       </Text>
                     </View>
                   </View>
+
                   <View style={styles.filterModalItemRight}>
                     <View style={styles.countContainer}>
                       <View
@@ -5732,6 +6107,7 @@ const DashbaordScreen = ({ navigation }) => {
                           {cat.readCount}
                         </Text>
                       </View>
+
                       <View
                         style={[
                           styles.countBadge,
@@ -5743,12 +6119,10 @@ const DashbaordScreen = ({ navigation }) => {
                         </Text>
                       </View>
                     </View>
+
                     <TouchableOpacity
                       style={styles.expandButton}
-                      onPress={e => {
-                        e.stopPropagation();
-                        toggleCategoryExpand(cat.id);
-                      }}
+                      onPress={() => toggleCategoryExpand(cat.id)}
                     >
                       <Image
                         source={
@@ -5765,15 +6139,27 @@ const DashbaordScreen = ({ navigation }) => {
                       />
                     </TouchableOpacity>
                   </View>
-                </View>
+                </TouchableOpacity>
 
+                {/* Expanded child items */}
                 {expandedCategories[cat.id] && (
                   <View style={styles.childContainer}>
                     {cat.children.map((child, index) => (
                       <TouchableOpacity
-                        key={index}
+                        key={`${cat.id}-${index}`}
                         style={styles.childItem}
-                        onPress={() => handleSubTypePress(cat.name, child.name)}
+                        onPress={() => {
+                          if (
+                            cat.id === 'groups' ||
+                            cat.name?.toLowerCase() === 'groups'
+                          ) {
+                            setSelectedCategory('Groups');
+                            setShowFilterModal(false);
+                            fetchGroups();
+                          } else {
+                            handleSubTypePress(cat.name, child.name);
+                          }
+                        }}
                       >
                         <View style={styles.childItemLeft}>
                           <Image
@@ -5785,6 +6171,7 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: cat.color,
                             }}
                           />
+
                           <Text style={styles.childItemText}>{child.name}</Text>
                         </View>
                       </TouchableOpacity>
@@ -5792,13 +6179,21 @@ const DashbaordScreen = ({ navigation }) => {
                   </View>
                 )}
               </View>
-            ))}
-          </ScrollView>
+            )}
+            style={styles.filterModalContent}
+            contentContainerStyle={{
+              paddingBottom: 20,
+              flexGrow: 1,
+            }}
+            showsVerticalScrollIndicator
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={false}
+          />
         </View>
-      </TouchableOpacity>
+      </View>
     </Modal>
   );
-
   const renderTimeModal = () => (
     <Modal
       visible={showTimeModal}
@@ -6846,6 +7241,8 @@ const DashbaordScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      <FAQModal visible={faqVisible} onClose={() => setFaqVisible(false)} />
     </SafeAreaView>
   );
 };
@@ -7835,7 +8232,16 @@ const styles = StyleSheet.create({
   // ============================================================
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+
+  filerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
 
   // ============================================================
@@ -9674,6 +10080,34 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+
+  filterModal: {
+    width: '100%',
+    maxHeight: '90%',
+    height: '85%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 8,
+    elevation: 10,
+  },
+
+  filterModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEF3',
+  },
+
+  filterModalContent: {
+    flex: 1,
+    minHeight: 0,
+    marginTop: 10,
   },
 });
 

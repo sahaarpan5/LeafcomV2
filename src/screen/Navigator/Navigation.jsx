@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import WelcomeScreen from '../Common/WelcomeScreen';
 import DashbaordScreen from '../Common/DashbaordScreen';
 import UserChatPage from '../Common/UserChatPage';
+import GroupChat from '../Common/GroupChat';
 
 
 
@@ -30,6 +31,7 @@ const Navigation = () => {
         </Stack.Screen>
         <Stack.Screen name="DashbaordScreen" component={DashbaordScreen} />
          <Stack.Screen name="UserChatPage" component={UserChatPage} />
+          <Stack.Screen name="GroupChat" component={GroupChat} />
       </Stack.Navigator>
 
     </SafeAreaProvider>

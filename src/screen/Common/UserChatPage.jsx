@@ -136,6 +136,7 @@ const UserChatPage = ({ navigation, route }) => {
   const [signatureName, setSignatureName] = useState('');
   const [signatureContent, setSignatureContent] = useState('');
   const selectedUserId = String(route?.params?.senderId || '3597');
+  const whatsapp= route?.params?.whatsappNumber;
 
   const [sender, setSender] = useState({
     id: selectedUserId,
@@ -251,7 +252,7 @@ const UserChatPage = ({ navigation, route }) => {
   const [whatsappMessage, setWhatsappMessage] = useState('');
 
   const [whatsappMessagePreview, setWhatsappMessagePreview] = useState('');
-  const [selectedWhatsappNumber, setSelectedWhatsappNumber] = useState('');
+  const [selectedWhatsappNumber, setSelectedWhatsappNumber] = useState(whatsapp);
 
   const [isFetchingWhatsappContent, setIsFetchingWhatsappContent] =
     useState(false);
