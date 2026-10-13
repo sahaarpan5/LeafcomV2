@@ -4445,7 +4445,7 @@ const UserChatPage = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.composeFieldRow}>
+            {/* <View style={styles.composeFieldRow}>
               <Text style={styles.composeFieldLabel}>From</Text>
               <View style={styles.composeFromField}>
                 <Text style={styles.composeFromText} numberOfLines={1}>
@@ -4462,7 +4462,7 @@ const UserChatPage = ({ navigation, route }) => {
                   }}
                 />
               </View>
-            </View>
+            </View> */}
 
             <View style={styles.composeFieldRow}>
               <Text style={styles.composeFieldLabel}>Subject</Text>
