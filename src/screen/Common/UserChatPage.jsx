@@ -27,6 +27,8 @@ import { database } from '../../config/firebaseConfig';
 import axios from 'axios';
 import EmojiPicker, { tr } from 'rn-emoji-keyboard';
 import Loader from '../../util/Loader';
+import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import Share from 'react-native-share';
 
 import {
   makeTelnyxCall,
@@ -136,7 +138,7 @@ const UserChatPage = ({ navigation, route }) => {
   const [signatureName, setSignatureName] = useState('');
   const [signatureContent, setSignatureContent] = useState('');
   const selectedUserId = String(route?.params?.senderId || '3597');
-  const whatsapp= route?.params?.whatsappNumber;
+  const whatsapp = route?.params?.whatsappNumber;
 
   const [sender, setSender] = useState({
     id: selectedUserId,
@@ -196,7 +198,7 @@ const UserChatPage = ({ navigation, route }) => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  const [activityChartFilter, setActivityChartFilter] = useState('week');
+  const [activityChartFilter, setActivityChartFilter] = useState('last7days');
   const [activityChartCustomStartDate, setActivityChartCustomStartDate] =
     useState('');
   const [activityChartCustomEndDate, setActivityChartCustomEndDate] =
@@ -252,7 +254,8 @@ const UserChatPage = ({ navigation, route }) => {
   const [whatsappMessage, setWhatsappMessage] = useState('');
 
   const [whatsappMessagePreview, setWhatsappMessagePreview] = useState('');
-  const [selectedWhatsappNumber, setSelectedWhatsappNumber] = useState(whatsapp);
+  const [selectedWhatsappNumber, setSelectedWhatsappNumber] =
+    useState(whatsapp);
 
   const [isFetchingWhatsappContent, setIsFetchingWhatsappContent] =
     useState(false);
@@ -761,8 +764,14 @@ const UserChatPage = ({ navigation, route }) => {
   ];
 
   const activityChartFilterOptions = [
+    { id: 'last7days', label: 'Last 7 Days' },
+    { id: 'today', label: 'Today' },
+    { id: 'yesterday', label: 'Yesterday' },
     { id: 'week', label: 'This Week' },
     { id: 'month', label: 'This Month' },
+    { id: 'lastMonth', label: 'Last Month' },
+    { id: 'lastYear', label: 'Last Year' },
+    { id: 'year', label: 'Current Year' },
     { id: 'custom', label: 'Custom Date Range' },
   ];
 
@@ -1576,6 +1585,136 @@ const UserChatPage = ({ navigation, route }) => {
 
       setTypeOptions([]);
     } finally {
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const escapeHtml = value =>
+        String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+
+      const messageRows = messages
+        .map((item, index) => {
+          const text =
+            item.message ?? item.description ?? item.text ?? item.body ?? '';
+
+          const date = item.dateTime
+            ? new Date(item.dateTime).toLocaleString()
+            : '';
+
+          return `
+          <div class="message">
+            <div class="message-title">
+              Message ${index + 1}
+            </div>
+            <div class="message-body">
+              ${escapeHtml(text)}
+            </div>
+            <div class="message-date">
+              ${escapeHtml(date)}
+            </div>
+          </div>
+        `;
+        })
+        .join('');
+
+      const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 24px;
+              color: #111827;
+            }
+            h1 {
+              color: #4F46E5;
+              font-size: 24px;
+            }
+            .subtitle {
+              color: #6B7280;
+              margin-bottom: 20px;
+            }
+            .summary {
+              background: #EEF2FF;
+              padding: 16px;
+              border-radius: 8px;
+              margin-bottom: 24px;
+            }
+            .message {
+              border: 1px solid #E5E7EB;
+              border-radius: 8px;
+              padding: 12px;
+              margin-bottom: 12px;
+              page-break-inside: avoid;
+            }
+            .message-title {
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .message-body {
+              white-space: pre-wrap;
+              overflow-wrap: anywhere;
+            }
+            .message-date {
+              color: #6B7280;
+              font-size: 11px;
+              margin-top: 8px;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Conversation Overview</h1>
+          <div class="subtitle">
+            ${escapeHtml(sender.name)} • ${escapeHtml(sender.type)}
+          </div>
+
+          <div class="summary">
+            <strong>Total Messages:</strong> ${messages.length}
+          </div>
+
+          <h2>Message History</h2>
+          ${messageRows || '<p>No messages available.</p>'}
+        </body>
+      </html>
+    `;
+
+      console.log('RNHTMLtoPDF:', RNHTMLtoPDF);
+      console.log('convert:', RNHTMLtoPDF?.convert);
+
+      const pdf = await RNHTMLtoPDF.convert({
+        html,
+        fileName: `Conversation_${Date.now()}`,
+        directory: 'Documents',
+        width: 595,
+        height: 842,
+        padding: 24,
+      });
+
+      if (!pdf.filePath) {
+        Alert.alert('Export Failed', 'Unable to generate the PDF.');
+        return;
+      }
+
+      await Share.open({
+        url: `file://${pdf.filePath}`,
+        type: 'application/pdf',
+        title: 'Export Conversation PDF',
+        failOnCancel: false,
+      });
+    } catch (error) {
+      console.log('PDF export error:', error);
+      Alert.alert(
+        'Export Failed',
+        error?.message || 'Unable to export the conversation.',
+      );
     }
   };
 
@@ -2920,11 +3059,19 @@ const UserChatPage = ({ navigation, route }) => {
           yStart.setDate(yStart.getDate() - 1);
           return msgDate >= yStart && msgDate < today;
         }
-        case 'week': {
-          const weekStart = new Date(today);
-          weekStart.setDate(weekStart.getDate() - 7);
-          return msgDate >= weekStart;
-        }
+        case 'week':
+          // Sunday to Saturday of the current week
+          start = startOfDay(now);
+
+          const day = start.getDay(); // Sunday = 0
+          start.setDate(start.getDate() - day);
+
+          end = new Date(start);
+          end.setDate(end.getDate() + 6);
+          end.setHours(23, 59, 59, 999);
+
+          break;
+
         case 'last30': {
           const l30 = new Date(today);
           l30.setDate(l30.getDate() - 30);
@@ -3010,123 +3157,295 @@ const UserChatPage = ({ navigation, route }) => {
     };
   };
 
+  // const getActivityChartData = () => {
+  //   const now = new Date();
+  //   let points = [];
+
+  //   if (activityChartFilter === 'week') {
+  //     const start = new Date(now);
+  //     start.setDate(start.getDate() - 6);
+  //     start.setHours(0, 0, 0, 0);
+
+  //     for (let i = 0; i < 7; i++) {
+  //       const d = new Date(start);
+  //       d.setDate(d.getDate() + i);
+  //       const dayStart = new Date(d);
+  //       dayStart.setHours(0, 0, 0, 0);
+  //       const dayEnd = new Date(d);
+  //       dayEnd.setHours(23, 59, 59, 999);
+  //       const count = messages.filter(m => {
+  //         const msgDate = new Date(m.dateTime);
+  //         return msgDate >= dayStart && msgDate <= dayEnd;
+  //       }).length;
+  //       points.push({
+  //         label: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+  //         count,
+  //       });
+  //     }
+  //   } else if (activityChartFilter === 'month') {
+  //     const year = now.getFullYear();
+  //     const month = now.getMonth();
+  //     const firstDay = new Date(year, month, 1);
+  //     const lastDay = new Date(year, month + 1, 0);
+
+  //     let weekStart = new Date(firstDay);
+  //     let weekIndex = 1;
+  //     while (weekStart <= lastDay) {
+  //       const weekEnd = new Date(weekStart);
+  //       weekEnd.setDate(weekEnd.getDate() + 6);
+  //       if (weekEnd > lastDay) weekEnd = new Date(lastDay);
+  //       const count = messages.filter(m => {
+  //         const msgDate = new Date(m.dateTime);
+  //         return msgDate >= weekStart && msgDate <= weekEnd;
+  //       }).length;
+  //       points.push({ label: `W${weekIndex}`, count });
+  //       weekStart.setDate(weekStart.getDate() + 7);
+  //       weekIndex++;
+  //     }
+  //   } else if (activityChartFilter === 'custom') {
+  //     if (activityChartCustomStartDate && activityChartCustomEndDate) {
+  //       const start = new Date(activityChartCustomStartDate);
+  //       const end = new Date(activityChartCustomEndDate);
+  //       end.setHours(23, 59, 59, 999);
+  //       const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+  //       if (diffDays <= 7) {
+  //         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+  //           const dayStart = new Date(d);
+  //           dayStart.setHours(0, 0, 0, 0);
+  //           const dayEnd = new Date(d);
+  //           dayEnd.setHours(23, 59, 59, 999);
+  //           const count = messages.filter(m => {
+  //             const msgDate = new Date(m.dateTime);
+  //             return msgDate >= dayStart && msgDate <= dayEnd;
+  //           }).length;
+  //           points.push({
+  //             label: d.toLocaleString('en-US', {
+  //               month: 'short',
+  //               day: 'numeric',
+  //             }),
+  //             count,
+  //           });
+  //         }
+  //       } else if (diffDays <= 31) {
+  //         let weekStart = new Date(start);
+  //         while (weekStart <= end) {
+  //           const weekEnd = new Date(weekStart);
+  //           weekEnd.setDate(weekEnd.getDate() + 6);
+  //           if (weekEnd > end) weekEnd = new Date(end);
+  //           const count = messages.filter(m => {
+  //             const msgDate = new Date(m.dateTime);
+  //             return msgDate >= weekStart && msgDate <= weekEnd;
+  //           }).length;
+  //           points.push({
+  //             label: weekStart.toLocaleString('en-US', {
+  //               month: 'short',
+  //               day: 'numeric',
+  //             }),
+  //             count,
+  //           });
+  //           weekStart.setDate(weekStart.getDate() + 7);
+  //         }
+  //       } else {
+  //         let monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+  //         while (monthStart <= end) {
+  //           const monthEnd = new Date(
+  //             monthStart.getFullYear(),
+  //             monthStart.getMonth() + 1,
+  //             0,
+  //           );
+  //           if (monthEnd > end) monthEnd = new Date(end);
+  //           const count = messages.filter(m => {
+  //             const msgDate = new Date(m.dateTime);
+  //             return msgDate >= monthStart && msgDate <= monthEnd;
+  //           }).length;
+  //           points.push({
+  //             label: monthStart.toLocaleString('en-US', { month: 'short' }),
+  //             count,
+  //           });
+  //           monthStart.setMonth(monthStart.getMonth() + 1);
+  //         }
+  //       }
+  //     } else {
+  //       points = [];
+  //     }
+  //   }
+  //   if (points.length === 0) points = [{ label: '', count: 0 }];
+  //   return points;
+  // };
+
   const getActivityChartData = () => {
     const now = new Date();
-    let points = [];
+    let start;
+    let end;
+    let groupBy = 'day';
 
-    if (activityChartFilter === 'week') {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 6);
-      start.setHours(0, 0, 0, 0);
+    const startOfDay = date =>
+      new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(start);
-        d.setDate(d.getDate() + i);
-        const dayStart = new Date(d);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(d);
-        dayEnd.setHours(23, 59, 59, 999);
-        const count = messages.filter(m => {
-          const msgDate = new Date(m.dateTime);
-          return msgDate >= dayStart && msgDate <= dayEnd;
+    switch (activityChartFilter) {
+      case 'last7days':
+        start = startOfDay(now);
+        start.setDate(start.getDate() - 6);
+
+        end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        break;
+
+      case 'today':
+        start = startOfDay(now);
+        end = new Date(start);
+        end.setHours(23, 59, 59, 999);
+        break;
+
+      case 'yesterday':
+        start = startOfDay(now);
+        start.setDate(start.getDate() - 1);
+        end = new Date(start);
+        end.setHours(23, 59, 59, 999);
+        break;
+
+      case 'week': {
+        // Monday to Sunday of the current week
+        start = startOfDay(now);
+        const day = start.getDay();
+        start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
+
+        end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999,
+        );
+        break;
+
+      case 'lastMonth':
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        break;
+
+      case 'lastYear':
+        start = new Date(now.getFullYear() - 1, 0, 1);
+        end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+        groupBy = 'month';
+        break;
+
+      case 'year':
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        groupBy = 'month';
+        break;
+
+      case 'custom':
+        if (!activityChartCustomStartDate || !activityChartCustomEndDate) {
+          return [{ label: '', count: 0 }];
+        }
+
+        start = startOfDay(new Date(activityChartCustomStartDate));
+        end = new Date(activityChartCustomEndDate);
+        end.setHours(23, 59, 59, 999);
+
+        if (end < start) {
+          return [{ label: '', count: 0 }];
+        }
+
+        const customDays =
+          Math.floor((end - start) / (24 * 60 * 60 * 1000)) + 1;
+
+        groupBy = customDays > 31 ? 'month' : 'day';
+        break;
+
+      default:
+        start = startOfDay(now);
+        start.setDate(start.getDate() - 6);
+        end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        break;
+    }
+
+    const points = [];
+
+    if (groupBy === 'month') {
+      let cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+
+      while (cursor <= end) {
+        const bucketStart = new Date(
+          cursor.getFullYear(),
+          cursor.getMonth(),
+          1,
+        );
+        const bucketEnd = new Date(
+          cursor.getFullYear(),
+          cursor.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999,
+        );
+
+        const count = messages.filter(message => {
+          const messageDate = new Date(message.dateTime);
+          return (
+            !Number.isNaN(messageDate.getTime()) &&
+            messageDate >= start &&
+            messageDate <= end &&
+            messageDate >= bucketStart &&
+            messageDate <= bucketEnd
+          );
         }).length;
+
         points.push({
-          label: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+          label: cursor.toLocaleString('en-US', { month: 'short' }),
           count,
         });
-      }
-    } else if (activityChartFilter === 'month') {
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const firstDay = new Date(year, month, 1);
-      const lastDay = new Date(year, month + 1, 0);
 
-      let weekStart = new Date(firstDay);
-      let weekIndex = 1;
-      while (weekStart <= lastDay) {
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        if (weekEnd > lastDay) weekEnd = new Date(lastDay);
-        const count = messages.filter(m => {
-          const msgDate = new Date(m.dateTime);
-          return msgDate >= weekStart && msgDate <= weekEnd;
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    } else {
+      let cursor = startOfDay(start);
+
+      while (cursor <= end) {
+        const bucketStart = new Date(cursor);
+        const bucketEnd = new Date(cursor);
+        bucketEnd.setHours(23, 59, 59, 999);
+
+        const count = messages.filter(message => {
+          const messageDate = new Date(message.dateTime);
+          return (
+            !Number.isNaN(messageDate.getTime()) &&
+            messageDate >= bucketStart &&
+            messageDate <= bucketEnd &&
+            messageDate >= start &&
+            messageDate <= end
+          );
         }).length;
-        points.push({ label: `W${weekIndex}`, count });
-        weekStart.setDate(weekStart.getDate() + 7);
-        weekIndex++;
-      }
-    } else if (activityChartFilter === 'custom') {
-      if (activityChartCustomStartDate && activityChartCustomEndDate) {
-        const start = new Date(activityChartCustomStartDate);
-        const end = new Date(activityChartCustomEndDate);
-        end.setHours(23, 59, 59, 999);
-        const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
-        if (diffDays <= 7) {
-          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const dayStart = new Date(d);
-            dayStart.setHours(0, 0, 0, 0);
-            const dayEnd = new Date(d);
-            dayEnd.setHours(23, 59, 59, 999);
-            const count = messages.filter(m => {
-              const msgDate = new Date(m.dateTime);
-              return msgDate >= dayStart && msgDate <= dayEnd;
-            }).length;
-            points.push({
-              label: d.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              }),
-              count,
-            });
-          }
-        } else if (diffDays <= 31) {
-          let weekStart = new Date(start);
-          while (weekStart <= end) {
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6);
-            if (weekEnd > end) weekEnd = new Date(end);
-            const count = messages.filter(m => {
-              const msgDate = new Date(m.dateTime);
-              return msgDate >= weekStart && msgDate <= weekEnd;
-            }).length;
-            points.push({
-              label: weekStart.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              }),
-              count,
-            });
-            weekStart.setDate(weekStart.getDate() + 7);
-          }
-        } else {
-          let monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
-          while (monthStart <= end) {
-            const monthEnd = new Date(
-              monthStart.getFullYear(),
-              monthStart.getMonth() + 1,
-              0,
-            );
-            if (monthEnd > end) monthEnd = new Date(end);
-            const count = messages.filter(m => {
-              const msgDate = new Date(m.dateTime);
-              return msgDate >= monthStart && msgDate <= monthEnd;
-            }).length;
-            points.push({
-              label: monthStart.toLocaleString('en-US', { month: 'short' }),
-              count,
-            });
-            monthStart.setMonth(monthStart.getMonth() + 1);
-          }
-        }
-      } else {
-        points = [];
+        points.push({
+          label: cursor.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+          }),
+          count,
+        });
+
+        cursor.setDate(cursor.getDate() + 1);
       }
     }
-    if (points.length === 0) points = [{ label: '', count: 0 }];
-    return points;
-  };
 
+    return points.length ? points : [{ label: '', count: 0 }];
+  };
   const renderLineChart = () => {
     const data = getActivityChartData();
     const maxCount = Math.max(...data.map(d => d.count), 1);
@@ -5173,11 +5492,9 @@ const UserChatPage = ({ navigation, route }) => {
                 <View style={styles.activitySectionHeader}>
                   <Text style={styles.analyticsSectionTitle}>
                     Activity (
-                    {activityChartFilter === 'week'
-                      ? 'Last 7 days'
-                      : activityChartFilter === 'month'
-                      ? 'This Month'
-                      : 'Custom Range'}
+                    {activityChartFilterOptions.find(
+                      option => option.id === activityChartFilter,
+                    )?.label || 'This Week'}
                     )
                   </Text>
                   <TouchableOpacity
@@ -7753,7 +8070,7 @@ const UserChatPage = ({ navigation, route }) => {
 
                   <TouchableOpacity
                     style={styles.messageSheetActionCard}
-                    onPress={() => setShowMessageModal(false)}
+                    onPress={handleExportPDF}
                     activeOpacity={0.7}
                   >
                     <View
@@ -10314,14 +10631,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgSecondary,
     borderTopLeftRadius: RADIUS.xxl,
     borderTopRightRadius: RADIUS.xxl,
-    height: SCREEN_HEIGHT * 0.92,
+    //height: SCREEN_HEIGHT * 0.80,
     overflow: 'hidden',
     flex: 1,
+    height: '85%',
   },
   analyticsHeader: {
     backgroundColor: COLORS.primaryDark,
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.sm,
+    paddingTop: SPACING.xl,
     paddingBottom: SPACING.lg,
     borderBottomLeftRadius: RADIUS.xxl,
     borderBottomRightRadius: RADIUS.xxl,
