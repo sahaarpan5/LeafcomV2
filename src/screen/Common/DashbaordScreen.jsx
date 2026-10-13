@@ -39,6 +39,7 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   // STATE MANAGEMENT
   // ============================================================
+  const [showActivitySearch, setShowActivitySearch] = useState(false);
   const [faqVisible, setFaqVisible] = useState(false);
   const [contacts, setContacts] = useState([]);
 
@@ -1561,7 +1562,7 @@ const DashbaordScreen = ({ navigation }) => {
     try {
       setIsLoadingCategories(true);
 
-      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
 
       if (!token) {
         console.log('Authentication token not found');
@@ -1792,7 +1793,7 @@ const DashbaordScreen = ({ navigation }) => {
   const fetchProfileInfo = async () => {
     try {
       setIsLoadingCategories(true);
-      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
 
       if (!token) {
         console.log('Authentication token not found');
@@ -1830,7 +1831,7 @@ const DashbaordScreen = ({ navigation }) => {
         setIsLoadingUsers(true);
       }
 
-      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
 
       const payload = {
         type: type || 'All',
@@ -2194,7 +2195,7 @@ const DashbaordScreen = ({ navigation }) => {
       setUserList([]);
       setHasMorePages(false);
 
-      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/listOfChatGroup',
         {
@@ -3525,7 +3526,16 @@ const DashbaordScreen = ({ navigation }) => {
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.whatsappContactCard}
+                    style={[
+                      styles.userCard,
+                      {
+                        borderLeftColor: '#6C63FF',
+                        borderLeftWidth: 4,
+                        borderColor: '#f1f3f5',
+                        borderWidth: 1,
+                        backgroundColor: '#FFFFFF',
+                      },
+                    ]}
                     onPress={() =>
                       navigation.navigate('UserChatPage', {
                         senderId: item.sender_id,
@@ -3553,7 +3563,7 @@ const DashbaordScreen = ({ navigation }) => {
                       <View style={styles.whatsappStatusDot} />
                     </View> */}
 
-                    <View style={styles.whatsappContactAvatar}>
+                    {/* <View style={styles.whatsappContactAvatar}>
                       {item.avatar ? (
                         <Image
                           source={item.avatar}
@@ -3563,6 +3573,35 @@ const DashbaordScreen = ({ navigation }) => {
                         <Text style={styles.whatsappContactAvatarText}>
                           {item.name?.charAt(0)?.toUpperCase() || '?'}
                         </Text>
+                      )}
+                    </View> */}
+
+                    <View style={styles.avatarContainer}>
+                      {item.avatar ? (
+                        <Image source={item.avatar} style={styles.avatar} />
+                      ) : (
+                        <View
+                          style={[
+                            styles.avatar,
+                            {
+                              backgroundColor: '#f0edff',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            },
+                          ]}
+                        >
+                          <Text style={styles.whatsappContactAvatarText}>
+                            {item.name?.charAt(0)?.toUpperCase() || '?'}
+                          </Text>
+                        </View>
+                      )}
+
+                      {item.unread > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>
+                            {item.unread}
+                          </Text>
+                        </View>
                       )}
                     </View>
 
@@ -4788,15 +4827,97 @@ const DashbaordScreen = ({ navigation }) => {
 
     return (
       <View style={styles.activityContainer}>
-        <View style={styles.activityHeaderContainer}>
+        {/* <View style={styles.activityHeaderContainer}>
           <View style={styles.activityCountContainer}>
             <Text style={styles.activityTotalCount}>
               Total: {totalActivities}
             </Text>
           </View>
+        </View> */}
+
+        <View style={styles.activityHeaderContainer}>
+          <View style={styles.activityTopRow}>
+            {/* Total Activity Count */}
+            <Text style={styles.activityTotalCount}>
+              Total: {totalActivities}
+            </Text>
+
+            {/* Filter Buttons */}
+            <View style={styles.activityFilterContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.activityFilterChip,
+                  hasQuickFilters && styles.activityFilterChipActive,
+                ]}
+                onPress={() => openModal('activityQuickFilter')}
+              >
+                <Image
+                  source={require('../../asset/options.png')}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    resizeMode: 'contain',
+                    tintColor: hasQuickFilters ? '#fff' : '#6C63FF',
+                  }}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.activityFilterChip}
+                onPress={() => openModal('activityTime')}
+              >
+                <Image
+                  source={require('../../asset/time.png')}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    resizeMode: 'contain',
+                    tintColor: '#6C63FF',
+                  }}
+                />
+                <Text style={styles.activityFilterChipText}>
+                  {activityTimeFilters.find(f => f.id === activityTimeFilter)
+                    ?.label || 'This Week'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Icon */}
+            <TouchableOpacity
+              style={styles.activitySearchIconButton}
+              onPress={() => setShowActivitySearch(prev => !prev)}
+            >
+              <Image
+                source={require('../../asset/search.png')}
+                style={styles.activitySearchIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Search Input - visible only when search icon is pressed */}
+          {showActivitySearch && (
+            <View style={styles.activitySearchContainer}>
+              <Image
+                source={require('../../asset/search.png')}
+                style={{
+                  width: 18,
+                  height: 18,
+                  resizeMode: 'contain',
+                  tintColor: '#999',
+                }}
+              />
+              <TextInput
+                style={styles.activitySearchInput}
+                placeholder="Search activities..."
+                placeholderTextColor="#999"
+                value={activityQuickSearch}
+                onChangeText={setActivityQuickSearch}
+              />
+            </View>
+          )}
         </View>
 
-        <View style={styles.activityFilterContainer}>
+        {/* <View style={styles.activityFilterContainer}>
           <TouchableOpacity
             style={[
               styles.activityFilterChip,
@@ -4880,7 +5001,7 @@ const DashbaordScreen = ({ navigation }) => {
               <Text style={styles.quickSearchIndicatorText}>+</Text>
             </View>
           )}
-        </View>
+        </View> */}
 
         {isLoadingActivity ? (
           <View style={styles.activityEmptyContainer}>
@@ -7275,7 +7396,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
     position: 'relative',
     overflow: 'hidden',
-    minHeight: 105,
+    minHeight: 95,
   },
   headerBgContainer: {
     position: 'absolute',
@@ -7396,7 +7517,7 @@ const styles = StyleSheet.create({
 
     // Tight curve on right side
     borderTopRightRadius: 120,
-    borderBottomRightRadius: 170,
+    borderBottomRightRadius: 160,
 
     paddingVertical: 60,
     paddingHorizontal: 10,
@@ -7564,6 +7685,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 5,
+    borderTopWidth: 2.5,
+    borderTopColor: '#6C63FF',
   },
 
   // ============================================================
@@ -10108,6 +10231,40 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     marginTop: 10,
+  },
+
+  activityTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+     justifyContent: 'flex-end',
+    width: '100%',
+    gap: 8,
+  },
+
+  activityFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 0,
+    flexWrap: 'nowrap',
+  },
+
+  activitySearchIconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+
+  activitySearchIcon: {
+    width: 19,
+    height: 19,
+    resizeMode: 'contain',
+    tintColor: '#6C63FF',
   },
 });
 
