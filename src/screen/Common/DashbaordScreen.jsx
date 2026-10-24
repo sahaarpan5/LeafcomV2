@@ -23,6 +23,7 @@ import {
 import Loader from '../../util/Loader';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../../config/firebaseConfig';
+import { WebView } from 'react-native-webview';
 
 import {
   makeTelnyxCall,
@@ -55,10 +56,16 @@ const DashbaordScreen = ({ navigation }) => {
   // Tab and navigation states
   const [activityTimeFilter, setActivityTimeFilter] = useState('all');
   const activityTimeFilters = [
-    { id: 'all', label: 'All' },
+    { id: 'all', label: 'All activity' },
     { id: 'today', label: 'Today' },
-    { id: 'week', label: 'This Week' },
-    { id: 'month', label: 'This Month' },
+    { id: 'yesterday', label: 'Yesterday' },
+    { id: 'last24hours', label: 'Last 24 hours' },
+    { id: 'last7days', label: 'Last 7 days' },
+    { id: 'thisweek', label: 'This week' },
+    { id: 'last30days', label: 'Last 30 days' },
+    { id: 'thismonth', label: 'This month' },
+    { id: 'lastmonth', label: 'Last month' },
+    { id: 'lastyear', label: 'Last year' },
   ];
   const [activityData, setActivityData] = useState([]);
   const [isLoadingActivity, setIsLoadingActivity] = useState(true);
@@ -100,7 +107,7 @@ const DashbaordScreen = ({ navigation }) => {
   const [activityRole, setActivityRole] = useState('all');
   const [activityThread, setActivityThread] = useState('all');
   const [activityChannel, setActivityChannel] = useState('all');
-  const [activitySortBy, setActivitySortBy] = useState('most_unread');
+  const [activitySortBy, setActivitySortBy] = useState('recent');
   const [activityMinUnread, setActivityMinUnread] = useState('0');
 
   const [totalReadCount, setTotalReadCount] = useState(0);
@@ -165,6 +172,13 @@ const DashbaordScreen = ({ navigation }) => {
   const [isWPCalling, setIsWPCalling] = useState(false);
 
   const [isSMSCalling, setIsSMSCalling] = useState(false);
+
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
+
+  const TUTORIAL_PDF_URL =
+    'https://leafnet.us/assets/sample-documents/LEAFCOM-Training-Tutorial.pdf';
 
   const [profileInfo, setProfileInfo] = useState({
     user_name: '',
@@ -242,6 +256,7 @@ const DashbaordScreen = ({ navigation }) => {
   const threadOptions = [
     { id: 'all', label: 'All Threads' },
     { id: 'main', label: 'Direct' },
+    { id: 'group', label: 'Group' },
     // { id: 'reply', label: 'Replies' },
   ];
 
@@ -600,22 +615,10 @@ const DashbaordScreen = ({ navigation }) => {
             // ============================================
 
             notifications.sort((a, b) => {
-              const aUnread = Number(a.unreadCount || 0);
-              const bUnread = Number(b.unreadCount || 0);
-
-              if (aUnread > 0 && bUnread === 0) {
-                return -1;
-              }
-
-              if (aUnread === 0 && bUnread > 0) {
-                return 1;
-              }
-
               return (
                 Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0)
               );
             });
-
             console.log('FINAL ACTIVITY NOTIFICATIONS:', notifications);
 
             setActivityData(notifications);
@@ -698,8 +701,177 @@ const DashbaordScreen = ({ navigation }) => {
     };
   }, []);
 
+  // useEffect(() => {
+  //   const userId = 2467; // Replace with logged-in user ID
+
+  //   const userNotificationRef = ref(
+  //     database,
+  //     `leafnet_notifications/User_${userId}_2`,
+  //   );
+
+  //   const groupNotificationRef = ref(
+  //     database,
+  //     `leafnet_notifications/Group_2_${userId}`,
+  //   );
+
+  //   let userNotifications = {};
+  //   let groupNotifications = {};
+  //   let userLoaded = false;
+  //   let groupLoaded = false;
+
+  //   const updateUnreadCount = () => {
+  //     const userUnreadCount = Object.values(userNotifications).filter(
+  //       item => item && Number(item.is_read_status) === 0,
+  //     ).length;
+
+  //     const groupUnreadCount = Object.values(groupNotifications).filter(
+  //       item => item && Number(item.is_read_status) === 0,
+  //     ).length;
+
+  //     setUnreadNotificationCount(userUnreadCount + groupUnreadCount);
+  //   };
+
+  //   const processMessages = () => {
+  //     // Wait until both Firebase listeners have returned data.
+  //     if (!userLoaded || !groupLoaded) {
+  //       return;
+  //     }
+
+  //     const allRecords = [
+  //       ...Object.entries(userNotifications).map(([key, item]) => ({
+  //         ...item,
+  //         firebaseKey: key,
+  //         source: 'user',
+  //       })),
+  //       ...Object.entries(groupNotifications).map(([key, item]) => ({
+  //         ...item,
+  //         firebaseKey: key,
+  //         source: 'group',
+  //       })),
+  //     ];
+
+  //     const groupedMessages = {};
+
+  //     allRecords.forEach(item => {
+  //       if (!item || item.sender_id == null) {
+  //         return;
+  //       }
+
+  //       // Keep user and group conversations separate.
+  //       const senderId = String(item.sender_id);
+  //       const conversationId = `${item.source}_${senderId}`;
+
+  //       const rawDateTime = item.dateTime || '';
+  //       const timestamp = rawDateTime
+  //         ? new Date(rawDateTime).getTime() || 0
+  //         : 0;
+
+  //       const isUnread = Number(item.is_read_status) === 0;
+  //       const messageText =
+  //         item.description || item.title || 'New notification';
+
+  //       if (!groupedMessages[conversationId]) {
+  //         groupedMessages[conversationId] = {
+  //           id: conversationId,
+  //           senderId,
+  //           source: item.source,
+  //           userName:
+  //             item.source === 'group'
+  //               ? item.group_name || 'Unknown Group'
+  //               : item.sender_name || 'Unknown User',
+  //           userImage: item.sender_profile_picture
+  //             ? { uri: item.sender_profile_picture }
+  //             : require('../../asset/dummyuser.png'),
+  //           lastMessage: messageText,
+  //           dateTime: rawDateTime,
+  //           timestamp,
+  //           isRead: !isUnread,
+  //           unreadCount: isUnread ? 1 : 0,
+  //           firebaseKey: item.firebaseKey,
+  //           originalData: item,
+  //         };
+  //         return;
+  //       }
+
+  //       const existing = groupedMessages[conversationId];
+
+  //       if (isUnread) {
+  //         existing.unreadCount += 1;
+  //       }
+
+  //       if (timestamp > existing.timestamp) {
+  //         existing.userName =
+  //           item.source === 'group'
+  //             ? item.group_name || existing.userName || 'Unknown Group'
+  //             : item.sender_name || existing.userName || 'Unknown User';
+  //         existing.userImage = item.sender_profile_picture
+  //           ? { uri: item.sender_profile_picture }
+  //           : existing.userImage;
+  //         existing.lastMessage = messageText;
+  //         existing.dateTime = rawDateTime;
+  //         existing.timestamp = timestamp;
+  //         existing.isRead = !isUnread;
+  //         existing.firebaseKey = item.firebaseKey;
+  //         existing.originalData = item;
+  //       }
+  //     });
+
+  //     const sortedMessages = Object.values(groupedMessages).sort((a, b) => {
+  //       // Unread conversations first.
+  //       const aUnread = a.unreadCount > 0;
+  //       const bUnread = b.unreadCount > 0;
+
+  //       if (aUnread !== bUnread) {
+  //         return aUnread ? -1 : 1;
+  //       }
+
+  //       // Then newest message first.
+  //       return b.timestamp - a.timestamp;
+  //     });
+
+  //     setMessages(sortedMessages);
+  //     setIsLoadingMessages(false);
+  //   };
+
+  //   const unsubscribeUser = onValue(
+  //     userNotificationRef,
+  //     snapshot => {
+  //       userNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+  //       userLoaded = true;
+  //       processMessages();
+  //     },
+  //     error => {
+  //       console.log('User notification listener error:', error);
+  //       userNotifications = {};
+  //       userLoaded = true;
+  //       processMessages();
+  //     },
+  //   );
+
+  //   const unsubscribeGroup = onValue(
+  //     groupNotificationRef,
+  //     snapshot => {
+  //       groupNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+  //       groupLoaded = true;
+  //       processMessages();
+  //     },
+  //     error => {
+  //       console.log('Group notification listener error:', error);
+  //       groupNotifications = {};
+  //       groupLoaded = true;
+  //       processMessages();
+  //     },
+  //   );
+
+  //   return () => {
+  //     unsubscribeUser();
+  //     unsubscribeGroup();
+  //   };
+  // }, []);
+
   useEffect(() => {
-    const userId = 2467; // Replace with logged-in user ID
+    // Replace with the actual logged-in user's ID when available.
+    const userId = 2467;
 
     const userNotificationRef = ref(
       database,
@@ -713,11 +885,35 @@ const DashbaordScreen = ({ navigation }) => {
 
     let userNotifications = {};
     let groupNotifications = {};
+
     let userLoaded = false;
     let groupLoaded = false;
 
+    // ============================================
+    // UPDATE UNREAD BADGE COUNT
+    // ============================================
+    const updateUnreadCount = () => {
+      const userUnreadCount = Object.values(userNotifications).filter(
+        item => item && Number(item.is_read_status) === 0,
+      ).length;
+
+      const groupUnreadCount = Object.values(groupNotifications).filter(
+        item => item && Number(item.is_read_status) === 0,
+      ).length;
+
+      const totalUnread = userUnreadCount + groupUnreadCount;
+
+      console.log('User unread count:', userUnreadCount);
+      console.log('Group unread count:', groupUnreadCount);
+      console.log('Total unread count:', totalUnread);
+
+      setUnreadNotificationCount(totalUnread);
+    };
+
+    // ============================================
+    // PROCESS MESSAGES FOR SIDEBAR
+    // ============================================
     const processMessages = () => {
-      // Wait until both Firebase listeners have returned data.
       if (!userLoaded || !groupLoaded) {
         return;
       }
@@ -742,16 +938,21 @@ const DashbaordScreen = ({ navigation }) => {
           return;
         }
 
-        // Keep user and group conversations separate.
         const senderId = String(item.sender_id);
         const conversationId = `${item.source}_${senderId}`;
 
         const rawDateTime = item.dateTime || '';
-        const timestamp = rawDateTime
-          ? new Date(rawDateTime).getTime() || 0
+
+        const parsedTimestamp = rawDateTime
+          ? new Date(rawDateTime).getTime()
+          : 0;
+
+        const timestamp = Number.isFinite(parsedTimestamp)
+          ? parsedTimestamp
           : 0;
 
         const isUnread = Number(item.is_read_status) === 0;
+
         const messageText =
           item.description || item.title || 'New notification';
 
@@ -760,13 +961,16 @@ const DashbaordScreen = ({ navigation }) => {
             id: conversationId,
             senderId,
             source: item.source,
+
             userName:
               item.source === 'group'
                 ? item.group_name || 'Unknown Group'
                 : item.sender_name || 'Unknown User',
+
             userImage: item.sender_profile_picture
               ? { uri: item.sender_profile_picture }
               : require('../../asset/dummyuser.png'),
+
             lastMessage: messageText,
             dateTime: rawDateTime,
             timestamp,
@@ -775,6 +979,7 @@ const DashbaordScreen = ({ navigation }) => {
             firebaseKey: item.firebaseKey,
             originalData: item,
           };
+
           return;
         }
 
@@ -784,14 +989,17 @@ const DashbaordScreen = ({ navigation }) => {
           existing.unreadCount += 1;
         }
 
+        // Keep the newest message as the conversation preview.
         if (timestamp > existing.timestamp) {
           existing.userName =
             item.source === 'group'
               ? item.group_name || existing.userName || 'Unknown Group'
               : item.sender_name || existing.userName || 'Unknown User';
+
           existing.userImage = item.sender_profile_picture
             ? { uri: item.sender_profile_picture }
             : existing.userImage;
+
           existing.lastMessage = messageText;
           existing.dateTime = rawDateTime;
           existing.timestamp = timestamp;
@@ -801,8 +1009,8 @@ const DashbaordScreen = ({ navigation }) => {
         }
       });
 
+      // Unread conversations first, newest messages next.
       const sortedMessages = Object.values(groupedMessages).sort((a, b) => {
-        // Unread conversations first.
         const aUnread = a.unreadCount > 0;
         const bUnread = b.unreadCount > 0;
 
@@ -810,7 +1018,6 @@ const DashbaordScreen = ({ navigation }) => {
           return aUnread ? -1 : 1;
         }
 
-        // Then newest message first.
         return b.timestamp - a.timestamp;
       });
 
@@ -818,36 +1025,63 @@ const DashbaordScreen = ({ navigation }) => {
       setIsLoadingMessages(false);
     };
 
+    // ============================================
+    // USER NOTIFICATION LISTENER
+    // ============================================
     const unsubscribeUser = onValue(
       userNotificationRef,
       snapshot => {
         userNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+
         userLoaded = true;
+
+        // IMPORTANT: Refresh the bell badge.
+        updateUnreadCount();
+
+        // Refresh the message sidebar.
         processMessages();
       },
       error => {
         console.log('User notification listener error:', error);
+
         userNotifications = {};
         userLoaded = true;
+
+        updateUnreadCount();
         processMessages();
       },
     );
 
+    // ============================================
+    // GROUP NOTIFICATION LISTENER
+    // ============================================
     const unsubscribeGroup = onValue(
       groupNotificationRef,
       snapshot => {
         groupNotifications = snapshot.exists() ? snapshot.val() || {} : {};
+
         groupLoaded = true;
+
+        // IMPORTANT: Refresh the bell badge.
+        updateUnreadCount();
+
+        // Refresh the message sidebar.
         processMessages();
       },
       error => {
         console.log('Group notification listener error:', error);
+
         groupNotifications = {};
         groupLoaded = true;
+
+        updateUnreadCount();
         processMessages();
       },
     );
 
+    // ============================================
+    // CLEAN UP LISTENERS
+    // ============================================
     return () => {
       unsubscribeUser();
       unsubscribeGroup();
@@ -1078,8 +1312,8 @@ const DashbaordScreen = ({ navigation }) => {
 
   const handleSortChange = value => {
     console.log('Selected Sort Filter:', value);
-
     setActivitySortBy(value);
+    setActiveDropdown(null);
   };
 
   const getFilteredContacts = type => {
@@ -1168,7 +1402,18 @@ const DashbaordScreen = ({ navigation }) => {
       filtered = filtered.filter(item => {
         const itemType = (item.type || 'inapp').trim().toLowerCase();
 
-        return itemType !== 'reply';
+        return itemType !== 'reply' && item.source !== 'group';
+      });
+    } else if (activityThread === 'group') {
+      filtered = filtered.filter(item => {
+        const groupRef = item.groupref ?? item.originalData?.groupref;
+
+        return (
+          item.source === 'group' ||
+          (groupRef !== null &&
+            groupRef !== undefined &&
+            String(groupRef).trim() !== '')
+        );
       });
     } else if (activityThread === 'reply') {
       filtered = filtered.filter(item => {
@@ -1188,22 +1433,24 @@ const DashbaordScreen = ({ navigation }) => {
     // inapp    -> Internal
     // --------------------------------------------------
     if (activityChannel !== 'all') {
-      const selectedChannel = String(activityChannel).trim().toLowerCase();
+      const normalizeChannel = value => {
+        const channel = String(value || '')
+          .trim()
+          .toLowerCase();
+
+        if (channel === 'sms') return 'messaging';
+
+        return channel;
+      };
+
+      const selectedChannel = normalizeChannel(activityChannel);
 
       filtered = filtered.filter(item => {
-        const channels = Array.isArray(item.channelTypes)
-          ? item.channelTypes
-          : [];
-
-        const hasSelectedChannel = channels.some(
-          channel => String(channel).trim().toLowerCase() === selectedChannel,
+        const latestEvent = normalizeChannel(
+          item.latestEvent ?? item.latestChannel ?? item.type ?? '',
         );
 
-        // Keep matching-channel users
-        // OR keep users having unread messages
-        const hasUnread = Number(item.unreadCount || 0) > 0;
-
-        return hasSelectedChannel || hasUnread;
+        return latestEvent === selectedChannel;
       });
     }
 
@@ -1224,29 +1471,46 @@ const DashbaordScreen = ({ navigation }) => {
     switch (activitySortBy) {
       case 'most_unread':
         filtered.sort((a, b) => {
-          return Number(b.unreadCount || 0) - Number(a.unreadCount || 0);
+          const unreadA = Number(a.unreadCount ?? 0);
+          const unreadB = Number(b.unreadCount ?? 0);
+
+          // Highest unread count first
+          if (unreadA !== unreadB) {
+            return unreadB - unreadA;
+          }
+
+          // If unread counts match, newest message first
+          return (
+            Number(b.latestTimestamp ?? 0) - Number(a.latestTimestamp ?? 0)
+          );
         });
         break;
 
       case 'recent':
-        filtered.sort((a, b) => {
-          return (
-            Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0)
-          );
-        });
+        filtered.sort(
+          (a, b) =>
+            Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0),
+        );
+        console.log('click', activitySortBy);
         break;
 
       case 'oldest':
-        filtered.sort((a, b) => {
-          return (
-            Number(a.latestTimestamp || 0) - Number(b.latestTimestamp || 0)
-          );
-        });
-        break;
-
-      default:
+        filtered.sort(
+          (a, b) =>
+            Number(a.latestTimestamp || 0) - Number(b.latestTimestamp || 0),
+        );
+        console.log('click', activitySortBy);
         break;
     }
+
+    console.log(
+      'Sorted activity:',
+      filtered.map(item => ({
+        name: item.userName,
+        unreadCount: item.unreadCount,
+        latestTimestamp: item.latestTimestamp,
+      })),
+    );
     return filtered;
   };
 
@@ -1256,68 +1520,140 @@ const DashbaordScreen = ({ navigation }) => {
     setActivityRole('all');
     setActivityThread('all');
     setActivityChannel('all');
-    setActivitySortBy('most_unread');
+    setActivitySortBy('recent');
     setActivityMinUnread('0');
     setActiveDropdown(null);
   };
 
-  const getFilteredActivity = () => {
-    let filtered = [...activityData];
+  const isActivityWithinTimeFilter = (dateTime, filterId) => {
+    if (filterId === 'all') return true;
 
-    const hasQuickFilters =
-      activityQuickSearch ||
-      activityReadStatus !== 'all' ||
-      activityRole !== 'all' ||
-      activityThread !== 'all' ||
-      activityChannel !== 'all' ||
-      activityMinUnread !== '0' ||
-      activitySortBy !== 'recent';
+    if (!dateTime) return false;
 
-    if (hasQuickFilters) {
-      return getFilteredActivityWithQuickFilters();
-    }
+    const activityDate = new Date(dateTime);
+
+    if (Number.isNaN(activityDate.getTime())) return false;
 
     const now = new Date();
 
-    if (activityTimeFilter === 'today') {
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
 
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.dateTime);
-        return itemDate >= today;
-      });
-    } else if (activityTimeFilter === 'week') {
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
 
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.dateTime);
-        return itemDate >= weekAgo;
-      });
-    } else if (activityTimeFilter === 'month') {
-      const monthAgo = new Date(now);
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.dateTime);
-        return itemDate >= monthAgo;
-      });
+    const weekStart = new Date(todayStart);
+    const dayOfWeek = weekStart.getDay();
+    weekStart.setDate(
+      weekStart.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1),
+    );
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const lastYearStart = new Date(now.getFullYear() - 1, 0, 1);
+    const thisYearStart = new Date(now.getFullYear(), 0, 1);
+
+    const hours24Ago = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const days7Ago = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const days30Ago = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    switch (filterId) {
+      case 'today':
+        return activityDate >= todayStart && activityDate < tomorrowStart;
+
+      case 'yesterday':
+        return activityDate >= yesterdayStart && activityDate < todayStart;
+
+      case 'last24hours':
+        return activityDate >= hours24Ago && activityDate <= now;
+
+      case 'last7days':
+        return activityDate >= days7Ago && activityDate <= now;
+
+      case 'thisweek':
+        return activityDate >= weekStart && activityDate <= now;
+
+      case 'last30days':
+        return activityDate >= days30Ago && activityDate <= now;
+
+      case 'thismonth':
+        return activityDate >= monthStart && activityDate <= now;
+
+      case 'lastmonth':
+        return activityDate >= lastMonthStart && activityDate < monthStart;
+
+      case 'lastyear':
+        return activityDate >= lastYearStart && activityDate < thisYearStart;
+
+      default:
+        return true;
     }
+  };
 
-    // activityTimeFilter === 'all'
-    // means don't filter by date
+  // const getFilteredActivity = () => {
+  //   let filteredData = activityData.filter(item =>
+  //     isActivityWithinTimeFilter(item.dateTime, activityTimeFilter),
+  //   );
 
-    if (activitySearch) {
-      const searchText = activitySearch.toLowerCase();
+  //   // Apply your existing quick filters
+  //   const quickFilteredData = getFilteredActivityWithQuickFilters();
 
-      filtered = filtered.filter(
-        item =>
-          (item.userName || '').toLowerCase().includes(searchText) ||
-          (item.message || '').toLowerCase().includes(searchText),
+  //   const quickFilteredIds = new Set(quickFilteredData.map(item => item.id));
+
+  //   filteredData = filteredData.filter(item => quickFilteredIds.has(item.id));
+
+  //   // Apply search filter
+  //   if (activityQuickSearch?.trim()) {
+  //     const searchText = activityQuickSearch.trim().toLowerCase();
+
+  //     filteredData = filteredData.filter(item =>
+  //       [
+  //         item.sender_name,
+  //         item.receiver_name,
+  //         item.description,
+  //         item.action,
+  //         item.group_name,
+  //       ]
+  //         .filter(Boolean)
+  //         .some(value => String(value).toLowerCase().includes(searchText)),
+  //     );
+  //   }
+
+  //   return filteredData;
+  // };
+
+  const getFilteredActivity = () => {
+    // Start with quick-filtered data so the selected sort order is preserved.
+    let filteredData = getFilteredActivityWithQuickFilters();
+
+    // Apply the time filter without changing the sorted order.
+    filteredData = filteredData.filter(item =>
+      isActivityWithinTimeFilter(item.dateTime, activityTimeFilter),
+    );
+
+    // Apply search filter
+    if (activityQuickSearch?.trim()) {
+      const searchText = activityQuickSearch.trim().toLowerCase();
+
+      filteredData = filteredData.filter(item =>
+        [
+          item.sender_name,
+          item.receiver_name,
+          item.description,
+          item.action,
+          item.group_name,
+        ]
+          .filter(Boolean)
+          .some(value => String(value).toLowerCase().includes(searchText)),
       );
     }
 
-    return filtered;
+    return filteredData;
   };
 
   const getTotalActivityCount = () => {
@@ -1809,6 +2145,7 @@ const DashbaordScreen = ({ navigation }) => {
           },
         },
       );
+      console.log('profile api', response);
 
       if (response.data?.success && response.data?.user_info) {
         setProfileInfo(response.data.user_info);
@@ -2845,12 +3182,9 @@ const DashbaordScreen = ({ navigation }) => {
 
           <View style={styles.headerIcons}>
             <TouchableOpacity
-              style={[
-                styles.headerIconButton,
-                styles.headerIconMenu,
-                { height: 30, width: 30, marginRight: 8 },
-              ]}
+              style={styles.topBarProfile}
               onPress={() => setShowSideNav(!showSideNav)}
+              activeOpacity={0.8}
             >
               <Image
                 source={
@@ -2858,15 +3192,13 @@ const DashbaordScreen = ({ navigation }) => {
                     ? { uri: profileInfo.profile_picture }
                     : require('../../asset/user.png')
                 }
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-                  tintColor: profileInfo.profile_picture
-                    ? undefined
-                    : '#FFFFFF',
-                }}
+                style={styles.topBarProfileImage}
+                resizeMode="cover"
               />
+
+              <Text style={styles.topBarProfileName} numberOfLines={1}>
+                {profileInfo.user_name || 'User'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -2888,24 +3220,37 @@ const DashbaordScreen = ({ navigation }) => {
               />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.headerIconButton,
-                styles.headerIconMenu,
-                { height: 30, width: 30, marginRight: 8 },
-              ]}
-              onPress={() => setShowMessageSidebar(true)}
-            >
-              <Image
-                source={require('../../asset/bell.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-                  tintColor: '#FFFFFF',
-                }}
-              />
-            </TouchableOpacity>
+            <View style={styles.notificationBellWrapper}>
+              <TouchableOpacity
+                style={[
+                  styles.headerIconButton,
+                  styles.headerIconMenu,
+                  { height: 30, width: 30, marginRight: 8 },
+                ]}
+                onPress={() => setShowMessageSidebar(true)}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={require('../../asset/bell.png')}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    resizeMode: 'contain',
+                    tintColor: '#FFFFFF',
+                  }}
+                />
+              </TouchableOpacity>
+
+              {getUnreadMessagesCount() > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {getUnreadMessagesCount() > 99
+                      ? '99+'
+                      : getUnreadMessagesCount()}
+                  </Text>
+                </View>
+              )}
+            </View>
 
             {/* <TouchableOpacity
               style={[
@@ -3878,7 +4223,7 @@ const DashbaordScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.activityFilterOptions}>
-            {activityTimeFilters.map(filter => (
+            {/* {activityTimeFilters.map(filter => (
               <TouchableOpacity
                 key={filter.id}
                 style={[
@@ -3908,6 +4253,19 @@ const DashbaordScreen = ({ navigation }) => {
                     }}
                   />
                 )}
+              </TouchableOpacity>
+            ))} */}
+
+            {activityTimeFilters.map(filter => (
+              <TouchableOpacity
+                key={filter.id}
+                onPress={() => {
+                  setActivityTimeFilter(filter.id);
+                  setShowActivityTimeModal(false);
+                }}
+                style={styles.activityTimeFilterOption}
+              >
+                <Text>{filter.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -4166,7 +4524,7 @@ const DashbaordScreen = ({ navigation }) => {
                   {renderDropdown(
                     sortOptions,
                     activitySortBy,
-                    setActivitySortBy,
+                    handleSortChange,
                     'Sort',
                     'sort',
                   )}
@@ -4203,12 +4561,12 @@ const DashbaordScreen = ({ navigation }) => {
                   </Text>
                   <View style={styles.quickFilterActiveChips}>
                     {activityQuickSearch && (
-                      <View style={styles.quickFilterActiveChip}>
+                      <TouchableOpacity style={styles.quickFilterActiveChip}onPress={() => setActivityQuickSearch('')}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Search: {activityQuickSearch}
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => setActivityQuickSearch('')}
+                        <View
+                          
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -4219,11 +4577,11 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#666',
                             }}
                           />
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     )}
                     {activityReadStatus !== 'all' && (
-                      <View style={styles.quickFilterActiveChip}>
+                      <TouchableOpacity style={styles.quickFilterActiveChip}onPress={() => setActivityReadStatus('all')}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Read:{' '}
                           {
@@ -4232,8 +4590,8 @@ const DashbaordScreen = ({ navigation }) => {
                             )?.label
                           }
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => setActivityReadStatus('all')}
+                        <View
+                          
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -4244,17 +4602,17 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#666',
                             }}
                           />
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     )}
                     {activityRole !== 'all' && (
-                      <View style={styles.quickFilterActiveChip}>
+                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivityRole('all')}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Role:{' '}
                           {roleOptions.find(o => o.id === activityRole)?.label}
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => setActivityRole('all')}
+                        <View
+                          
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -4265,11 +4623,11 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#666',
                             }}
                           />
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     )}
                     {activityThread !== 'all' && (
-                      <View style={styles.quickFilterActiveChip}>
+                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivityThread('all')}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Thread:{' '}
                           {
@@ -4277,8 +4635,8 @@ const DashbaordScreen = ({ navigation }) => {
                               ?.label
                           }
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => setActivityThread('all')}
+                        <View
+                          
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -4289,11 +4647,11 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#666',
                             }}
                           />
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     )}
                     {activityChannel !== 'all' && (
-                      <View style={styles.quickFilterActiveChip}>
+                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivityChannel('all')}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Channel:{' '}
                           {
@@ -4301,8 +4659,8 @@ const DashbaordScreen = ({ navigation }) => {
                               ?.label
                           }
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => setActivityChannel('all')}
+                        <View
+                          
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -4313,11 +4671,12 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#666',
                             }}
                           />
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     )}
                     {activityMinUnread !== '0' && (
-                      <View style={styles.quickFilterActiveChip}>
+                      <TouchableOpacity style={styles.quickFilterActiveChip}
+                      onPress={() => setActivityMinUnread('0')}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Min. Unread:{' '}
                           {
@@ -4326,8 +4685,8 @@ const DashbaordScreen = ({ navigation }) => {
                             )?.label
                           }
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => setActivityMinUnread('0')}
+                        <View
+                          
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -4338,11 +4697,11 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#666',
                             }}
                           />
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     )}
                     {activitySortBy !== 'recent' && (
-                      <View style={styles.quickFilterActiveChip}>
+                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivitySortBy('recent')}>
                         <Text style={styles.quickFilterActiveChipText}>
                           Sort:{' '}
                           {
@@ -4350,8 +4709,8 @@ const DashbaordScreen = ({ navigation }) => {
                               ?.label
                           }
                         </Text>
-                        <TouchableOpacity
-                          onPress={() => setActivitySortBy('most_unread')}
+                        <View
+                          
                         >
                           <Image
                             source={require('../../asset/close.png')}
@@ -4362,8 +4721,8 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#666',
                             }}
                           />
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      </TouchableOpacity>
                     )}
                   </View>
                 </View>
@@ -4401,6 +4760,7 @@ const DashbaordScreen = ({ navigation }) => {
                   onPress={() => {
                     setShowActivityQuickFilterModal(false);
                     setActiveDropdown(null);
+                    console.log('press', activitySortBy);
                   }}
                 >
                   <Image
@@ -5013,6 +5373,7 @@ const DashbaordScreen = ({ navigation }) => {
             data={filteredActivities}
             renderItem={renderActivityItem}
             keyExtractor={item => item.id}
+            extraData={activitySortBy}
             showsVerticalScrollIndicator={true}
             contentContainerStyle={styles.activityListContent}
             style={styles.activityFlatList}
@@ -5348,7 +5709,7 @@ const DashbaordScreen = ({ navigation }) => {
                       break;
 
                     case 'tutorial':
-                      handleOpenTutorial();
+                      setShowTutorialModal(true);
                       break;
 
                     case 'contacts':
@@ -6420,51 +6781,6 @@ const DashbaordScreen = ({ navigation }) => {
 
   const renderEmailSection = () => (
     <View style={styles.emailContainer}>
-      <View style={styles.communicationFilterContainer}>
-        {communicationOptions.map(option => (
-          <TouchableOpacity
-            key={option.id}
-            style={[
-              styles.communicationFilterChip,
-              communicationFilter === option.id &&
-                styles.communicationFilterChipActive,
-            ]}
-            onPress={() => {
-              setCommunicationFilter(option.id);
-              if (option.id === 'whatsapp') {
-                openModal('whatsapp');
-              } else if (option.id === 'sms') {
-                openModal('message');
-              } else if (option.id === 'call') {
-                openModal('dial');
-              } else if (option.id === 'email') {
-                setCommunicationFilter('email');
-              }
-            }}
-          >
-            <Image
-              source={option.icon}
-              style={{
-                width: 18,
-                height: 18,
-                resizeMode: 'contain',
-                tintColor:
-                  communicationFilter === option.id ? '#fff' : option.color,
-              }}
-            />
-            <Text
-              style={[
-                styles.communicationFilterText,
-                communicationFilter === option.id &&
-                  styles.communicationFilterTextActive,
-              ]}
-            >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {communicationFilter === 'email' && (
         <View style={styles.emailFormWrapper}>
           <ScrollView
@@ -6488,12 +6804,9 @@ const DashbaordScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>From</Text>
-              <TextInput
-                style={[styles.formInput, styles.disabledInput]}
-                value={profileInfo.email || 'No email available'}
-                editable={false}
-              />
+              <Text style={[styles.formLabel, { color: '#b80c0c' }]}>
+                Send From {profileInfo.email}
+              </Text>
             </View>
 
             <View style={styles.formGroup}>
@@ -6522,7 +6835,22 @@ const DashbaordScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Signature</Text>
+              <View style={styles.signatureHeader}>
+                <Text style={styles.formLabel}>Signature</Text>
+
+                <TouchableOpacity
+                  style={styles.addSignatureHeaderButton}
+                  onPress={() => {
+                    if (!isLoadingSignatures) {
+                      openModal('signature');
+                    }
+                  }}
+                  disabled={isLoadingSignatures}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.addSignatureHeaderButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity
                 style={styles.signatureSelector}
@@ -6738,15 +7066,16 @@ const DashbaordScreen = ({ navigation }) => {
             />
             <Text style={styles.sideNavText}>Message</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.sideNavItem}
             onPress={() => {
               setShowSideNav(false);
-              openModal('dashboard');
+              setShowWhatsAppModal(true);
             }}
           >
             <Image
-              source={require('../../asset/grid.png')}
+              source={require('../../asset/whatsapps.png')}
               style={{
                 width: 24,
                 height: 24,
@@ -6754,14 +7083,15 @@ const DashbaordScreen = ({ navigation }) => {
                 tintColor: '#666',
               }}
             />
-            <Text style={styles.sideNavText}>Dashboard</Text>
+            <Text style={styles.sideNavText}>Whatsapp</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.sideNavItem}
             onPress={() => {
               setShowSideNav(false);
 
-              handleOpenTutorial();
+              setShowTutorialModal(true);
             }}
           >
             <Image
@@ -6777,7 +7107,11 @@ const DashbaordScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.sideNavItem}
-            onPress={() => setShowSideNav(false)}
+            onPress={() => {
+              setShowSideNav(false);
+
+              setFaqVisible(true);
+            }}
           >
             <Image
               source={require('../../asset/information-circle.png')}
@@ -6808,6 +7142,41 @@ const DashbaordScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
+    </Modal>
+  );
+
+  const rendertutorialModal = () => (
+    <Modal
+      visible={showTutorialModal}
+      animationType="slide"
+      transparent={false}
+      onRequestClose={() => setShowTutorialModal(false)}
+      statusBarTranslucent={false}
+    >
+      <View style={styles.tutorialModalContainer}>
+        <View style={styles.tutorialHeader}>
+          <Text style={styles.tutorialTitle}>Tutorial</Text>
+
+          <TouchableOpacity
+            onPress={() => setShowTutorialModal(false)}
+            style={styles.tutorialCloseButton}
+          >
+            <Text style={styles.tutorialCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <WebView
+          source={{
+            uri: `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(
+              TUTORIAL_PDF_URL,
+            )}`,
+          }}
+          style={styles.tutorialWebView}
+          startInLoadingState
+          javaScriptEnabled
+          domStorageEnabled
+        />
+      </View>
     </Modal>
   );
 
@@ -7224,6 +7593,7 @@ const DashbaordScreen = ({ navigation }) => {
 
       {renderSideNav()}
       {renderMessageSidebar()}
+      {rendertutorialModal()}
 
       {renderBodyContent()}
 
@@ -10236,7 +10606,7 @@ const styles = StyleSheet.create({
   activityTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-     justifyContent: 'flex-end',
+    justifyContent: 'flex-end',
     width: '100%',
     gap: 8,
   },
@@ -10265,6 +10635,140 @@ const styles = StyleSheet.create({
     height: 19,
     resizeMode: 'contain',
     tintColor: '#6C63FF',
+  },
+  signatureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+
+  addSignatureHeaderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#6C63FF',
+  },
+
+  addSignatureHeaderButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  topBarProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+    paddingHorizontal: 6,
+    gap: 8,
+  },
+
+  topBarProfileImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#FFFFFF',
+  },
+
+  topBarProfileName: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    maxWidth: 100,
+  },
+  notificationBellWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  notificationBadge: {
+    position: 'absolute',
+    top: -5,
+    right: 2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FF3B30',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
+
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  tutorialModalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+
+  tutorialHeader: {
+    height: 56,
+    backgroundColor: '#76577F',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+
+  tutorialTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+
+  tutorialCloseButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  tutorialCloseText: {
+    color: '#FFFFFF',
+    fontSize: 23,
+  },
+
+  tutorialWebView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  activityTimeFilterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0EDF3',
+    backgroundColor: '#FFFFFF',
+  },
+
+  activityTimeFilterOptionText: {
+    fontSize: 14,
+    color: '#333333',
+    fontWeight: '500',
+  },
+
+  activityTimeFilterOptionSelected: {
+    backgroundColor: '#F3EDF8',
+  },
+
+  activityTimeFilterOptionSelectedText: {
+    color: '#76577F',
+    fontWeight: '700',
   },
 });
 

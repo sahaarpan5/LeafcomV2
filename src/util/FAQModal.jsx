@@ -39,8 +39,7 @@ const FAQ_DATA = [
   },
   {
     id: '5',
-    question:
-      'How do I find someone I messaged who is not saved as a contact?',
+    question: 'How do I find someone I messaged who is not saved as a contact?',
     answer:
       'Unsaved contacts usually show up as a phone number (sometimes with a Dialer Contact badge) instead of a full name. The quickest way to find them again is the Activity Feed—open the middle column and look for the recent thread; click the row to reopen the chat. You can also search by phone number in the Directory, or in the WhatsApp and SMS contact pickers on the right. In Start New Conversation (+), use the Contacts tab and search by number if you remember it. If you still cannot find them, dial or enter the number again from the Phone Dialer or WhatsApp/SMS section to restart the conversation. To keep them for next time, open the chat and click Add to Contacts in the message header.',
   },
@@ -62,7 +61,7 @@ const FAQ_DATA = [
     answer:
       'In the Email column, open Email History (near the bottom next to Send Mail). A side panel lists messages you have sent so you can review them.',
   },
-   {
+  {
     id: '9',
     question: 'Where can I find group chat?',
     answer:
@@ -100,36 +99,263 @@ const FAQ_DATA = [
   },
   {
     id: '15',
-    question: 'Why do I have to select a WhatsApp template every time I start a chat?',
+    question:
+      'Why do I have to select a WhatsApp template every time I start a chat?',
     answer:
       'WhatsApp Business rules require many outbound starts to go through pre-approved templates so Meta can verify message content. Each new outbound session must pick a template; your integration follows that policy to keep the channel compliant.',
   },
-  
 ];
+
+const FAQ_TRANSLATIONS = {
+  English: {
+    title: '❔ Frequently asked questions',
+    subtitle: 'Select a question on the left to see the answer.',
+    search: 'Search questions or answers...',
+    noQuestions: 'No questions found.',
+    selectQuestion: 'Select a question to see the answer.',
+    close: 'Close',
+    translating: 'Frequently asked questions',
+
+    questions: FAQ_DATA,
+  },
+
+  Spanish: {
+    title: '❔ Preguntas frecuentes',
+    subtitle: 'Selecciona una pregunta a la izquierda para ver la respuesta.',
+    search: 'Buscar preguntas o respuestas...',
+    noQuestions: 'No se encontraron preguntas.',
+    selectQuestion: 'Selecciona una pregunta para ver la respuesta.',
+    close: 'Cerrar',
+    translating: 'Preguntas frecuentes',
+
+    questions: [
+      {
+        id: '1',
+        question: '¿Qué son el directorio y el feed de actividad?',
+        answer:
+          'El directorio muestra las personas y los equipos con los que puedes comunicarte. El feed de actividad muestra las conversaciones recientes y los mensajes sin leer.',
+      },
+      {
+        id: '2',
+        question: '¿Cómo inicio un chat de WhatsApp?',
+        answer:
+          'Busca a la persona en el directorio y utiliza la opción de WhatsApp. Si se requiere una plantilla aprobada, selecciónala antes de enviar el mensaje.',
+      },
+      {
+        id: '3',
+        question: '¿Cómo inicio un chat por SMS?',
+        answer:
+          'Utiliza la opción SMS de un contacto o selecciona el canal SMS. El contacto debe tener un número de teléfono móvil válido.',
+      },
+      {
+        id: '4',
+        question: '¿Qué significa la etiqueta Contacto del marcador?',
+        answer:
+          'Esta etiqueta indica que la persona todavía no está guardada como contacto completo en el directorio. Puedes buscarla por número de teléfono y utilizar Añadir a contactos para guardarla.',
+      },
+      {
+        id: '5',
+        question:
+          '¿Cómo encuentro a alguien que no está guardado como contacto?',
+        answer:
+          'Busca el número de teléfono en el directorio, en las listas de WhatsApp o SMS, o abre la conversación reciente desde el feed de actividad.',
+      },
+      {
+        id: '6',
+        question: '¿Cómo envío un correo electrónico a un usuario?',
+        answer:
+          'Selecciona a una persona en el directorio, introduce el destinatario, el asunto y el mensaje, selecciona una firma y pulsa Enviar correo.',
+      },
+      {
+        id: '7',
+        question: '¿Dónde puedo ver las notificaciones?',
+        answer:
+          'Utiliza el icono de mensajes en la parte superior. También puedes ver indicadores de mensajes sin leer en el feed de actividad.',
+      },
+      {
+        id: '8',
+        question: '¿Dónde puedo ver el historial de correos electrónicos?',
+        answer:
+          'Abre Historial de correo electrónico en la sección de correo para revisar los mensajes enviados.',
+      },
+      {
+        id: '9',
+        question: '¿Dónde puedo encontrar el chat grupal?',
+        answer:
+          'Abre la sección Grupos del directorio, expande un grupo y selecciona la conversación correspondiente.',
+      },
+      {
+        id: '10',
+        question:
+          '¿Cómo respondo a los visitantes que iniciaron un chat desde el sitio web?',
+        answer:
+          'Busca la conversación en el feed de actividad, abre el hilo, escribe tu respuesta y envía el mensaje.',
+      },
+      {
+        id: '11',
+        question: '¿Cómo puedo ver el tutorial?',
+        answer:
+          'Pulsa Tutorial en el pie de página para abrir la guía del usuario en PDF.',
+      },
+      {
+        id: '12',
+        question: '¿Cómo puedo ver un resumen del chat?',
+        answer:
+          'Abre una conversación, utiliza el menú de opciones del chat y selecciona Resumen.',
+      },
+      {
+        id: '13',
+        question: '¿Puedo descargar el historial del chat?',
+        answer:
+          'Sí. Abre el menú de opciones del chat y selecciona Exportar para generar un PDF de la conversación.',
+      },
+      {
+        id: '14',
+        question: '¿Cómo imprimo el historial del chat?',
+        answer: 'Abre el menú de opciones del chat y selecciona Imprimir.',
+      },
+      {
+        id: '15',
+        question:
+          '¿Por qué debo seleccionar una plantilla de WhatsApp cada vez que inicio un chat?',
+        answer:
+          'Las reglas de WhatsApp Business requieren plantillas previamente aprobadas para muchos mensajes iniciados por una empresa.',
+      },
+    ],
+  },
+
+  Portuguese: {
+    title: '❔ Perguntas frequentes',
+    subtitle: 'Selecione uma pergunta à esquerda para ver a resposta.',
+    search: 'Pesquisar perguntas ou respostas...',
+    noQuestions: 'Nenhuma pergunta encontrada.',
+    selectQuestion: 'Selecione uma pergunta para ver a resposta.',
+    close: 'Fechar',
+    translating: 'Perguntas frequentes',
+
+    questions: [
+      {
+        id: '1',
+        question: 'O que são o Diretório e o Feed de atividades?',
+        answer:
+          'O Diretório lista as pessoas e equipes com as quais você pode entrar em contato. O Feed de atividades mostra conversas recentes e mensagens não lidas.',
+      },
+      {
+        id: '2',
+        question: 'Como inicio uma conversa no WhatsApp?',
+        answer:
+          'Encontre a pessoa no Diretório e use a opção WhatsApp. Se for necessário um modelo aprovado, selecione-o antes de enviar a mensagem.',
+      },
+      {
+        id: '3',
+        question: 'Como inicio uma conversa por SMS?',
+        answer:
+          'Use a opção SMS de um contato ou selecione o canal SMS. O contato precisa ter um número de celular válido.',
+      },
+      {
+        id: '4',
+        question: 'O que significa o selo Contato do discador?',
+        answer:
+          'Esse selo indica que a pessoa ainda não está salva como um contato completo no Diretório. Você pode pesquisar pelo número e usar Adicionar aos contatos para salvá-la.',
+      },
+      {
+        id: '5',
+        question: 'Como encontro alguém que não está salvo como contato?',
+        answer:
+          'Pesquise o número de telefone no Diretório, nas listas de WhatsApp ou SMS, ou abra a conversa recente no Feed de atividades.',
+      },
+      {
+        id: '6',
+        question: 'Como envio um e-mail para um usuário?',
+        answer:
+          'Selecione uma pessoa no Diretório, informe o destinatário, o assunto e a mensagem, escolha uma assinatura e clique em Enviar e-mail.',
+      },
+      {
+        id: '7',
+        question: 'Onde posso ver as notificações?',
+        answer:
+          'Use o ícone de mensagens no cabeçalho superior. Você também verá indicadores de mensagens não lidas no Feed de atividades.',
+      },
+      {
+        id: '8',
+        question: 'Onde posso ver o histórico de e-mails?',
+        answer:
+          'Abra Histórico de e-mails na seção de e-mail para revisar as mensagens enviadas.',
+      },
+      {
+        id: '9',
+        question: 'Onde posso encontrar o chat em grupo?',
+        answer:
+          'Abra a seção Grupos no Diretório, expanda um grupo e selecione a conversa correspondente.',
+      },
+      {
+        id: '10',
+        question:
+          'Como respondo aos visitantes que iniciaram um chat pelo site?',
+        answer:
+          'Encontre a conversa no Feed de atividades, abra o tópico, escreva sua resposta e envie a mensagem.',
+      },
+      {
+        id: '11',
+        question: 'Como posso visualizar o tutorial?',
+        answer:
+          'Clique em Tutorial no rodapé da página para abrir o guia do usuário em PDF.',
+      },
+      {
+        id: '12',
+        question: 'Como posso ver um resumo do chat?',
+        answer:
+          'Abra uma conversa, use o menu de opções do chat e selecione Resumo.',
+      },
+      {
+        id: '13',
+        question: 'Posso baixar o histórico do chat?',
+        answer:
+          'Sim. Abra o menu de opções do chat e selecione Exportar para gerar um PDF da conversa.',
+      },
+      {
+        id: '14',
+        question: 'Como imprimo o histórico do chat?',
+        answer: 'Abra o menu de opções do chat e selecione Imprimir.',
+      },
+      {
+        id: '15',
+        question:
+          'Por que preciso selecionar um modelo do WhatsApp sempre que inicio um chat?',
+        answer:
+          'As regras do WhatsApp Business exigem modelos previamente aprovados para muitas mensagens iniciadas por uma empresa.',
+      },
+    ],
+  },
+};
 
 const FAQModal = ({ visible, onClose }) => {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState('1');
   const [language, setLanguage] = useState('English');
   const [showLanguages, setShowLanguages] = useState(false);
+  const [translatedFAQs, setTranslatedFAQs] = useState(FAQ_DATA);
+  const [isTranslating, setIsTranslating] = useState(false);
 
-  const languages = ['English', 'Bengali', 'Hindi'];
+  const languages = ['English', 'Spanish', 'Portuguese'];
+
+  const currentTranslation = FAQ_TRANSLATIONS[language];
 
   const filteredFAQs = useMemo(() => {
     const query = search.trim().toLowerCase();
+    const questions = currentTranslation.questions;
 
-    if (!query) return FAQ_DATA;
+    if (!query) return questions;
 
-    return FAQ_DATA.filter(
+    return questions.filter(
       item =>
         item.question.toLowerCase().includes(query) ||
         item.answer.toLowerCase().includes(query),
     );
-  }, [search]);
+  }, [search, currentTranslation]);
 
   const selectedFAQ =
-    filteredFAQs.find(item => item.id === selectedId) ||
-    filteredFAQs[0];
+    filteredFAQs.find(item => item.id === selectedId) || filteredFAQs[0];
 
   const handleSearch = value => {
     setSearch(value);
@@ -150,16 +376,11 @@ const FAQModal = ({ visible, onClose }) => {
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setSelectedId(item.id)}
-        style={[
-          styles.questionItem,
-          isSelected && styles.selectedQuestion,
-        ]}
+        style={[styles.questionItem, isSelected && styles.selectedQuestion]}
       >
         <Text style={styles.questionMark}>❓</Text>
 
-        <Text style={styles.questionText}>
-          {item.question}
-        </Text>
+        <Text style={styles.questionText}>{item.question}</Text>
       </TouchableOpacity>
     );
   };
@@ -178,7 +399,7 @@ const FAQModal = ({ visible, onClose }) => {
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
               <Text style={styles.headerTitle}>
-                ❔ Frequently asked questions
+                 {currentTranslation.title}
               </Text>
 
               <TouchableOpacity
@@ -190,7 +411,7 @@ const FAQModal = ({ visible, onClose }) => {
             </View>
 
             <Text style={styles.headerSubtitle}>
-              Select a question on the left to see the answer.
+               {currentTranslation.subtitle}
             </Text>
           </View>
 
@@ -199,7 +420,7 @@ const FAQModal = ({ visible, onClose }) => {
             <TextInput
               value={search}
               onChangeText={handleSearch}
-              placeholder="Search questions or answers..."
+              placeholder={currentTranslation.search}
               placeholderTextColor="#777777"
               style={styles.searchInput}
             />
@@ -221,12 +442,12 @@ const FAQModal = ({ visible, onClose }) => {
                       style={styles.languageOption}
                       onPress={() => {
                         setLanguage(item);
+                        setSelectedId('1');
+                        setSearch('');
                         setShowLanguages(false);
                       }}
                     >
-                      <Text style={styles.languageOptionText}>
-                        {item}
-                      </Text>
+                      <Text style={styles.languageOptionText}>{item}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -244,9 +465,7 @@ const FAQModal = ({ visible, onClose }) => {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator
                 ListEmptyComponent={
-                  <Text style={styles.emptyText}>
-                    No questions found.
-                  </Text>
+                  <Text style={styles.emptyText}>No questions found.</Text>
                 }
               />
             </View>
@@ -262,15 +481,13 @@ const FAQModal = ({ visible, onClose }) => {
                       {selectedFAQ.question}
                     </Text>
 
-                    <Text style={styles.answerText}>
-                      {selectedFAQ.answer}
-                    </Text>
+                    <Text style={styles.answerText}>{selectedFAQ.answer}</Text>
                   </View>
                 </ScrollView>
               ) : (
                 <View style={styles.noAnswer}>
                   <Text style={styles.noAnswerText}>
-                    Select a question to see the answer.
+                     {currentTranslation.selectQuestion}
                   </Text>
                 </View>
               )}
@@ -279,11 +496,8 @@ const FAQModal = ({ visible, onClose }) => {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleClose}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+              <Text style={styles.closeButtonText}>{currentTranslation.close}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
