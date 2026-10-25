@@ -160,6 +160,8 @@ const UserChatPage = ({ navigation, route }) => {
     showChatBubble = false,
     showWhatsAppIcon = false,
     showEmailIcon = false,
+    showPhoneIcon = true,
+    showMessageIcon = true,
   } = route?.params || {};
   const [SMS_SENDERS, setSMSSenders] = useState([]);
   const [stateOptions, setStateOptions] = useState([]);
@@ -7045,6 +7047,8 @@ const UserChatPage = ({ navigation, route }) => {
                     if (type.id === 'whatsapp')
                       return showWhatsAppIcon === true;
                     if (type.id === 'email') return showEmailIcon === true;
+                    if (type.id === 'sms') return showMessageIcon === true;
+                    if (type.id === 'call') return showPhoneIcon === true;
                     return true;
                   })
                   .map(type => (
@@ -7744,6 +7748,8 @@ const UserChatPage = ({ navigation, route }) => {
             if (type.id === 'inapp') return showChatBubble === true;
             if (type.id === 'whatsapp') return showWhatsAppIcon === true;
             if (type.id === 'email') return showEmailIcon === true;
+            if (type.id === 'sms') return showMessageIcon === true;
+            if (type.id === 'call') return showPhoneIcon === true;
 
             // SMS and Call remain unchanged
             return true;

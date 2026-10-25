@@ -52,6 +52,7 @@ const DashbaordScreen = ({ navigation }) => {
   const [isSavingSignature, setIsSavingSignature] = useState(false);
   const [activitySort, setActivitySort] = useState('newest');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [clearingMessages, setClearingMessages] = useState(false);
 
   // Tab and navigation states
   const [activityTimeFilter, setActivityTimeFilter] = useState('all');
@@ -88,6 +89,7 @@ const DashbaordScreen = ({ navigation }) => {
   const [selectedSubType, setSelectedSubType] = useState('');
 
   const [userList, setUserList] = useState([]);
+  const [groupList, setGroupList] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMorePages, setHasMorePages] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -176,6 +178,8 @@ const DashbaordScreen = ({ navigation }) => {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+
+  const [deletingMessageId, setDeletingMessageId] = useState(null);
 
   const TUTORIAL_PDF_URL =
     'https://leafnet.us/assets/sample-documents/LEAFCOM-Training-Tutorial.pdf';
@@ -478,6 +482,8 @@ const DashbaordScreen = ({ navigation }) => {
                   // Group card title = group_name.
                   // Normal card title = sender_name.
                   userName: displayName,
+                  sender_profile_type_details:
+                    item.sender_profile_type_details || '',
 
                   userTag:
                     item.sender_profile_type_details ||
@@ -563,6 +569,12 @@ const DashbaordScreen = ({ navigation }) => {
 
               if (itemTimestamp > existing.latestTimestamp) {
                 existing.userName = displayName;
+
+                existing.sender_profile_type_details =
+                  item.sender_profile_type_details ||
+                  item.sender_profile_type ||
+                  existing.userTag ||
+                  '';
 
                 existing.userTag =
                   item.sender_profile_type_details ||
@@ -967,6 +979,8 @@ const DashbaordScreen = ({ navigation }) => {
                 ? item.group_name || 'Unknown Group'
                 : item.sender_name || 'Unknown User',
 
+            sender_profile_type_details: item.sender_profile_type_details || '',
+
             userImage: item.sender_profile_picture
               ? { uri: item.sender_profile_picture }
               : require('../../asset/dummyuser.png'),
@@ -977,6 +991,7 @@ const DashbaordScreen = ({ navigation }) => {
             isRead: !isUnread,
             unreadCount: isUnread ? 1 : 0,
             firebaseKey: item.firebaseKey,
+
             originalData: item,
           };
 
@@ -995,6 +1010,11 @@ const DashbaordScreen = ({ navigation }) => {
             item.source === 'group'
               ? item.group_name || existing.userName || 'Unknown Group'
               : item.sender_name || existing.userName || 'Unknown User';
+
+          existing.sender_profile_type_details =
+            item.sender_profile_type_details ||
+            existing.sender_profile_type_details ||
+            '';
 
           existing.userImage = item.sender_profile_picture
             ? { uri: item.sender_profile_picture }
@@ -1707,12 +1727,111 @@ const DashbaordScreen = ({ navigation }) => {
     return `${years} years ago`;
   };
 
-  const deleteMessage = id => {
-    setMessages(prev => prev.filter(msg => msg.id !== id));
+  const deleteMessage = async item => {
+    if (deletingMessageId !== null) return;
+
+    const firebaseKey = item.firebaseKey;
+
+    if (!firebaseKey) {
+      Alert.alert('Error', 'Firebase notification key not found.');
+      return;
+    }
+
+    try {
+      setDeletingMessageId(item.id);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const payload = {
+        type: 2,
+        user_identifier: 'User_2467_2',
+        field_name: firebaseKey,
+      };
+      console.log('delete payload', payload);
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/removeNotification',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (response.data?.success) {
+        setMessages(prev => prev.filter(msg => msg.id !== item.id));
+      } else {
+        Alert.alert(
+          'Error',
+          response.data?.message || 'Unable to delete the message.',
+        );
+      }
+    } catch (error) {
+      console.log(
+        'DELETE NOTIFICATION ERROR:',
+        error.response?.data || error.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Failed to delete the message. Please try again.',
+      );
+    } finally {
+      setDeletingMessageId(null);
+    }
   };
 
-  const clearAllMessages = () => {
-    setMessages([]);
+  const clearAllMessages = async () => {
+    if (clearingMessages) return;
+
+    try {
+      setClearingMessages(true);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const payload = {
+        type: 1,
+        user_identifier: 'Group_2_2467',
+      };
+
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/removeNotification',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      console.log('REMOVE NOTIFICATION RESPONSE:', response.data);
+
+      if (response.data?.success) {
+        setMessages([]);
+      } else {
+        Alert.alert(
+          'Error',
+          response.data?.message || 'Failed to clear messages.',
+        );
+      }
+    } catch (error) {
+      console.log(
+        'REMOVE NOTIFICATION ERROR:',
+        error.response?.data || error.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error.response?.data?.message ||
+          'Unable to clear messages. Please try again.',
+      );
+    } finally {
+      setClearingMessages(false);
+    }
   };
 
   const toggleMute = () => {
@@ -2578,6 +2697,53 @@ const DashbaordScreen = ({ navigation }) => {
     }
   };
 
+  const fetchGroupsForMessageNav = async () => {
+    try {
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const response = await axios.post(
+        'https://leafcom.us/backend/api/chat-application/listOfChatGroup',
+        {
+          group_id: '',
+          search_text: '',
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      // Check the actual API response first
+      console.log(
+        'GROUP API RESPONSE:',
+        JSON.stringify(response.data, null, 2),
+      );
+
+      // Adjust this path if your API response uses another structure
+      const apiGroups = response.data?.data;
+
+      if (!Array.isArray(apiGroups)) {
+        console.log('Group data is not an array:', apiGroups);
+        return [];
+      }
+
+      const groups = apiGroups.map((group, index) => ({
+        id: String(group.id ?? group.group_id ?? index),
+        group_id: group.group_id,
+        name: group.group_name ?? group.name ?? 'Unnamed Group',
+        group_name: group.group_name ?? group.name ?? 'Unnamed Group',
+        isChatGroup: true,
+      }));
+
+      console.log('MAPPED GROUPS:', JSON.stringify(groups, null, 2));
+
+      return groups;
+    } catch (error) {
+      console.log('FETCH GROUPS ERROR:', error.response?.data ?? error.message);
+      return [];
+    }
+  };
   const fetchContacts = async (
     pageNumber = 1,
     loadMore = false,
@@ -2971,6 +3137,8 @@ const DashbaordScreen = ({ navigation }) => {
         showEmailIcon: isValidEmail(item.email),
         showWhatsAppIcon:
           !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+        showPhoneIcon: true,
+        showMessageIcon: true,
       });
     } catch (error) {
       console.error(
@@ -3042,6 +3210,8 @@ const DashbaordScreen = ({ navigation }) => {
         showEmailIcon: isValidEmail(item.email),
         showWhatsAppIcon:
           !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+        showPhoneIcon: true,
+        showMessageIcon: true,
       });
     } catch (error) {
       console.error('Dialer message error:', error?.response?.data || error);
@@ -3284,21 +3454,131 @@ const DashbaordScreen = ({ navigation }) => {
     const unreadCount = getUnreadMessagesCount();
 
     const renderMessageItem = ({ item }) => (
-      <TouchableOpacity style={styles.messageItem}>
+      <TouchableOpacity
+        style={styles.messageItem}
+        onPress={async () => {
+          if (item.source === 'group') {
+            try {
+              const groups = await fetchGroupsForMessageNav();
+
+              // Stop if the API returns no groups
+              if (!Array.isArray(groups) || groups.length === 0) {
+                console.log('No groups available from API.');
+                return;
+              }
+
+              const clickedGroupId =
+                item.group_id || item.originalData?.group_id || '';
+
+              const clickedGroupName =
+                item.group_name || item.userName || item.name || '';
+
+              // Find the selected group by ID or name
+              const selectedGroup = groups.find(group => {
+                const idMatches =
+                  clickedGroupId &&
+                  String(group.group_id) === String(clickedGroupId);
+
+                const nameMatches =
+                  clickedGroupName &&
+                  String(group.name || group.group_name)
+                    .trim()
+                    .toLowerCase() === clickedGroupName.trim().toLowerCase();
+
+                return idMatches || nameMatches;
+              });
+
+              // If not found, open the first group
+              const groupToOpen = selectedGroup || groups[0];
+
+              console.log('Opening group:', groupToOpen);
+
+              navigation.navigate('GroupChat', {
+                id: groupToOpen.id,
+                senderId: groupToOpen.id,
+                name: groupToOpen.name || groupToOpen.group_name,
+                userName: groupToOpen.name || groupToOpen.group_name,
+                group_id: groupToOpen.group_id,
+                users: groupToOpen.users || [],
+              });
+            } catch (error) {
+              console.log(
+                'Unable to open group:',
+                error.response?.data || error.message,
+              );
+            }
+
+            return;
+          }
+
+          const profileTypeDetails = String(
+            item.sender_profile_type_details || item.userTag || '',
+          )
+            .trim()
+            .toLowerCase();
+
+          const showCommunicationIcons = [
+            'system admin',
+            'office user',
+            'department user',
+          ].includes(profileTypeDetails);
+
+          navigation.navigate('UserChatPage', {
+            senderId: item.sender_id || item.senderId,
+
+            userName:
+              item.sender_name ||
+              item.user_name ||
+              item.userName ||
+              'Unknown User',
+
+            userImage: item.sender_profile_picture || null,
+
+            userType: item.sender_profile_type,
+
+            commType: 'inApp',
+
+            // All three depend only on profileTypeDetails
+            showChatBubble: showCommunicationIcons,
+            showEmailIcon: showCommunicationIcons,
+            showWhatsAppIcon: showCommunicationIcons,
+            showPhoneIcon: showCommunicationIcons,
+            showMessageIcon: showCommunicationIcons,
+
+            whatsapp_number: item.whatsapp_number || item.user_name || '',
+
+            whatsappNumber: item.whatsapp_number || item.user_name || '',
+
+            phone: item.mobile_no || '',
+          });
+        }}
+      >
         <View style={styles.messageAvatarContainer}>
           <Image source={item.userImage} style={styles.messageAvatar} />
           {!item.isRead && <View style={styles.messageAvatarDot} />}
         </View>
         <View style={styles.messageContent}>
           <View style={styles.messageHeader}>
-            <Text
+            {/* <Text
               style={[
                 styles.messageUserName,
                 !item.isRead && styles.messageUserNameUnread,
               ]}
             >
-              {item.userName}
-            </Text>
+              {item.userName} 
+            </Text> */}
+
+            <View style={styles.senderNameRow}>
+              <Text style={styles.senderName}>
+                {item.userName || 'Unknown User'}
+              </Text>
+
+              {!!item.sender_profile_type_details && (
+                <Text style={styles.senderProfileDetails}>
+                  [{item.sender_profile_type_details}]
+                </Text>
+              )}
+            </View>
             <Text style={styles.messageTime}>{getTimeAgo(item.dateTime)}</Text>
           </View>
           <View style={styles.messageFooter}>
@@ -3345,17 +3625,24 @@ const DashbaordScreen = ({ navigation }) => {
               )}
               <TouchableOpacity
                 style={styles.messageDeleteBtn}
-                onPress={() => deleteMessage(item.id)}
+                onPress={() => deleteMessage(item)}
+                disabled={deletingMessageId !== null}
+                activeOpacity={0.7}
               >
-                <Image
-                  source={require('../../asset/close.png')}
-                  style={{
-                    width: 14,
-                    height: 14,
-                    resizeMode: 'contain',
-                    tintColor: '#999',
-                  }}
-                />
+                {deletingMessageId === item.id ? (
+                  <ActivityIndicator size="small" color="#B39AC7" />
+                ) : (
+                  // Replace this with your existing close icon
+                  <Image
+                    source={require('../../asset/close.png')}
+                    style={{
+                      width: 14,
+                      height: 14,
+                      resizeMode: 'contain',
+                      tintColor: '#999',
+                    }}
+                  />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -3407,9 +3694,15 @@ const DashbaordScreen = ({ navigation }) => {
                   <View style={styles.sidebarHeaderContent}>
                     <View style={styles.sidebarHeaderLeft}>
                       <View style={styles.sidebarTitleContainer}>
-                        <View style={styles.sidebarIconWrapper}>
+                        <TouchableOpacity
+                          style={styles.sidebarHeaderBtn}
+                          onPress={() => {
+                            setShowMessageSidebar(false);
+                            setActiveTab('directory');
+                          }}
+                        >
                           <Image
-                            source={require('../../asset/chatbubbles.png')}
+                            source={require('../../asset/close.png')}
                             style={{
                               width: 16,
                               height: 16,
@@ -3417,7 +3710,7 @@ const DashbaordScreen = ({ navigation }) => {
                               tintColor: '#FFF',
                             }}
                           />
-                        </View>
+                        </TouchableOpacity>
                         <Text style={styles.sidebarTitle}>Messages</Text>
                       </View>
                       <View style={styles.sidebarHeaderBadges}>
@@ -3436,7 +3729,7 @@ const DashbaordScreen = ({ navigation }) => {
                       </View>
                     </View>
                     <View style={styles.sidebarHeaderRight}>
-                      <TouchableOpacity
+                      {/* <TouchableOpacity
                         style={styles.sidebarHeaderBtn}
                         onPress={toggleMute}
                       >
@@ -3449,31 +3742,18 @@ const DashbaordScreen = ({ navigation }) => {
                             tintColor: '#FFF',
                           }}
                         />
-                      </TouchableOpacity>
+                      </TouchableOpacity> */}
                       <TouchableOpacity
                         style={styles.sidebarClearBtn}
                         onPress={clearAllMessages}
                       >
-                        <Text style={styles.sidebarClearBtnText}>
-                          Clear All
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.sidebarHeaderBtn}
-                        onPress={() => {
-                          setShowMessageSidebar(false);
-                          setActiveTab('directory');
-                        }}
-                      >
-                        <Image
-                          source={require('../../asset/close.png')}
-                          style={{
-                            width: 16,
-                            height: 16,
-                            resizeMode: 'contain',
-                            tintColor: '#FFF',
-                          }}
-                        />
+                        {clearingMessages ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.sidebarClearBtnText}>
+                            Clear All
+                          </Text>
+                        )}
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -3590,6 +3870,8 @@ const DashbaordScreen = ({ navigation }) => {
                   whatsapp_number: item.whatsapp_number || item.user_name,
                   whatsappNumber: item.whatsapp_number || item.user_name,
                   phone: item.number,
+                  showPhoneIcon: true,
+                  showMessageIcon: true,
                 });
               }}
             >
@@ -3621,6 +3903,8 @@ const DashbaordScreen = ({ navigation }) => {
                   whatsapp_number: item.whatsapp_number || item.user_name,
                   whatsappNumber: item.whatsapp_number || item.user_name,
                   phone: item.number,
+                  showPhoneIcon: true,
+                  showMessageIcon: true,
                 });
               }}
             >
@@ -3666,6 +3950,8 @@ const DashbaordScreen = ({ navigation }) => {
                   whatsapp_number: item.whatsapp_number || item.user_name,
                   whatsappNumber: item.whatsapp_number || item.user_name,
                   phone: item.number,
+                  showPhoneIcon: true,
+                  showMessageIcon: true,
                 });
               }}
             >
@@ -3696,6 +3982,8 @@ const DashbaordScreen = ({ navigation }) => {
                 whatsapp_number: item.whatsapp_number || item.user_name,
                 whatsappNumber: item.whatsapp_number || item.user_name,
                 phone: item.number,
+                showPhoneIcon: true,
+                showMessageIcon: true,
               });
             }}
           >
@@ -3749,6 +4037,8 @@ const DashbaordScreen = ({ navigation }) => {
               showEmailIcon: isValidEmail(item.email),
               showWhatsAppIcon:
                 !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+              showPhoneIcon: true,
+              showMessageIcon: true,
             })
           }
         >
@@ -3897,6 +4187,8 @@ const DashbaordScreen = ({ navigation }) => {
                         whatsapp_number: item.whatsapp_number,
                         whatsappNumber: item.whatsapp_number,
                         phone: item.mobile_no,
+                        showPhoneIcon: true,
+                        showMessageIcon: true,
                       })
                     }
                   >
@@ -4006,6 +4298,8 @@ const DashbaordScreen = ({ navigation }) => {
                                 whatsapp_number: item.whatsapp_number,
                                 whatsappNumber: item.whatsapp_number,
                                 phone: item.mobile_no,
+                                showPhoneIcon: true,
+                                showMessageIcon: true,
                               });
                             }}
                           >
@@ -4038,6 +4332,8 @@ const DashbaordScreen = ({ navigation }) => {
                                 whatsapp_number: item.whatsapp_number,
                                 whatsappNumber: item.whatsapp_number,
                                 phone: item.mobile_no,
+                                showPhoneIcon: true,
+                                showMessageIcon: true,
                               });
                             }}
                           >
@@ -4088,6 +4384,8 @@ const DashbaordScreen = ({ navigation }) => {
                                   whatsapp_number: item.whatsapp_number,
                                   whatsappNumber: item.whatsapp_number,
                                   phone: item.mobile_no,
+                                  showPhoneIcon: true,
+                                  showMessageIcon: true,
                                 });
                               }}
                             >
@@ -4119,6 +4417,8 @@ const DashbaordScreen = ({ navigation }) => {
                               whatsapp_number: item.whatsapp_number,
                               whatsappNumber: item.whatsapp_number,
                               phone: item.mobile_no,
+                              showPhoneIcon: true,
+                              showMessageIcon: true,
                             });
                           }}
                         >
@@ -4561,13 +4861,14 @@ const DashbaordScreen = ({ navigation }) => {
                   </Text>
                   <View style={styles.quickFilterActiveChips}>
                     {activityQuickSearch && (
-                      <TouchableOpacity style={styles.quickFilterActiveChip}onPress={() => setActivityQuickSearch('')}>
+                      <TouchableOpacity
+                        style={styles.quickFilterActiveChip}
+                        onPress={() => setActivityQuickSearch('')}
+                      >
                         <Text style={styles.quickFilterActiveChipText}>
                           Search: {activityQuickSearch}
                         </Text>
-                        <View
-                          
-                        >
+                        <View>
                           <Image
                             source={require('../../asset/close.png')}
                             style={{
@@ -4581,7 +4882,10 @@ const DashbaordScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     )}
                     {activityReadStatus !== 'all' && (
-                      <TouchableOpacity style={styles.quickFilterActiveChip}onPress={() => setActivityReadStatus('all')}>
+                      <TouchableOpacity
+                        style={styles.quickFilterActiveChip}
+                        onPress={() => setActivityReadStatus('all')}
+                      >
                         <Text style={styles.quickFilterActiveChipText}>
                           Read:{' '}
                           {
@@ -4590,9 +4894,7 @@ const DashbaordScreen = ({ navigation }) => {
                             )?.label
                           }
                         </Text>
-                        <View
-                          
-                        >
+                        <View>
                           <Image
                             source={require('../../asset/close.png')}
                             style={{
@@ -4606,14 +4908,15 @@ const DashbaordScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     )}
                     {activityRole !== 'all' && (
-                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivityRole('all')}>
+                      <TouchableOpacity
+                        style={styles.quickFilterActiveChip}
+                        onPress={() => setActivityRole('all')}
+                      >
                         <Text style={styles.quickFilterActiveChipText}>
                           Role:{' '}
                           {roleOptions.find(o => o.id === activityRole)?.label}
                         </Text>
-                        <View
-                          
-                        >
+                        <View>
                           <Image
                             source={require('../../asset/close.png')}
                             style={{
@@ -4627,7 +4930,10 @@ const DashbaordScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     )}
                     {activityThread !== 'all' && (
-                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivityThread('all')}>
+                      <TouchableOpacity
+                        style={styles.quickFilterActiveChip}
+                        onPress={() => setActivityThread('all')}
+                      >
                         <Text style={styles.quickFilterActiveChipText}>
                           Thread:{' '}
                           {
@@ -4635,9 +4941,7 @@ const DashbaordScreen = ({ navigation }) => {
                               ?.label
                           }
                         </Text>
-                        <View
-                          
-                        >
+                        <View>
                           <Image
                             source={require('../../asset/close.png')}
                             style={{
@@ -4651,7 +4955,10 @@ const DashbaordScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     )}
                     {activityChannel !== 'all' && (
-                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivityChannel('all')}>
+                      <TouchableOpacity
+                        style={styles.quickFilterActiveChip}
+                        onPress={() => setActivityChannel('all')}
+                      >
                         <Text style={styles.quickFilterActiveChipText}>
                           Channel:{' '}
                           {
@@ -4659,9 +4966,7 @@ const DashbaordScreen = ({ navigation }) => {
                               ?.label
                           }
                         </Text>
-                        <View
-                          
-                        >
+                        <View>
                           <Image
                             source={require('../../asset/close.png')}
                             style={{
@@ -4675,8 +4980,10 @@ const DashbaordScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     )}
                     {activityMinUnread !== '0' && (
-                      <TouchableOpacity style={styles.quickFilterActiveChip}
-                      onPress={() => setActivityMinUnread('0')}>
+                      <TouchableOpacity
+                        style={styles.quickFilterActiveChip}
+                        onPress={() => setActivityMinUnread('0')}
+                      >
                         <Text style={styles.quickFilterActiveChipText}>
                           Min. Unread:{' '}
                           {
@@ -4685,9 +4992,7 @@ const DashbaordScreen = ({ navigation }) => {
                             )?.label
                           }
                         </Text>
-                        <View
-                          
-                        >
+                        <View>
                           <Image
                             source={require('../../asset/close.png')}
                             style={{
@@ -4701,7 +5006,10 @@ const DashbaordScreen = ({ navigation }) => {
                       </TouchableOpacity>
                     )}
                     {activitySortBy !== 'recent' && (
-                      <TouchableOpacity style={styles.quickFilterActiveChip} onPress={() => setActivitySortBy('recent')}>
+                      <TouchableOpacity
+                        style={styles.quickFilterActiveChip}
+                        onPress={() => setActivitySortBy('recent')}
+                      >
                         <Text style={styles.quickFilterActiveChipText}>
                           Sort:{' '}
                           {
@@ -4709,9 +5017,7 @@ const DashbaordScreen = ({ navigation }) => {
                               ?.label
                           }
                         </Text>
-                        <View
-                          
-                        >
+                        <View>
                           <Image
                             source={require('../../asset/close.png')}
                             style={{
@@ -4829,6 +5135,128 @@ const DashbaordScreen = ({ navigation }) => {
             elevation: 5,
           },
         ]}
+        activeOpacity={0.7}
+        onPress={async () => {
+          // Group conversation: same behavior as renderMessageItem
+          if (
+            item.source === 'group' ||
+            item.isChatGroup === true ||
+            item.group_id != null
+          ) {
+            try {
+              const groups = await fetchGroupsForMessageNav();
+
+              if (!Array.isArray(groups) || groups.length === 0) {
+                console.log('No groups available from API.');
+                return;
+              }
+
+              const groupId = item.group_id || item.originalData?.group_id;
+              const groupName = item.group_name || item.userName || item.name;
+
+              const selectedGroup = groups.find(group => {
+                const idMatches =
+                  groupId && String(group.group_id) === String(groupId);
+
+                const nameMatches =
+                  groupName &&
+                  String(group.name || group.group_name)
+                    .trim()
+                    .toLowerCase() === String(groupName).trim().toLowerCase();
+
+                return idMatches || nameMatches;
+              });
+
+              if (!selectedGroup) {
+                console.log('Selected group was not found.');
+                return;
+              }
+
+              navigation.navigate('GroupChat', {
+                id: selectedGroup.id,
+                senderId: selectedGroup.id,
+                name: selectedGroup.name || selectedGroup.group_name,
+                userName: selectedGroup.name || selectedGroup.group_name,
+                group_id: selectedGroup.group_id,
+                users: selectedGroup.users || [],
+              });
+            } catch (error) {
+              console.log(
+                'Unable to open group:',
+                error.response?.data || error.message,
+              );
+            }
+
+            return;
+          }
+
+          // Individual conversation: same behavior as renderMessageItem
+          navigation.navigate('UserChatPage', {
+            senderId: item.sender_id || item.senderId,
+            userName:
+              item.sender_name ||
+              item.user_name ||
+              item.userName ||
+              'Unknown User',
+            userImage: item.sender_profile_picture || item.avatar || null,
+            userType: item.sender_profile_type,
+            commType: 'inApp',
+
+            showChatBubble: [
+              'system admin',
+              'office user',
+              'department user',
+            ].includes(
+              String(item.sender_profile_type_details || item.userTag || '')
+                .trim()
+                .toLowerCase(),
+            ),
+
+            showEmailIcon: [
+              'system admin',
+              'office user',
+              'department user',
+            ].includes(
+              String(item.sender_profile_type_details || item.userTag || '')
+                .trim()
+                .toLowerCase(),
+            ),
+
+            showWhatsAppIcon: [
+              'system admin',
+              'office user',
+              'department user',
+            ].includes(
+              String(item.sender_profile_type_details || item.userTag || '')
+                .trim()
+                .toLowerCase(),
+            ),
+
+            showPhoneIcon: [
+              'system admin',
+              'office user',
+              'department user',
+            ].includes(
+              String(item.sender_profile_type_details || item.userTag || '')
+                .trim()
+                .toLowerCase(),
+            ),
+
+            showMessageIcon: [
+              'system admin',
+              'office user',
+              'department user',
+            ].includes(
+              String(item.sender_profile_type_details || item.userTag || '')
+                .trim()
+                .toLowerCase(),
+            ),
+
+            whatsapp_number: item.whatsapp_number || item.user_name || '',
+            whatsappNumber: item.whatsapp_number || item.user_name || '',
+            phone: item.mobile_no || '',
+          });
+        }}
       >
         <View style={styles.activityAvatar}>
           <Image
@@ -4976,6 +5404,8 @@ const DashbaordScreen = ({ navigation }) => {
               whatsapp_number: item.whatsapp_number || item.user_name,
               whatsappNumber: item.whatsapp_number || item.user_name,
               phone: item.mobile_no,
+              showPhoneIcon: true,
+              showMessageIcon: true,
             });
           }
         }}
@@ -5029,6 +5459,8 @@ const DashbaordScreen = ({ navigation }) => {
                       whatsapp_number: item.whatsapp_number || item.user_name,
                       whatsappNumber: item.whatsapp_number || item.user_name,
                       phone: item.mobile_no,
+                      showPhoneIcon: true,
+                      showMessageIcon: true,
                     });
                   }}
                 >
@@ -5061,6 +5493,8 @@ const DashbaordScreen = ({ navigation }) => {
                       whatsapp_number: item.whatsapp_number || item.user_name,
                       whatsappNumber: item.whatsapp_number || item.user_name,
                       phone: item.mobile_no,
+                      showPhoneIcon: true,
+                      showMessageIcon: true,
                     });
                   }}
                 >
@@ -5106,6 +5540,8 @@ const DashbaordScreen = ({ navigation }) => {
                       whatsapp_number: item.whatsapp_number || item.user_name,
                       whatsappNumber: item.whatsapp_number || item.user_name,
                       phone: item.mobile_no,
+                      showPhoneIcon: true,
+                      showMessageIcon: true,
                     });
                   }}
                 >
@@ -5136,6 +5572,8 @@ const DashbaordScreen = ({ navigation }) => {
                     whatsapp_number: item.whatsapp_number || item.user_name,
                     whatsappNumber: item.whatsapp_number || item.user_name,
                     phone: item.mobile_no,
+                    showPhoneIcon: true,
+                    showMessageIcon: true,
                   });
                 }}
               >
@@ -10769,6 +11207,24 @@ const styles = StyleSheet.create({
   activityTimeFilterOptionSelectedText: {
     color: '#76577F',
     fontWeight: '700',
+  },
+
+  senderNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+
+  senderName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#222222',
+  },
+
+  senderProfileDetails: {
+    fontSize: 12,
+    color: '#777777',
+    marginLeft: 5,
   },
 });
 
