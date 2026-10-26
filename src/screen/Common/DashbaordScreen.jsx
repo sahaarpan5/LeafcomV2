@@ -3130,7 +3130,7 @@ const DashbaordScreen = ({ navigation }) => {
         whatsappNumber: whatsappNumber,
         phone: enteredNumber,
 
-        user_type_details: contact.user_type_details || 'Dialer Contact',
+        userTypeDetails: contact.user_type_details || 'Dialer Contact',
 
         commType: 'WP',
         showChatBubble: item.user_type_details !== 'Dialer Contact',
@@ -3139,6 +3139,7 @@ const DashbaordScreen = ({ navigation }) => {
           !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
         showPhoneIcon: true,
         showMessageIcon: true,
+        useremail: profileInfo.email,
       });
     } catch (error) {
       console.error(
@@ -3204,7 +3205,7 @@ const DashbaordScreen = ({ navigation }) => {
         whatsapp_number: contact.whatsapp_number || enteredNumber,
         whatsappNumber: contact.whatsapp_number || enteredNumber,
         phone: enteredNumber,
-        user_type_details: contact.user_type_details || 'Dialer Contact',
+        userTypeDetails:  contact.user_type_details || 'Dialer Contact',
         commType: 'SMS',
         showChatBubble: item.user_type_details !== 'Dialer Contact',
         showEmailIcon: isValidEmail(item.email),
@@ -3212,6 +3213,7 @@ const DashbaordScreen = ({ navigation }) => {
           !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
         showPhoneIcon: true,
         showMessageIcon: true,
+        useremail: profileInfo.email,
       });
     } catch (error) {
       console.error('Dialer message error:', error?.response?.data || error);
@@ -3548,6 +3550,7 @@ const DashbaordScreen = ({ navigation }) => {
             whatsapp_number: item.whatsapp_number || item.user_name || '',
 
             whatsappNumber: item.whatsapp_number || item.user_name || '',
+            useremail: profileInfo.email,
 
             phone: item.mobile_no || '',
           });
@@ -3807,7 +3810,18 @@ const DashbaordScreen = ({ navigation }) => {
   );
 
   const renderContactItem = ({ item }) => (
-    <TouchableOpacity style={styles.contactCard}>
+    <TouchableOpacity
+      style={[
+        styles.userCard,
+        {
+          borderLeftColor: '#6C63FF',
+          borderLeftWidth: 4,
+          borderColor: '#f1f3f5',
+          borderWidth: 1,
+          backgroundColor: '#FFFFFF',
+        },
+      ]}
+    >
       <View style={styles.contactAvatar}>
         {item.profile_picture ? (
           <Image
@@ -3860,7 +3874,8 @@ const DashbaordScreen = ({ navigation }) => {
                   senderId: item.id,
                   userName: item.name || item.user_name,
                   userImage: item.profile_picture,
-                  userType: item.type,
+                  userType: item.user_type,
+                  userTypeDetails:item.user_type_details,
                   commType: 'inApp',
                   showChatBubble: item.user_type_details !== 'Dialer Contact',
                   showEmailIcon: isValidEmail(item.email),
@@ -3871,6 +3886,7 @@ const DashbaordScreen = ({ navigation }) => {
                   whatsappNumber: item.whatsapp_number || item.user_name,
                   phone: item.number,
                   showPhoneIcon: true,
+                  useremail: profileInfo.email,
                   showMessageIcon: true,
                 });
               }}
@@ -3893,7 +3909,7 @@ const DashbaordScreen = ({ navigation }) => {
                   senderId: item.id,
                   userName: item.name || item.user_name,
                   userImage: item.profile_picture,
-                  userType: item.type,
+                  userType: item.user_type_details,
                   commType: 'email',
                   showChatBubble: item.user_type_details !== 'Dialer Contact',
                   showEmailIcon: isValidEmail(item.email),
@@ -3904,6 +3920,7 @@ const DashbaordScreen = ({ navigation }) => {
                   whatsappNumber: item.whatsapp_number || item.user_name,
                   phone: item.number,
                   showPhoneIcon: true,
+                  useremail: profileInfo.email,
                   showMessageIcon: true,
                 });
               }}
@@ -3940,7 +3957,8 @@ const DashbaordScreen = ({ navigation }) => {
                   senderId: item.id,
                   userName: item.name || item.user_name,
                   userImage: item.profile_picture,
-                  userType: item.type,
+                  userType: item.user_type,
+                  userTypeDetails:item.user_type_details,
                   commType: 'WP',
                   showChatBubble: item.user_type_details !== 'Dialer Contact',
                   showEmailIcon: isValidEmail(item.email),
@@ -3951,6 +3969,7 @@ const DashbaordScreen = ({ navigation }) => {
                   whatsappNumber: item.whatsapp_number || item.user_name,
                   phone: item.number,
                   showPhoneIcon: true,
+                  useremail: profileInfo.email,
                   showMessageIcon: true,
                 });
               }}
@@ -3973,7 +3992,8 @@ const DashbaordScreen = ({ navigation }) => {
                 senderId: item.id,
                 userName: item.name || item.user_name,
                 userImage: item.profile_picture,
-                userType: item.type,
+                userType: item.user_type,
+                userTypeDetails: item.user_type_details,
                 commType: 'sms',
                 showChatBubble: item.user_type_details !== 'Dialer Contact',
                 showEmailIcon: isValidEmail(item.email),
@@ -3983,6 +4003,7 @@ const DashbaordScreen = ({ navigation }) => {
                 whatsappNumber: item.whatsapp_number || item.user_name,
                 phone: item.number,
                 showPhoneIcon: true,
+                useremail: profileInfo.email,
                 showMessageIcon: true,
               });
             }}
@@ -4008,11 +4029,14 @@ const DashbaordScreen = ({ navigation }) => {
         ? userList.filter(
             user => user.whatsapp_number && user.whatsapp_number.trim() !== '',
           )
-        : getFilteredContacts(type);
+        : userList.filter(
+            user => user.mobile_no && user.mobile_no.trim() !== '',
+          );
     const isVisible =
       type === 'whatsapp' ? showWhatsAppModal : showMessageModal;
     const setVisible =
       type === 'whatsapp' ? setShowWhatsAppModal : setShowMessageModal;
+    console.log('selectedUserType', selectedUserType);
 
     return (
       <Modal
@@ -4028,7 +4052,8 @@ const DashbaordScreen = ({ navigation }) => {
               senderId: item.sender_id,
               userName: item.sender_name || item.user_name,
               userImage: item.sender_profile_picture,
-              userType: item.sender_profile_type,
+              userType: item.user_type,
+              userTypeDetails: item.user_type_details,
               commType: 'inApp',
               whatsapp_number: item.whatsapp_number,
               whatsappNumber: item.whatsapp_number,
@@ -4038,6 +4063,7 @@ const DashbaordScreen = ({ navigation }) => {
               showWhatsAppIcon:
                 !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
               showPhoneIcon: true,
+              useremail: profileInfo.email,
               showMessageIcon: true,
             })
           }
@@ -4108,31 +4134,9 @@ const DashbaordScreen = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.activeFilters}>
-                {selectedUserType !== 'all' && (
-                  <View style={styles.activeFilterChip}>
-                    <Text style={styles.activeFilterText}>
-                      {userTypes.find(t => t.id === selectedUserType)?.name}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setSelectedUserType('all');
-                        setSelectedSubType('All Users');
-                      }}
-                    >
-                      <Image
-                        source={require('../../asset/close.png')}
-                        style={{
-                          width: 14,
-                          height: 14,
-                          resizeMode: 'contain',
-                          tintColor: '#666',
-                        }}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                {selectedSubType !== 'All Users' && (
+              {/* <View style={styles.activeFilters}>
+               
+                {selectedUserType && (
                   <View style={styles.activeFilterChip}>
                     <Text style={styles.activeFilterText}>
                       {selectedSubType}
@@ -4152,7 +4156,7 @@ const DashbaordScreen = ({ navigation }) => {
                     </TouchableOpacity>
                   </View>
                 )}
-              </View>
+              </View> */}
 
               <FlatList
                 data={filteredContacts}
@@ -4176,7 +4180,8 @@ const DashbaordScreen = ({ navigation }) => {
                         senderId: item.sender_id,
                         userName: item.sender_name || item.user_name,
                         userImage: item.sender_profile_picture,
-                        userType: item.sender_profile_type,
+                        userType: item.user_type,
+                        userTypeDetails: item.user_type_details,
                         commType: 'inApp',
                         showChatBubble:
                           item.user_type_details !== 'Dialer Contact',
@@ -4188,6 +4193,7 @@ const DashbaordScreen = ({ navigation }) => {
                         whatsappNumber: item.whatsapp_number,
                         phone: item.mobile_no,
                         showPhoneIcon: true,
+                        useremail: profileInfo.email,
                         showMessageIcon: true,
                       })
                     }
@@ -4259,7 +4265,7 @@ const DashbaordScreen = ({ navigation }) => {
                               { color: '#6C63FF' },
                             ]}
                           >
-                            {item.type}
+                            {item.user_type}
                           </Text>
                         </View>
                         <View
@@ -4274,7 +4280,7 @@ const DashbaordScreen = ({ navigation }) => {
                               { color: iconColor },
                             ]}
                           >
-                            {type === 'whatsapp' ? 'WhatsApp' : 'Message'}
+                            {item.user_type_details}
                           </Text>
                         </View>
                       </View>
@@ -4287,7 +4293,8 @@ const DashbaordScreen = ({ navigation }) => {
                                 senderId: item.sender_id,
                                 userName: item.sender_name || item.user_name,
                                 userImage: item.sender_profile_picture,
-                                userType: item.sender_profile_type,
+                                userType: item.user_type,
+                                userTypeDetails: item.user_type_details,
                                 commType: 'inApp',
                                 showChatBubble:
                                   item.user_type_details !== 'Dialer Contact',
@@ -4299,6 +4306,7 @@ const DashbaordScreen = ({ navigation }) => {
                                 whatsappNumber: item.whatsapp_number,
                                 phone: item.mobile_no,
                                 showPhoneIcon: true,
+                                useremail: profileInfo.email,
                                 showMessageIcon: true,
                               });
                             }}
@@ -4321,7 +4329,8 @@ const DashbaordScreen = ({ navigation }) => {
                                 senderId: item.sender_id,
                                 userName: item.sender_name || item.user_name,
                                 userImage: item.sender_profile_picture,
-                                userType: item.sender_profile_type,
+                                userType: item.user_type,
+                                userTypeDetails: item.user_type_details,
                                 commType: 'email',
                                 showChatBubble:
                                   item.user_type_details !== 'Dialer Contact',
@@ -4333,6 +4342,7 @@ const DashbaordScreen = ({ navigation }) => {
                                 whatsappNumber: item.whatsapp_number,
                                 phone: item.mobile_no,
                                 showPhoneIcon: true,
+                                useremail: profileInfo.email,
                                 showMessageIcon: true,
                               });
                             }}
@@ -4373,7 +4383,8 @@ const DashbaordScreen = ({ navigation }) => {
                                   senderId: item.sender_id,
                                   userName: item.sender_name || item.user_name,
                                   userImage: item.sender_profile_picture,
-                                  userType: item.sender_profile_type,
+                                  userType: item.user_type,
+                                  userTypeDetails: item.user_type_details,
                                   commType: 'WP',
                                   showChatBubble:
                                     item.user_type_details !== 'Dialer Contact',
@@ -4385,6 +4396,7 @@ const DashbaordScreen = ({ navigation }) => {
                                   whatsappNumber: item.whatsapp_number,
                                   phone: item.mobile_no,
                                   showPhoneIcon: true,
+                                  useremail: profileInfo.email,
                                   showMessageIcon: true,
                                 });
                               }}
@@ -4399,48 +4411,51 @@ const DashbaordScreen = ({ navigation }) => {
                               />
                             </TouchableOpacity>
                           )}
-                        <TouchableOpacity
-                          style={[styles.contactIconSmall]}
-                          onPress={() => {
-                            navigation.navigate('UserChatPage', {
-                              senderId: item.sender_id,
-                              userName: item.sender_name || item.user_name,
-                              userImage: item.sender_profile_picture,
-                              userType: item.sender_profile_type,
-                              commType: 'sms',
-                              showChatBubble:
-                                item.user_type_details !== 'Dialer Contact',
-                              showEmailIcon: isValidEmail(item.email),
-                              showWhatsAppIcon:
-                                !!item.whatsapp_number &&
-                                item.whatsapp_number.trim() !== '',
-                              whatsapp_number: item.whatsapp_number,
-                              whatsappNumber: item.whatsapp_number,
-                              phone: item.mobile_no,
-                              showPhoneIcon: true,
-                              showMessageIcon: true,
-                            });
-                          }}
-                        >
-                          <Image
-                            source={require('../../asset/message.png')}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              resizeMode: 'contain',
+                        {item.mobile_no && item.mobile_no.trim() !== '' && (
+                          <TouchableOpacity
+                            style={[styles.contactIconSmall]}
+                            onPress={() => {
+                              navigation.navigate('UserChatPage', {
+                                senderId: item.sender_id,
+                                userName: item.sender_name || item.user_name,
+                                userImage: item.sender_profile_picture,
+                                userType: item.user_type,
+                                commType: 'sms',
+                                showChatBubble:
+                                  item.user_type_details !== 'Dialer Contact',
+                                showEmailIcon: isValidEmail(item.email),
+                                showWhatsAppIcon:
+                                  !!item.whatsapp_number &&
+                                  item.whatsapp_number.trim() !== '',
+                                whatsapp_number: item.whatsapp_number,
+                                whatsappNumber: item.whatsapp_number,
+                                phone: item.mobile_no,
+                                showPhoneIcon: true,
+                                useremail: profileInfo.email,
+                                showMessageIcon: true,
+                              });
                             }}
-                          />
-                        </TouchableOpacity>
+                          >
+                            <Image
+                              source={require('../../asset/message.png')}
+                              style={{
+                                width: 20,
+                                height: 20,
+                                resizeMode: 'contain',
+                              }}
+                            />
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                   </TouchableOpacity>
                 )}
                 ListFooterComponent={
-                  contactsHasMorePages ? (
+                  hasMorePages ? (
                     <TouchableOpacity
                       style={[
                         styles.loadMoreButton,
-                        isLoadingMoreContacts && {
+                        isLoadingMoreUsers && {
                           opacity: 0.6,
                         },
                       ]}
@@ -4468,7 +4483,7 @@ const DashbaordScreen = ({ navigation }) => {
                   ) : null
                 }
                 ListEmptyComponent={
-                  isLoadingContacts ? (
+                  isLoadingMoreUsers ? (
                     <View style={styles.emptyUserContainer}>
                       <ActivityIndicator size="large" color="#6C63FF" />
 
@@ -5199,7 +5214,8 @@ const DashbaordScreen = ({ navigation }) => {
               item.userName ||
               'Unknown User',
             userImage: item.sender_profile_picture || item.avatar || null,
-            userType: item.sender_profile_type,
+            userType: item.user_type,
+            userTypeDetails: item.user_type_details,
             commType: 'inApp',
 
             showChatBubble: [
@@ -5254,6 +5270,7 @@ const DashbaordScreen = ({ navigation }) => {
 
             whatsapp_number: item.whatsapp_number || item.user_name || '',
             whatsappNumber: item.whatsapp_number || item.user_name || '',
+            useremail: profileInfo.email,
             phone: item.mobile_no || '',
           });
         }}
@@ -5395,7 +5412,8 @@ const DashbaordScreen = ({ navigation }) => {
               senderId: item.sender_id,
               userName: item.sender_name || item.user_name,
               userImage: item.sender_profile_picture,
-              userType: item.sender_profile_type,
+              userType: item.user_type,
+              userTypeDetails: item.user_type_details,
               commType: 'inApp',
               showChatBubble: item.user_type_details !== 'Dialer Contact',
               showEmailIcon: isValidEmail(item.email),
@@ -5406,6 +5424,7 @@ const DashbaordScreen = ({ navigation }) => {
               phone: item.mobile_no,
               showPhoneIcon: true,
               showMessageIcon: true,
+              useremail: profileInfo.email,
             });
           }
         }}
@@ -5448,7 +5467,8 @@ const DashbaordScreen = ({ navigation }) => {
                       senderId: item.sender_id,
                       userName: item.sender_name || item.user_name,
                       userImage: item.sender_profile_picture,
-                      userType: item.sender_profile_type,
+                      userType: item.user_type,
+                      userTypeDetails: item.user_type_details,
                       commType: 'inApp',
                       showChatBubble:
                         item.user_type_details !== 'Dialer Contact',
@@ -5461,6 +5481,7 @@ const DashbaordScreen = ({ navigation }) => {
                       phone: item.mobile_no,
                       showPhoneIcon: true,
                       showMessageIcon: true,
+                      useremail: profileInfo.email,
                     });
                   }}
                 >
@@ -5482,7 +5503,8 @@ const DashbaordScreen = ({ navigation }) => {
                       senderId: item.sender_id,
                       userName: item.sender_name || item.user_name,
                       userImage: item.sender_profile_picture,
-                      userType: item.sender_profile_type,
+                      userType: item.user_type,
+                      userTypeDetails: item.user_type_details,
                       commType: 'email',
                       showChatBubble:
                         item.user_type_details !== 'Dialer Contact',
@@ -5495,6 +5517,7 @@ const DashbaordScreen = ({ navigation }) => {
                       phone: item.mobile_no,
                       showPhoneIcon: true,
                       showMessageIcon: true,
+                      useremail: profileInfo.email,
                     });
                   }}
                 >
@@ -5529,7 +5552,8 @@ const DashbaordScreen = ({ navigation }) => {
                       senderId: item.sender_id,
                       userName: item.sender_name || item.user_name,
                       userImage: item.sender_profile_picture,
-                      userType: item.sender_profile_type,
+                      userType: item.user_type,
+                      userTypeDetails: item.user_type_details,
                       commType: 'WP',
                       showChatBubble:
                         item.user_type_details !== 'Dialer Contact',
@@ -5542,6 +5566,7 @@ const DashbaordScreen = ({ navigation }) => {
                       phone: item.mobile_no,
                       showPhoneIcon: true,
                       showMessageIcon: true,
+                      useremail: profileInfo.email,
                     });
                   }}
                 >
@@ -5562,7 +5587,8 @@ const DashbaordScreen = ({ navigation }) => {
                     senderId: item.sender_id,
                     userName: item.sender_name || item.user_name,
                     userImage: item.sender_profile_picture,
-                    userType: item.sender_profile_type,
+                    userType: item.user_type,
+                    userTypeDetails: item.user_type_details,
                     commType: 'sms',
                     showChatBubble: item.user_type_details !== 'Dialer Contact',
                     showEmailIcon: isValidEmail(item.email),
@@ -5574,6 +5600,7 @@ const DashbaordScreen = ({ navigation }) => {
                     phone: item.mobile_no,
                     showPhoneIcon: true,
                     showMessageIcon: true,
+                    useremail: profileInfo.email,
                   });
                 }}
               >
@@ -6222,7 +6249,7 @@ const DashbaordScreen = ({ navigation }) => {
         onPress={() => setShowContactFilter(false)}
       >
         <View style={styles.contactFilterModal}>
-          <View style={styles.filterModalHeader}>
+          <View style={styles.filterModalHeaderForContactModal}>
             <Text style={styles.filterModalTitle}>Filter Contacts</Text>
             <TouchableOpacity onPress={() => setShowContactFilter(false)}>
               <Image
@@ -6531,52 +6558,6 @@ const DashbaordScreen = ({ navigation }) => {
                     }}
                   />
                 </TouchableOpacity>
-              </View>
-
-              <View style={styles.activeFilters}>
-                {selectedUserType !== 'all' && (
-                  <View style={styles.activeFilterChip}>
-                    <Text style={styles.activeFilterText}>
-                      {userTypes.find(t => t.id === selectedUserType)?.name}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setSelectedUserType('all');
-                        setSelectedSubType('All Users');
-                      }}
-                    >
-                      <Image
-                        source={require('../../asset/close.png')}
-                        style={{
-                          width: 14,
-                          height: 14,
-                          resizeMode: 'contain',
-                          tintColor: '#666',
-                        }}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                {selectedSubType !== 'All Users' && (
-                  <View style={styles.activeFilterChip}>
-                    <Text style={styles.activeFilterText}>
-                      {selectedSubType}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setSelectedSubType('All Users')}
-                    >
-                      <Image
-                        source={require('../../asset/close.png')}
-                        style={{
-                          width: 14,
-                          height: 14,
-                          resizeMode: 'contain',
-                          tintColor: '#666',
-                        }}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
               </View>
 
               <View style={styles.contactCountHeader}>
@@ -7286,7 +7267,9 @@ const DashbaordScreen = ({ navigation }) => {
                   disabled={isLoadingSignatures}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.addSignatureHeaderButtonText}>+ Add</Text>
+                  <Text style={styles.addSignatureHeaderButtonText}>
+                    + Add{' '}
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -8196,7 +8179,7 @@ const styles = StyleSheet.create({
   // TOP BAR - TALLER HEIGHT
   // ============================================================
   dashboardHeader: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
 
     paddingBottom: 12,
     backgroundColor: '#5C4FC9',
@@ -8204,7 +8187,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
     position: 'relative',
     overflow: 'hidden',
-    minHeight: 95,
   },
   headerBgContainer: {
     position: 'absolute',
@@ -8321,13 +8303,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
-    marginRight: 15,
 
-    // Tight curve on right side
-    borderTopRightRadius: 120,
-    borderBottomRightRadius: 160,
+    borderTopRightRadius: 55,
+    borderBottomRightRadius: 70,
 
-    paddingVertical: 60,
+    marginRight: 10,
+    paddingVertical: 10,
     paddingHorizontal: 10,
 
     alignItems: 'center',
@@ -9188,7 +9169,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     maxHeight: SCREEN_HEIGHT * 0.7,
   },
-  filterModalHeader: {
+  filterModalHeaderForContactModal: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -10184,6 +10165,8 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '600',
     fontFamily: 'sans-serif',
+    alignItems: 'flex-start',
+    flexShrink: 0,
   },
   activityUnreadContainer: {
     flexDirection: 'row',
@@ -10204,9 +10187,10 @@ const styles = StyleSheet.create({
   },
   activityFilterContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginLeft: 'auto',
     gap: 8,
-    marginBottom: 12,
-    flexWrap: 'wrap',
   },
   activityFilterChip: {
     flexDirection: 'row',
@@ -11044,9 +11028,8 @@ const styles = StyleSheet.create({
   activityTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     width: '100%',
-    gap: 8,
   },
 
   activityFilterContainer: {

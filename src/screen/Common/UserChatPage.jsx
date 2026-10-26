@@ -139,6 +139,7 @@ const UserChatPage = ({ navigation, route }) => {
   const [signatureContent, setSignatureContent] = useState('');
   const selectedUserId = String(route?.params?.senderId || '3597');
   const whatsapp = route?.params?.whatsappNumber;
+  const useremail = route?.params?.useremail;
 
   const [sender, setSender] = useState({
     id: selectedUserId,
@@ -149,12 +150,15 @@ const UserChatPage = ({ navigation, route }) => {
         'https://leafnet.us/assets/img/user-demo.jpg',
     },
     type: route?.params?.userType || '',
+    userTypeDetails: route?.params?.userTypeDetails || '',
     status: 'online',
     email: '',
     phone: route?.params?.phone || '',
     whatsapp: route?.params?.whatsappNumber || '',
     commType: route?.params?.commType || 'inApp',
   });
+  console.log('userTypeDetails', sender.userTypeDetails);
+  console.log('type', sender.type);
 
   const {
     showChatBubble = false,
@@ -400,6 +404,15 @@ const UserChatPage = ({ navigation, route }) => {
     };
   }, []);
 
+  useEffect(() => {
+    setSender(prev => ({
+      ...prev,
+      type: route?.params?.userType || prev.type || '',
+      userTypeDetails:
+        route?.params?.userTypeDetails || prev.userTypeDetails || '',
+    }));
+  }, [route?.params?.userType, route?.params?.userTypeDetails]);
+
   // ============================================================
   // LOAD CHAT MESSAGES FROM FIREBASE
   // ============================================================
@@ -587,15 +600,17 @@ const UserChatPage = ({ navigation, route }) => {
                         'https://leafnet.us/assets/img/user-demo.jpg',
                   },
 
-                  type: otherUserIsSender
-                    ? firstMessage.senderType
-                    : firstMessage.receiverType,
-
                   status: 'online',
 
                   email: '',
                   phone: '',
                   whatsapp: '',
+
+                  type: route?.params?.userType || prev.type || '',
+                  userTypeDetails:
+                    route?.params?.userTypeDetails ||
+                    prev.userTypeDetails ||
+                    '',
                 });
               }
 
@@ -4445,6 +4460,15 @@ const UserChatPage = ({ navigation, route }) => {
                   }}
                 />
               </TouchableOpacity>
+
+              <Text style={styles.composeRecipientHint}>
+                Select a recipient email from available contact cards.
+              </Text>
+
+              <Text style={[styles.composeRecipientHint, { color: 'red' }]}>
+                <Text style={{ fontWeight: 'bold' }}>Send from </Text>
+                {useremail}
+              </Text>
             </View>
 
             {/* <View style={styles.composeFieldRow}>
@@ -6132,6 +6156,22 @@ const UserChatPage = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
             <View style={styles.addContactHeaderChips}>
+
+
+               <View style={styles.addContactHeaderChip}>
+                <Image
+                  source={require('../../asset/pricetag.png')} // Update the path as needed
+                  style={{
+                    width: 11,
+                    height: 11,
+                    resizeMode: 'contain',
+                    tintColor: COLORS.textInverse,
+                  }}
+                />
+                <Text style={styles.addContactHeaderChipText}>
+                  {sender.name || '-'}
+                </Text>
+              </View>
               <View style={styles.addContactHeaderChip}>
                 <Image
                   source={require('../../asset/pricetag.png')} // Update the path as needed
@@ -6143,7 +6183,7 @@ const UserChatPage = ({ navigation, route }) => {
                   }}
                 />
                 <Text style={styles.addContactHeaderChipText}>
-                  {contactForm.type || 'Type'}
+                  {sender.type || '-'}
                 </Text>
               </View>
               <View style={styles.addContactHeaderChip}>
@@ -6157,7 +6197,7 @@ const UserChatPage = ({ navigation, route }) => {
                   }}
                 />
                 <Text style={styles.addContactHeaderChipText}>
-                  {isEditingContact ? 'Editing' : 'Subtype'}
+                  {sender.userTypeDetails || '-'}
                 </Text>
               </View>
             </View>
@@ -6459,120 +6499,38 @@ const UserChatPage = ({ navigation, route }) => {
       statusBarTranslucent={true}
     >
       <View style={styles.sideDrawerBackdrop}>
-        <TouchableWithoutFeedback onPress={() => setShowContactModal(false)}>
-          <Animated.View
+        <Animated.View
+          style={[
+            styles.sideDrawer,
+            {
+              opacity: contactSheetOpacity,
+              transform: [
+                {
+                  translateX: contactDrawerX,
+                },
+              ],
+            },
+          ]}
+        >
+          {/* HEADER */}
+          <View
             style={[
-              styles.sideDrawer,
+              styles.contactHeader,
               {
-                opacity: contactSheetOpacity,
-                transform: [
-                  {
-                    translateX: contactDrawerX,
-                  },
-                ],
+                paddingTop: HEADER_TOP_PADDING + 12,
               },
             ]}
           >
-            {/* HEADER */}
-            <View
-              style={[
-                styles.contactHeader,
-                {
-                  paddingTop: HEADER_TOP_PADDING + 12,
-                },
-              ]}
-            >
-              <View style={styles.contactHeaderDecor}>
-                <View style={styles.contactDecorCircle1} />
-                <View style={styles.contactDecorCircle2} />
-              </View>
-
-              <View style={styles.contactHeaderTop}>
-                <View style={styles.contactTitleWrap}>
-                  <View style={styles.contactTitleIcon}>
-                    <Image
-                      source={require('../../asset/people.png')}
-                      style={{
-                        width: 20,
-                        height: 20,
-                        resizeMode: 'contain',
-                        tintColor: COLORS.textInverse,
-                      }}
-                    />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.contactTitle}>Contacts</Text>
-
-                    <Text style={styles.contactSubtitle}>
-                      {contacts.length}{' '}
-                      {contacts.length === 1 ? 'contact' : 'contacts'} available
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.contactCloseBtn}
-                  onPress={() => setShowContactModal(false)}
-                  activeOpacity={0.7}
-                >
-                  <Image
-                    source={require('../../asset/close.png')}
-                    style={{
-                      width: 18,
-                      height: 18,
-                      resizeMode: 'contain',
-                      tintColor: COLORS.textInverse,
-                    }}
-                  />
-                </TouchableOpacity>
-              </View>
+            <View style={styles.contactHeaderDecor}>
+              <View style={styles.contactDecorCircle1} />
+              <View style={styles.contactDecorCircle2} />
             </View>
 
-            {/* CONTACT LIST */}
-            <FlatList
-              data={contacts}
-              keyExtractor={item => String(item.id)}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}
-              style={styles.contactBody}
-              contentContainerStyle={[
-                styles.contactBodyContent,
-                {
-                  paddingBottom: 40,
-                },
-              ]}
-              ListHeaderComponent={
-                <TouchableOpacity
-                  style={styles.addContactCard}
-                  onPress={handleOpenAddContact}
-                  activeOpacity={0.75}
-                >
-                  <View style={styles.addContactCardIconWrap}>
-                    <Image
-                      source={require('../../asset/person_add.png')}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        resizeMode: 'contain',
-                        tintColor: COLORS.textInverse,
-                      }}
-                    />
-                  </View>
-
-                  <View style={styles.addContactCardTextWrap}>
-                    <Text style={styles.addContactCardTitle}>
-                      Add New Contact
-                    </Text>
-
-                    <Text style={styles.addContactCardSubtitle}>
-                      Tap to create a new contact
-                    </Text>
-                  </View>
-
+            <View style={styles.contactHeaderTop}>
+              <View style={styles.contactTitleWrap}>
+                <View style={styles.contactTitleIcon}>
                   <Image
-                    source={require('../../asset/chevron-forward.png')}
+                    source={require('../../asset/people.png')}
                     style={{
                       width: 20,
                       height: 20,
@@ -6580,134 +6538,217 @@ const UserChatPage = ({ navigation, route }) => {
                       tintColor: COLORS.textInverse,
                     }}
                   />
-                </TouchableOpacity>
-              }
-              renderItem={({ item: contact }) => (
-                // your contact item here
-                <View style={styles.contactItem}>
-                  <View style={styles.contactItemTop}>
-                    <Image
-                      source={require('../../asset/dummyuser.png')}
-                      style={styles.contactAvatar}
-                    />
+                </View>
 
-                    <View style={styles.contactInfo}>
-                      <Text style={styles.contactName}>{contact.name}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.contactTitle}>Contacts</Text>
 
-                      <Text style={styles.contactUserTag}>{contact.role}</Text>
-                    </View>
+                  <Text style={styles.contactSubtitle}>
+                    <Text style={styles.contactCountHighlight}>
+                      {contacts.length}{' '}
+                      {contacts.length === 1 ? 'contact ' : 'contacts '}
+                    </Text>{' '}
+                    available
+                  </Text>
+                </View>
+              </View>
 
-                    <View style={styles.contactItemActions}>
-                      <TouchableOpacity
-                        style={[
-                          styles.contactIconBtn,
-                          { backgroundColor: COLORS.primarySoft },
-                        ]}
-                        onPress={() => handleOpenEditContact(contact)}
-                        activeOpacity={0.7}
-                      >
-                        <Image
-                          source={require('../../asset/pencil.png')}
-                          style={{
-                            width: 16,
-                            height: 16,
-                            resizeMode: 'contain',
-                            tintColor: COLORS.primary,
-                          }}
-                        />
-                      </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.contactCloseBtn}
+                onPress={() => setShowContactModal(false)}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={require('../../asset/close.png')}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    resizeMode: 'contain',
+                    tintColor: COLORS.textInverse,
+                  }}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
 
-                      <TouchableOpacity
-                        style={[
-                          styles.contactIconBtn,
-                          { backgroundColor: COLORS.dangerSoft },
-                        ]}
-                        onPress={() => handleDeleteContact(contact.id)}
-                        activeOpacity={0.7}
-                      >
-                        <Image
-                          source={require('../../asset/trash.png')}
-                          style={{
-                            width: 16,
-                            height: 16,
-                            resizeMode: 'contain',
-                            tintColor: COLORS.danger,
-                          }}
-                        />
-                      </TouchableOpacity>
-                    </View>
+          {/* CONTACT LIST */}
+          <FlatList
+            data={contacts}
+            keyExtractor={item => String(item.id)}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled={true}
+            style={styles.contactBody}
+            contentContainerStyle={[
+              styles.contactBodyContent,
+              {
+                paddingBottom: 40,
+              },
+            ]}
+            ListHeaderComponent={
+              <TouchableOpacity
+                style={styles.addContactCard}
+                onPress={handleOpenAddContact}
+                activeOpacity={0.75}
+              >
+                <View style={styles.addContactCardIconWrap}>
+                  <Image
+                    source={require('../../asset/person_add.png')}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      resizeMode: 'contain',
+                      tintColor: COLORS.textInverse,
+                    }}
+                  />
+                </View>
+
+                <View style={styles.addContactCardTextWrap}>
+                  <Text style={styles.addContactCardTitle}>
+                    Add New Contact
+                  </Text>
+
+                  <Text style={styles.addContactCardSubtitle}>
+                    Tap to create a new contact
+                  </Text>
+                </View>
+
+                <Image
+                  source={require('../../asset/chevron-forward.png')}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    resizeMode: 'contain',
+                    tintColor: COLORS.textInverse,
+                  }}
+                />
+              </TouchableOpacity>
+            }
+            renderItem={({ item: contact }) => (
+              // your contact item here
+              <View style={styles.contactItem}>
+                <View style={styles.contactItemTop}>
+                  <Image
+                    source={require('../../asset/dummyuser.png')}
+                    style={styles.contactAvatar}
+                  />
+
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.contactName}>{contact.name}</Text>
+
+                    <Text style={styles.contactUserTag}>{contact.role}</Text>
                   </View>
 
-                  <View style={styles.contactDetailsWrap}>
-                    <View style={styles.contactDetailRow}>
+                  <View style={styles.contactItemActions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.contactIconBtn,
+                        { backgroundColor: COLORS.primarySoft },
+                      ]}
+                      onPress={() => handleOpenEditContact(contact)}
+                      activeOpacity={0.7}
+                    >
                       <Image
-                        source={require('../../asset/call.png')}
+                        source={require('../../asset/pencil.png')}
                         style={{
-                          width: 13,
-                          height: 13,
-                          resizeMode: 'contain',
-                          tintColor: COLORS.success,
-                        }}
-                      />
-
-                      <Text style={styles.contactDetailText} numberOfLines={1}>
-                        {contact.phone}
-                      </Text>
-                    </View>
-
-                    <View style={styles.contactDetailRow}>
-                      <Image
-                        source={require('../../asset/email.png')}
-                        style={{
-                          width: 13,
-                          height: 13,
-                          resizeMode: 'contain',
-                          tintColor: COLORS.warning,
-                        }}
-                      />
-
-                      <Text style={styles.contactDetailText} numberOfLines={1}>
-                        {contact.email}
-                      </Text>
-                    </View>
-
-                    <View style={styles.contactDetailRow}>
-                      <Image
-                        source={require('../../asset/whatsapps.png')}
-                        style={{
-                          width: 13,
-                          height: 13,
-                          resizeMode: 'contain',
-                          tintColor: COLORS.whatsapp,
-                        }}
-                      />
-
-                      <Text style={styles.contactDetailText} numberOfLines={1}>
-                        {contact.whatsapp}
-                      </Text>
-                    </View>
-
-                    <View style={styles.contactDetailRow}>
-                      <Image
-                        source={require('../../asset/location.png')}
-                        style={{
-                          width: 13,
-                          height: 13,
+                          width: 16,
+                          height: 16,
                           resizeMode: 'contain',
                           tintColor: COLORS.primary,
                         }}
                       />
+                    </TouchableOpacity>
 
-                      <Text style={styles.contactDetailText} numberOfLines={2}>
-                        {contact.address}
-                      </Text>
-                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.contactIconBtn,
+                        { backgroundColor: COLORS.dangerSoft },
+                      ]}
+                      onPress={() => handleDeleteContact(contact.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Image
+                        source={require('../../asset/trash.png')}
+                        style={{
+                          width: 16,
+                          height: 16,
+                          resizeMode: 'contain',
+                          tintColor: COLORS.danger,
+                        }}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
-              )}
-            />
-          </Animated.View>
-        </TouchableWithoutFeedback>
+
+                <View style={styles.contactDetailsWrap}>
+                  <View style={styles.contactDetailRow}>
+                    <Image
+                      source={require('../../asset/call.png')}
+                      style={{
+                        width: 13,
+                        height: 13,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.success,
+                      }}
+                    />
+
+                    <Text style={styles.contactDetailText} numberOfLines={1}>
+                      {contact.phone}
+                    </Text>
+                  </View>
+
+                  <View style={styles.contactDetailRow}>
+                    <Image
+                      source={require('../../asset/email.png')}
+                      style={{
+                        width: 13,
+                        height: 13,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.warning,
+                      }}
+                    />
+
+                    <Text style={styles.contactDetailText} numberOfLines={1}>
+                      {contact.email}
+                    </Text>
+                  </View>
+
+                  <View style={styles.contactDetailRow}>
+                    <Image
+                      source={require('../../asset/whatsapps.png')}
+                      style={{
+                        width: 13,
+                        height: 13,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.whatsapp,
+                      }}
+                    />
+
+                    <Text style={styles.contactDetailText} numberOfLines={1}>
+                      {contact.whatsapp}
+                    </Text>
+                  </View>
+
+                  <View style={styles.contactDetailRow}>
+                    <Image
+                      source={require('../../asset/location.png')}
+                      style={{
+                        width: 13,
+                        height: 13,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.primary,
+                      }}
+                    />
+
+                    <Text style={styles.contactDetailText} numberOfLines={2}>
+                      {contact.address}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          />
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -12103,6 +12144,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  composeRecipientHint: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: -4,
+    marginTop: 5,
+    marginBottom: 12,
+    marginLeft: 0,
+    lineHeight: 16,
+  },
+  contactCountHighlight: {
+    fontWeight: 'bold',
+    color: '#76577F',
+    backgroundColor: '#F0E8F5',
   },
 });
 
