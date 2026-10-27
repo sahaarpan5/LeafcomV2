@@ -34,6 +34,7 @@ import {
   makeTelnyxCall,
   endTelnyxCall,
 } from '../../services/telnyxCallService';
+import WebView from 'react-native-webview';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const BOTTOM_SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.92;
@@ -115,6 +116,7 @@ const UserChatPage = ({ navigation, route }) => {
   const [selectedCallContact, setSelectedCallContact] = useState(null);
   const [isCalling, setIsCalling] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState('');
 
   const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
 
@@ -123,6 +125,9 @@ const UserChatPage = ({ navigation, route }) => {
     useState(false);
 
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successModalMessage, setSuccessModalMessage] = useState('');
 
   const [isSendingMobileSms, setIsSendingMobileSms] = useState(false);
 
@@ -140,6 +145,15 @@ const UserChatPage = ({ navigation, route }) => {
   const selectedUserId = String(route?.params?.senderId || '3597');
   const whatsapp = route?.params?.whatsappNumber;
   const useremail = route?.params?.useremail;
+
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printHtml, setPrintHtml] = useState('');
+
+  const handlePrint = () => {
+    setPrintHtml(getChatPrintHTML());
+    setShowMessageModal(false);
+    setShowPrintModal(true);
+  };
 
   const [sender, setSender] = useState({
     id: selectedUserId,
@@ -1043,6 +1057,279 @@ const UserChatPage = ({ navigation, route }) => {
       setIsSavingSignature(false);
     }
   };
+
+  const getChatPrintHTML = () => {
+  const escapeHtml = value =>
+    String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  const messageRows = messages
+    .map((item, index) => {
+      const messageText =
+        item.message ??
+        item.description ??
+        item.text ??
+        item.body ??
+        '';
+
+      const senderName =
+        item.sender_name ??
+        item.senderName ??
+        item.sender_name_full ??
+        sender?.name ??
+        'User';
+
+      const messageDate =
+        item.dateTime ??
+        item.date_time ??
+        item.date ??
+        item.timestamp ??
+        '';
+
+      return `
+        <div class="message">
+          <div class="message-header">
+            <strong>${escapeHtml(senderName)}</strong>
+            <span class="message-number">#${index + 1}</span>
+          </div>
+
+          <div class="message-body">${escapeHtml(messageText)}</div>
+
+          ${
+            messageDate
+              ? `<div class="message-date">${escapeHtml(messageDate)}</div>`
+              : ''
+          }
+        </div>
+      `;
+    })
+    .join('');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0"
+        />
+
+        <title>Chat Conversation</title>
+
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            padding: 16px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #222222;
+            background: #f5f5f7;
+          }
+
+          .print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+          }
+
+          .toolbar-title {
+            font-size: 15px;
+            font-weight: 700;
+          }
+
+          .print-button {
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            color: #ffffff;
+            background: #76577f;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+          }
+
+          .print-button:active {
+            opacity: 0.8;
+          }
+
+          .chat-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 8px;
+          }
+
+          .chat-title {
+            margin: 0 0 6px;
+            color: #76577f;
+            font-size: 23px;
+            font-weight: 700;
+          }
+
+          .chat-subtitle {
+            margin-bottom: 18px;
+            color: #666666;
+            font-size: 13px;
+            overflow-wrap: anywhere;
+          }
+
+          .summary {
+            margin-bottom: 18px;
+            padding: 10px 12px;
+            background: #f5f0f7;
+            border-left: 4px solid #76577f;
+            border-radius: 4px;
+          }
+
+          .message {
+            margin-bottom: 12px;
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 7px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            overflow-wrap: anywhere;
+          }
+
+          .message-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eeeeee;
+          }
+
+          .message-header strong {
+            color: #76577f;
+            font-size: 13px;
+            overflow-wrap: anywhere;
+          }
+
+          .message-number {
+            flex-shrink: 0;
+            color: #888888;
+            font-size: 11px;
+          }
+
+          .message-body {
+            margin-top: 10px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+
+          .message-date {
+            margin-top: 10px;
+            color: #777777;
+            font-size: 11px;
+          }
+
+          .empty-state {
+            padding: 24px 10px;
+            color: #777777;
+            text-align: center;
+          }
+
+          @media print {
+            @page {
+              size: A4;
+              margin: 12mm;
+            }
+
+            body {
+              padding: 0;
+              background: #ffffff;
+              font-size: 11px;
+            }
+
+            .print-toolbar {
+              display: none !important;
+            }
+
+            .chat-container {
+              max-width: none;
+              padding: 0;
+              border-radius: 0;
+            }
+
+            .chat-title {
+              font-size: 20px;
+            }
+
+            .message {
+              margin-bottom: 8px;
+              padding: 9px;
+              border-color: #cccccc;
+            }
+
+            .message-body {
+              white-space: pre-wrap;
+              overflow-wrap: anywhere;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="print-toolbar">
+          <div class="toolbar-title">Chat Print Preview</div>
+
+          <button
+            type="button"
+            class="print-button"
+            onclick="window.print()"
+          >
+            Print Chat
+          </button>
+        </div>
+
+        <div class="chat-container">
+          <h1 class="chat-title">Conversation History</h1>
+
+          <div class="chat-subtitle">
+            ${escapeHtml(sender?.name || 'Chat')}
+            ${
+              sender?.type
+                ? ` &bull; ${escapeHtml(sender.type)}`
+                : ''
+            }
+          </div>
+
+          <div class="summary">
+            <strong>Total Messages:</strong> ${messages.length}
+          </div>
+
+          ${
+            messageRows ||
+            '<div class="empty-state">No messages available.</div>'
+          }
+        </div>
+      </body>
+    </html>
+  `;
+};
 
   const fetchSignatures = async () => {
     try {
@@ -2720,22 +3007,32 @@ const UserChatPage = ({ navigation, route }) => {
   const handleOpenAddContact = () => {
     setIsEditingContact(false);
     setEditingContactId(null);
+    const usCountry = countryOptions.find(
+      item => String(item.country_code || '').toUpperCase() === 'US',
+    );
+
     setContactForm({
       type: '',
+      typeId: null,
       firstName: '',
       middleName: '',
       lastName: '',
       address: '',
       city: '',
       state: '',
+      stateId: null,
+      stateCode: '',
       zip: '',
-      country: '',
-      phoneCountryCode: '+1',
+      country: usCountry?.name || 'United States',
+      countryId: usCountry?.id || null,
+      country_phone_code: usCountry?.country_phone_code || '+1',
       phoneNumber: '',
-      whatsappCountryCode: '+1',
+      whatsappCountryCode: usCountry?.country_phone_code || '+1',
       whatsappNumber: '',
-      country_phone_code: '+1',
+      country_code: usCountry?.country_code || 'US',
+      email: '',
     });
+
     setShowContactModal(false);
     setTimeout(() => setShowAddContactModal(true), 300);
   };
@@ -2860,12 +3157,13 @@ const UserChatPage = ({ navigation, route }) => {
 
         console.log('New Contact:', newContact);
 
-        Alert.alert(
-          'Success',
+        setSuccessModalMessage(
           isEditingContact
             ? 'Contact edit successful.'
             : 'Contact save successful.',
         );
+
+        setSuccessModalVisible(true);
 
         fetchContacts();
 
@@ -5991,6 +6289,7 @@ const UserChatPage = ({ navigation, route }) => {
   // ============================================================
   // RENDER: DROPDOWN PICKER MODAL
   // ============================================================
+
   const renderDropdownModal = ({
     visible,
     onClose,
@@ -5998,90 +6297,136 @@ const UserChatPage = ({ navigation, route }) => {
     options,
     selectedValue,
     onSelect,
-  }) => (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalBackdrop}>
-          <TouchableWithoutFeedback>
-            <View style={styles.dropdownCard}>
-              <View style={styles.dropdownHeader}>
-                <View style={styles.dropdownIconWrap}>
-                  <Image
-                    source={require('../../asset/list.png')} // Update the path as needed
-                    style={{
-                      width: 22,
-                      height: 22,
-                      resizeMode: 'contain',
-                      tintColor: COLORS.primary,
-                    }}
-                  />
-                </View>
-                <Text style={styles.dropdownTitle}>{title}</Text>
-                <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-                  <Image
-                    source={require('../../asset/close.png')} // Update the path as needed
-                    style={{
-                      width: 18,
-                      height: 18,
-                      resizeMode: 'contain',
-                      tintColor: COLORS.textSecondary,
-                    }}
-                  />
-                </TouchableOpacity>
-              </View>
-              <ScrollView
-                style={styles.dropdownBody}
-                showsVerticalScrollIndicator={false}
-              >
-                {options.map(opt => {
-                  const isActive = selectedValue === opt;
-                  return (
-                    <TouchableOpacity
-                      key={opt}
-                      style={[
-                        styles.dropdownOption,
-                        isActive && styles.dropdownOptionActive,
-                      ]}
-                      onPress={() => {
-                        onSelect(opt);
-                        onClose();
+  }) => {
+    const filteredOptions = (options || []).filter(option =>
+      String(option)
+        .toLowerCase()
+        .includes(dropdownSearch.trim().toLowerCase()),
+    );
+
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+        onShow={() => setDropdownSearch('')}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={styles.dropdownCard}>
+                {/* Header */}
+                <View style={styles.dropdownHeader}>
+                  <View style={styles.dropdownIconWrap}>
+                    <Image
+                      source={require('../../asset/list.png')}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.primary,
                       }}
+                    />
+                  </View>
+
+                  <Text style={styles.dropdownTitle}>{title}</Text>
+
+                  <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
+                    <Image
+                      source={require('../../asset/close.png')}
+                      style={{
+                        width: 18,
+                        height: 18,
+                        resizeMode: 'contain',
+                        tintColor: COLORS.textSecondary,
+                      }}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Search box */}
+                <View style={styles.dropdownSearchContainer}>
+                  <TextInput
+                    style={styles.dropdownSearchInput}
+                    placeholder={`Search ${title.replace(/^Select /i, '')}...`}
+                    placeholderTextColor={COLORS.textTertiary}
+                    value={dropdownSearch}
+                    onChangeText={setDropdownSearch}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+
+                  {dropdownSearch.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => setDropdownSearch('')}
                       activeOpacity={0.7}
                     >
-                      <Text
-                        style={[
-                          styles.dropdownOptionText,
-                          isActive && styles.dropdownOptionTextActive,
-                        ]}
-                      >
-                        {opt}
-                      </Text>
-                      {isActive && (
-                        <Image
-                          source={require('../../asset/checkmark-circle.png')} // Update the path as needed
-                          style={{
-                            width: 20,
-                            height: 20,
-                            resizeMode: 'contain',
-                            tintColor: COLORS.primary,
-                          }}
-                        />
-                      )}
+                      <Text style={styles.dropdownClearText}>Clear</Text>
                     </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
-  );
+                  )}
+                </View>
+
+                {/* Filtered options */}
+                <ScrollView
+                  style={styles.dropdownBody}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {filteredOptions.length > 0 ? (
+                    filteredOptions.map((opt, index) => {
+                      const isActive = selectedValue === opt;
+
+                      return (
+                        <TouchableOpacity
+                          key={`${opt}-${index}`}
+                          style={[
+                            styles.dropdownOption,
+                            isActive && styles.dropdownOptionActive,
+                          ]}
+                          onPress={() => {
+                            onSelect(opt);
+                            setDropdownSearch('');
+                            onClose();
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownOptionText,
+                              isActive && styles.dropdownOptionTextActive,
+                            ]}
+                          >
+                            {opt}
+                          </Text>
+
+                          {isActive && (
+                            <Image
+                              source={require('../../asset/checkmark-circle.png')}
+                              style={{
+                                width: 20,
+                                height: 20,
+                                resizeMode: 'contain',
+                                tintColor: COLORS.primary,
+                              }}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })
+                  ) : (
+                    <Text style={styles.dropdownNoResults}>
+                      No results found
+                    </Text>
+                  )}
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
 
   // ============================================================
   // RENDER: ADD / EDIT CONTACT MODAL
@@ -6156,9 +6501,7 @@ const UserChatPage = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
             <View style={styles.addContactHeaderChips}>
-
-
-               <View style={styles.addContactHeaderChip}>
+              <View style={styles.addContactHeaderChip}>
                 <Image
                   source={require('../../asset/pricetag.png')} // Update the path as needed
                   style={{
@@ -7082,7 +7425,7 @@ const UserChatPage = ({ navigation, route }) => {
               {/* Action Buttons */}
               <View style={styles.actionsRow}>
                 {messageTypes
-                  .slice(0, 4)
+
                   .filter(type => {
                     if (type.id === 'inapp') return showChatBubble === true;
                     if (type.id === 'whatsapp')
@@ -7777,68 +8120,117 @@ const UserChatPage = ({ navigation, route }) => {
   // ============================================================
   // RENDER: MESSAGE TYPE SELECTOR
   // ============================================================
+  // const renderMessageTypeSelector = () => (
+  //   <View style={styles.typeSelectorWrap}>
+  //     <ScrollView
+  //       horizontal
+  //       showsHorizontalScrollIndicator={false}
+  //       contentContainerStyle={styles.typeSelectorContent}
+  //     >
+  //       {messageTypes
+  //         .filter(type => {
+  //           if (type.id === 'inapp') return showChatBubble === true;
+  //           if (type.id === 'whatsapp') return showWhatsAppIcon === true;
+  //           if (type.id === 'email') return showEmailIcon === true;
+  //           if (type.id === 'sms') return showMessageIcon === true;
+  //           if (type.id === 'call') return showPhoneIcon === true;
+
+  //           // SMS and Call remain unchanged
+  //           return true;
+  //         })
+  //         .map(type => {
+  //           const isActive = selectedMessageType === type.id;
+  //           return (
+  //             <TouchableOpacity
+  //               key={type.id}
+  //               style={[
+  //                 styles.typeChip,
+  //                 isActive && {
+  //                   backgroundColor: type.color,
+  //                   borderColor: type.color,
+  //                 },
+  //               ]}
+  //               onPress={() => {
+  //                 setSelectedMessageType(type.id);
+  //                 if (type.id === 'email') handleOpenEmailCompose();
+  //                 else if (type.id === 'whatsapp') handleOpenWhatsappCompose();
+  //                 else if (type.id === 'sms') handleOpenSmsCompose();
+  //                 else if (type.id === 'call') {
+  //                   handleOpenCallModal();
+  //                 }
+  //               }}
+  //               activeOpacity={0.7}
+  //             >
+  //               <Image
+  //                 source={type.icon}
+  //                 style={{
+  //                   width: 14,
+  //                   height: 14,
+  //                   resizeMode: 'contain',
+  //                   tintColor: isActive ? COLORS.textInverse : type.color,
+  //                 }}
+  //               />
+  //               <Text
+  //                 style={[
+  //                   styles.typeChipText,
+  //                   isActive && { color: COLORS.textInverse },
+  //                 ]}
+  //               >
+  //                 {type.label}
+  //               </Text>
+  //             </TouchableOpacity>
+  //           );
+  //         })}
+  //     </ScrollView>
+  //   </View>
+  // );
+
   const renderMessageTypeSelector = () => (
     <View style={styles.typeSelectorWrap}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.typeSelectorContent}
-      >
-        {messageTypes
-          .filter(type => {
-            if (type.id === 'inapp') return showChatBubble === true;
-            if (type.id === 'whatsapp') return showWhatsAppIcon === true;
-            if (type.id === 'email') return showEmailIcon === true;
-            if (type.id === 'sms') return showMessageIcon === true;
-            if (type.id === 'call') return showPhoneIcon === true;
+      <View style={styles.typeSelectorContent}>
+        {messageTypes.map(type => {
+          const isActive = selectedMessageType === type.id;
 
-            // SMS and Call remain unchanged
-            return true;
-          })
-          .map(type => {
-            const isActive = selectedMessageType === type.id;
-            return (
-              <TouchableOpacity
-                key={type.id}
-                style={[
-                  styles.typeChip,
-                  isActive && {
-                    backgroundColor: type.color,
-                    borderColor: type.color,
-                  },
-                ]}
-                onPress={() => {
-                  setSelectedMessageType(type.id);
-                  if (type.id === 'email') handleOpenEmailCompose();
-                  else if (type.id === 'whatsapp') handleOpenWhatsappCompose();
-                  else if (type.id === 'sms') handleOpenSmsCompose();
-                  else if (type.id === 'call') {
-                    handleOpenCallModal();
-                  }
+          return (
+            <TouchableOpacity
+              key={type.id}
+              style={[
+                styles.typeChip,
+                isActive && {
+                  backgroundColor: type.color,
+                  borderColor: type.color,
+                },
+              ]}
+              onPress={() => {
+                setSelectedMessageType(type.id);
+
+                if (type.id === 'email') {
+                  handleOpenEmailCompose();
+                } else if (type.id === 'whatsapp') {
+                  handleOpenWhatsappCompose();
+                } else if (type.id === 'sms') {
+                  handleOpenSmsCompose();
+                } else if (type.id === 'call') {
+                  handleOpenCallModal();
+                } else {
+                  inputRef.current?.focus();
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={type.icon}
+                style={{
+                  width: 18,
+                  height: 18,
+                  resizeMode: 'contain',
+                  tintColor: isActive ? COLORS.textInverse : type.color,
                 }}
-                activeOpacity={0.7}
-              >
-                <Image
-                  source={type.icon}
-                  style={{
-                    width: 14,
-                    height: 14,
-                    resizeMode: 'contain',
-                    tintColor: isActive ? COLORS.textInverse : type.color,
-                  }}
-                />
-                <Text
-                  style={[
-                    styles.typeChipText,
-                    isActive && { color: COLORS.textInverse },
-                  ]}
-                >
-                  {type.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-      </ScrollView>
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 
@@ -8080,7 +8472,7 @@ const UserChatPage = ({ navigation, route }) => {
                 </Text>
               </View>
 
-              <View style={styles.messageSheetSection}>
+              {/* <View style={styles.messageSheetSection}>
                 <Text style={styles.messageSheetSectionTitle}>
                   QUICK ACTIONS
                 </Text>
@@ -8144,7 +8536,7 @@ const UserChatPage = ({ navigation, route }) => {
 
                   <TouchableOpacity
                     style={styles.messageSheetActionCard}
-                    onPress={() => setShowMessageModal(false)}
+                    onPress={handlePrint}
                     activeOpacity={0.7}
                   >
                     <View
@@ -8169,7 +8561,7 @@ const UserChatPage = ({ navigation, route }) => {
                     </Text>
                   </TouchableOpacity>
                 </View>
-              </View>
+              </View> */}
             </Animated.View>
           </TouchableWithoutFeedback>
         </View>
@@ -8231,48 +8623,6 @@ const UserChatPage = ({ navigation, route }) => {
               </TouchableOpacity>
             </Animated.View>
           )}
-
-          {/* <View style={styles.messagesContainer}>
-            {isLoadingMessages ? (
-              <View style={styles.messageLoaderContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-
-                <Text style={styles.messageLoaderText}>
-                  Loading messages...
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                ref={flatListRef}
-                data={getFilteredMessages()}
-                renderItem={renderMessageBubble}
-                keyExtractor={item => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.messagesList}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-                onContentSizeChange={() => {
-                  // Only scroll to bottom while typing with keyboard open
-                  // and never when a reaction is being focused.
-                  if (isKeyboardVisible && !reactionFocusIdRef.current) {
-                    flatListRef.current?.scrollToEnd({
-                      animated: false,
-                    });
-                  }
-                }}
-                onScrollToIndexFailed={info => {
-                  // Retry after FlatList finishes rendering the item
-                  setTimeout(() => {
-                    flatListRef.current?.scrollToIndex({
-                      index: info.index,
-                      animated: true,
-                      viewPosition: 0.5,
-                    });
-                  }, 300);
-                }}
-              />
-            )}
-          </View> */}
 
           <View style={styles.messagesContainer}>
             <FlatList
@@ -8383,6 +8733,36 @@ const UserChatPage = ({ navigation, route }) => {
       {showTranslateModal && renderTranslateModal()}
       {showSignatureModal && renderSignatureModal()}
       {showAddSignatureModal && renderAddSignatureModal()}
+
+      <Modal
+        visible={showPrintModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowPrintModal(false)}
+      >
+        <SafeAreaView style={styles.printModalContainer}>
+          {/* Header */}
+          <View style={styles.printModalHeader}>
+            <Text style={styles.printModalTitle}>Print Chat</Text>
+
+            <TouchableOpacity
+              onPress={() => setShowPrintModal(false)}
+              style={styles.printCloseButton}
+            >
+              <Text style={styles.printCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Full chat HTML preview */}
+          <WebView
+            source={{ html: printHtml }}
+            originWhitelist={['*']}
+            style={styles.printWebView}
+            javaScriptEnabled
+            scalesPageToFit
+          />
+        </SafeAreaView>
+      </Modal>
 
       <Modal
         visible={showCallModal}
@@ -8533,6 +8913,40 @@ const UserChatPage = ({ navigation, route }) => {
                 <Text style={styles.hangupButtonText}>Hang Up</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={successModalVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setSuccessModalVisible(false)}
+      >
+        <View style={styles.successModalOverlay}>
+          <View style={styles.successModalCard}>
+            <View style={styles.successIconCircle}>
+              <Text style={styles.successIcon}>✓</Text>
+            </View>
+
+            <Text style={styles.successModalTitle}>
+              {successModalMessage === 'Contact edit successful.'
+                ? 'Contact Updated!'
+                : 'Contact Saved!'}
+            </Text>
+
+            <Text style={styles.successModalDescription}>
+              {successModalMessage}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.successDoneButton}
+              activeOpacity={0.8}
+              onPress={() => setSuccessModalVisible(false)}
+            >
+              <Text style={styles.successDoneButtonText}>Done</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -9131,22 +9545,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgPrimary,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,
+    width: '100%',
   },
   typeSelectorContent: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    gap: SPACING.sm,
-  },
-  typeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 7,
-    borderRadius: RADIUS.full,
-    borderWidth: 1.5,
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 6,
+  },
+  typeChip: {
+    flex: 1,
+    minWidth: 0,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.bgPrimary,
-    gap: 5,
   },
   typeChipText: {
     fontSize: 12,
@@ -12158,6 +12576,156 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#76577F',
     backgroundColor: '#F0E8F5',
+  },
+  dropdownSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+
+    marginTop: 12,
+    marginBottom: 8,
+    backgroundColor: COLORS.bgSecondary,
+  },
+
+  dropdownSearchInput: {
+    flex: 1,
+    height: 44,
+    paddingVertical: 8,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+  },
+
+  dropdownClearText: {
+    color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    paddingLeft: 8,
+    fontFamily: 'sans-serif',
+  },
+
+  dropdownNoResults: {
+    textAlign: 'center',
+    color: COLORS.textSecondary,
+    paddingVertical: 24,
+    fontSize: 14,
+  },
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(20, 15, 30, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+
+  successModalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingHorizontal: 24,
+    paddingTop: 30,
+    paddingBottom: 24,
+    alignItems: 'center',
+    elevation: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+  },
+
+  successIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#E6F7EE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#C4EED5',
+  },
+
+  successIcon: {
+    fontSize: 38,
+    fontWeight: '700',
+    color: '#20A464',
+    lineHeight: 44,
+    fontFamily: 'sans-serif',
+  },
+
+  successModalTitle: {
+    fontSize: 21,
+    fontWeight: '700',
+    color: '#252033',
+    textAlign: 'center',
+    marginBottom: 8,
+    fontFamily: 'sans-serif',
+  },
+
+  successModalDescription: {
+    fontSize: 14,
+    color: '#777184',
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: 24,
+    fontFamily: 'sans-serif',
+  },
+
+  successDoneButton: {
+    width: '100%',
+    height: 48,
+    backgroundColor: '#76577F',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontFamily: 'sans-serif',
+  },
+
+  successDoneButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'sans-serif',
+  },
+
+  printModalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+
+  printModalHeader: {
+    height: 55,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+
+  printModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#222222',
+  },
+
+  printCloseButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+
+  printCloseText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#76577F',
+  },
+
+  printWebView: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
 });
 

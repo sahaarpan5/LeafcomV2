@@ -24,6 +24,7 @@ import Loader from '../../util/Loader';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../../config/firebaseConfig';
 import { WebView } from 'react-native-webview';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   makeTelnyxCall,
@@ -3205,7 +3206,7 @@ const DashbaordScreen = ({ navigation }) => {
         whatsapp_number: contact.whatsapp_number || enteredNumber,
         whatsappNumber: contact.whatsapp_number || enteredNumber,
         phone: enteredNumber,
-        userTypeDetails:  contact.user_type_details || 'Dialer Contact',
+        userTypeDetails: contact.user_type_details || 'Dialer Contact',
         commType: 'SMS',
         showChatBubble: item.user_type_details !== 'Dialer Contact',
         showEmailIcon: isValidEmail(item.email),
@@ -3316,14 +3317,26 @@ const DashbaordScreen = ({ navigation }) => {
   }, [pendingModal]);
 
   const filteredUsers = getFilteredUsers();
+  const insets = useSafeAreaInsets();
 
   // ============================================================
   // RENDER: TOP BAR - TALLER HEIGHT
   // ============================================================
   const renderTopBar = () => {
     return (
-      <View style={styles.dashboardHeader}>
-        <StatusBar backgroundColor="#6C63FF" barStyle="light-content" />
+      <View
+        style={[
+          styles.dashboardHeader,
+          {
+            paddingTop: insets.top,
+          },
+        ]}
+      >
+        <StatusBar
+          backgroundColor="transparent"
+          barStyle="light-content"
+          translucent={true}
+        />
 
         {/* Colorful Background Overlays */}
         <View style={styles.headerBgContainer}>
@@ -3875,7 +3888,7 @@ const DashbaordScreen = ({ navigation }) => {
                   userName: item.name || item.user_name,
                   userImage: item.profile_picture,
                   userType: item.user_type,
-                  userTypeDetails:item.user_type_details,
+                  userTypeDetails: item.user_type_details,
                   commType: 'inApp',
                   showChatBubble: item.user_type_details !== 'Dialer Contact',
                   showEmailIcon: isValidEmail(item.email),
@@ -3958,7 +3971,7 @@ const DashbaordScreen = ({ navigation }) => {
                   userName: item.name || item.user_name,
                   userImage: item.profile_picture,
                   userType: item.user_type,
-                  userTypeDetails:item.user_type_details,
+                  userTypeDetails: item.user_type_details,
                   commType: 'WP',
                   showChatBubble: item.user_type_details !== 'Dialer Contact',
                   showEmailIcon: isValidEmail(item.email),
@@ -8304,7 +8317,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
 
-    borderTopRightRadius: 55,
+    borderTopRightRadius: 35,
     borderBottomRightRadius: 70,
 
     marginRight: 10,
@@ -8317,7 +8330,7 @@ const styles = StyleSheet.create({
 
   topBarLogo: {
     width: 120,
-    height: 50,
+    height: 100,
     marginTop: 40,
   },
   topBarTitle: {
@@ -11148,6 +11161,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+    fontFamily: 'sans-serif',
   },
 
   tutorialCloseButton: {

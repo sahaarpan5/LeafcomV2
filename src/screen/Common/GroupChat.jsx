@@ -138,9 +138,33 @@ const GroupChat = ({ navigation, route }) => {
   const selectedUserId = String(route?.params?.senderId || '3597');
   const selectedGroupname = String(route?.params?.userName || '3597');
 
+  const groupMembers = Array.isArray(route?.params?.users)
+    ? route.params.users
+    : [];
+
+  const groupMemberNames = groupMembers
+    .map(member =>
+      typeof member === 'string'
+        ? member
+        : member?.user_name ||
+          member?.name ||
+          member?.full_name ||
+          member?.sender_name ||
+          member?.user?.name ||
+          '',
+    )
+    .filter(Boolean);
+
+  const groupMemberCount = groupMembers.length;
+
+  const groupMemberSubtitle =
+    groupMemberNames.length > 0
+      ? groupMemberNames.join(', ')
+      : `${groupMemberCount} members`;
+
   const [sender, setSender] = useState({
     id: selectedUserId,
-    name: route?.params?.userName ,
+    name: route?.params?.userName,
     image: {
       uri:
         route?.params?.userImage ||
@@ -2323,12 +2347,11 @@ const GroupChat = ({ navigation, route }) => {
       }
 
       const payload = {
-        
         message: inputMessage.trim(),
         type: 'inapp',
-        is_group_chat:1,
-        group_name:selectedGroupname,
-        chat_group_id:Number(selectedUserId)
+        is_group_chat: 1,
+        group_name: selectedGroupname,
+        chat_group_id: Number(selectedUserId),
       };
 
       console.log('SEND MESSAGE PAYLOAD:', payload);
@@ -6663,20 +6686,38 @@ const GroupChat = ({ navigation, route }) => {
           </View>
 
           <View style={styles.senderTextWrap}>
+            {/* Group title and highlighted member count */}
             <View style={styles.nameRow}>
-              <View style={styles.senderRow}>
-                <Text style={styles.senderName} numberOfLines={1}>
-                  Team Member Chat
+              <Text
+                style={styles.senderName}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                Team Member Chat
+              </Text>
+
+              <View style={styles.groupMemberCountBadge}>
+                <Text style={styles.groupMemberCountText}>
+                   {groupMemberCount} {groupMemberCount === 1 ? 'Member' : 'Members'}
                 </Text>
               </View>
-
-             
-
-              
             </View>
 
-          
-           
+            {/* Member names displayed as chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.memberChipsScroll}
+              contentContainerStyle={styles.memberChipsContainer}
+            >
+              {groupMemberNames.map((memberName, index) => (
+                <View key={`${memberName}-${index}`} style={styles.memberChip}>
+                  <Text style={styles.memberChipText} numberOfLines={1}>
+                    {memberName}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </View>
@@ -7882,7 +7923,6 @@ const GroupChat = ({ navigation, route }) => {
             )}
           </View>
 
-        
           {renderInputArea()}
         </View>
       </KeyboardAvoidingView>
@@ -11668,6 +11708,7 @@ const styles = StyleSheet.create({
     color: '#222222',
     fontSize: 13,
     fontWeight: '600',
+     fontFamily: 'sans-serif',
   },
 
   hangupButton: {
@@ -11684,7 +11725,68 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+     fontFamily: 'sans-serif',
   },
+  groupMemberCountText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#E0E7FF',
+    flexShrink: 0,
+     fontFamily: 'sans-serif',
+  },
+
+  groupMemberNamesText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 2,
+    paddingRight: 4,
+     fontFamily: 'sans-serif',
+  },
+
+  groupMemberCountBadge: {
+  backgroundColor: '#E9D5FF',
+  paddingHorizontal: 8,
+  paddingVertical: 3,
+  borderRadius: 12,
+  marginLeft: 6,
+  flexShrink: 0,
+},
+
+groupMemberCountText: {
+  fontSize: 11,
+  fontWeight: '800',
+  color: '#6B21A8',
+   fontFamily: 'sans-serif',
+},
+
+memberChipsScroll: {
+  marginTop: 5,
+  maxHeight: 28,
+},
+
+memberChipsContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  paddingRight: 8,
+},
+
+memberChip: {
+  backgroundColor: 'rgba(255, 255, 255, 0.16)',
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.3)',
+  borderRadius: 14,
+  paddingHorizontal: 9,
+  paddingVertical: 4,
+  maxWidth: 130,
+},
+
+memberChipText: {
+  color: '#FFFFFF',
+  fontSize: 11,
+  fontWeight: '600',
+   fontFamily: 'sans-serif',
+},
 });
 
 export default GroupChat;
