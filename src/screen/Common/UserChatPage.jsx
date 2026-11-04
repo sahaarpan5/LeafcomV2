@@ -620,10 +620,10 @@ const UserChatPage = ({ navigation, route }) => {
                   phone: '',
                   whatsapp: '',
 
-                  type: route?.params?.userType || prev.type || '',
+                  type: route?.params?.userType  || '',
                   userTypeDetails:
                     route?.params?.userTypeDetails ||
-                    prev.userTypeDetails ||
+                   
                     '',
                 });
               }
@@ -821,18 +821,18 @@ const UserChatPage = ({ navigation, route }) => {
       return;
     }
 
-    // Wait until contacts are fetched
-    if (!contacts || contacts.length === 0) {
-      return;
-    }
+    //  Wait until contacts are fetched
+    // if (!contacts || contacts.length === 0) {
+    //   return;
+    // }
 
     // Don't open multiple times
     if (whatsappAutoOpenedRef.current) {
       return;
     }
 
-    // Find a contact having WhatsApp number
-    const whatsappContact = contacts.find(contact => contact?.whatsapp?.trim());
+    // // Find a contact having WhatsApp number
+    const whatsappContact =  whatsapp;
 
     if (!whatsappContact) {
       console.log('No WhatsApp number found for this user.');
@@ -843,7 +843,7 @@ const UserChatPage = ({ navigation, route }) => {
     whatsappAutoOpenedRef.current = true;
 
     // Set WhatsApp number
-    setSelectedWhatsappNumber(whatsappContact.whatsapp);
+    setSelectedWhatsappNumber(whatsappContact);
 
     // Select first template
     if (whatsappTemplates.length > 0) {
@@ -864,7 +864,7 @@ const UserChatPage = ({ navigation, route }) => {
       'WhatsApp Compose Modal opened automatically:',
       whatsappContact.whatsapp,
     );
-  }, [contacts, whatsappTemplates, route?.params?.commType]);
+  }, [ contacts,whatsappTemplates, route?.params?.commType]);
 
   useEffect(() => {
     const commType = route?.params?.commType;
@@ -875,9 +875,9 @@ const UserChatPage = ({ navigation, route }) => {
     }
 
     // Wait until contacts are fetched
-    if (!contacts || contacts.length === 0) {
-      return;
-    }
+    // if (!contacts || contacts.length === 0) {
+    //   return;
+    // }
 
     // Prevent opening multiple times
     if (smsAutoOpenedRef.current) {
@@ -885,9 +885,11 @@ const UserChatPage = ({ navigation, route }) => {
     }
 
     // Find first contact having a phone number
-    const smsContact = contacts.find(contact => contact?.phoneNumber?.trim());
+    // const smsContact = contacts.find(contact => contact?.phoneNumber?.trim());
 
-    if (!smsContact) {
+    const smsNumber =  sender.phone || '';
+
+    if (!smsNumber) {
       console.log('No mobile number found for this user.');
       return;
     }
@@ -897,9 +899,9 @@ const UserChatPage = ({ navigation, route }) => {
 
     // Set selected SMS sender
     setSelectedSmsSender({
-      id: String(smsContact.id || ''),
-      label: smsContact.role || 'Contact',
-      number: smsContact.phoneNumber,
+      id: String(sender.id || ''),
+      label: sender.role || 'Contact',
+      number:smsNumber,
     });
 
     // Clear previous message
@@ -910,7 +912,7 @@ const UserChatPage = ({ navigation, route }) => {
 
     console.log(
       'SMS Compose Modal opened automatically:',
-      smsContact.phoneNumber,
+      smsNumber,
     );
   }, [contacts, route?.params?.commType]);
 

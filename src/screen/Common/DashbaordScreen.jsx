@@ -55,6 +55,8 @@ const DashbaordScreen = ({ navigation }) => {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [clearingMessages, setClearingMessages] = useState(false);
 
+  const [contactModalTab, setContactModalTab] = useState('contacts');
+
   // Tab and navigation states
   const [activityTimeFilter, setActivityTimeFilter] = useState('all');
   const activityTimeFilters = [
@@ -1897,7 +1899,7 @@ const DashbaordScreen = ({ navigation }) => {
     setTotalUnreadCount(0);
 
     // Call API with new sorting
-    fetchUsers(1, false, selectedType, selectedSubType, sortBy);
+    fetchUsers(1, false, selectedType, selectedSubType, sortBy,false);
   };
 
   // const fetchUserTypes = async () => {
@@ -2280,6 +2282,7 @@ const DashbaordScreen = ({ navigation }) => {
     type = selectedType,
     subType = selectedSubType,
     sortBy = getSortByValue(selectedTimeFilter),
+    isShowAll = false,
   ) => {
     try {
       if (loadMore) {
@@ -2294,7 +2297,7 @@ const DashbaordScreen = ({ navigation }) => {
         type: type || 'All',
         sub_type: subType || '',
         search_text: '',
-        is_show_all: false,
+        is_show_all: isShowAll ? 1 : false,
         per_page: 10,
         page: pageNumber,
         sort_by: sortBy,
@@ -2409,7 +2412,7 @@ const DashbaordScreen = ({ navigation }) => {
     fetchUsers(nextPage, true);
   };
 
-  const handleSubTypePress = (parentType, subType) => {
+  const handleSubTypePress = (parentType, subType, isShowAll = false) => {
     setSelectedType(parentType);
     setSelectedSubType(subType);
 
@@ -2423,7 +2426,7 @@ const DashbaordScreen = ({ navigation }) => {
 
     setShowFilterModal(false);
 
-    fetchUsers(1, false, parentType, subType);
+    fetchUsers(1, false, parentType, subType, undefined, isShowAll);
   };
 
   const handleSaveSignature = async () => {
@@ -3067,7 +3070,7 @@ const DashbaordScreen = ({ navigation }) => {
     }
   };
 
-  const handleDialerWhatsApp = async () => {
+  const handleDialerWhatsApp = async (item = null) => {
     if (!phoneNumber?.trim()) {
       Alert.alert('Validation', 'Please enter a phone number.');
       return;
@@ -3122,22 +3125,28 @@ const DashbaordScreen = ({ navigation }) => {
       navigation.navigate('UserChatPage', {
         senderId: contact.sender_id,
         sender_id: contact.sender_id,
+        userName: item?.user_name || contact.user_name || enteredNumber,
+        userImage:
+          item?.sender_profile_picture || contact.sender_profile_picture || '',
+        userType: item?.user_type || contact.user_type || 'Users',
+        userTypeDetails:
+          item?.user_type_details ||
+          contact.user_type_details ||
+          'Dialer Contact',
 
-        userName: contact.user_name || enteredNumber,
-        userImage: contact.sender_profile_picture || '',
-        userType: contact.user_type || 'Users',
+        whatsapp_number:
+          item?.whatsapp_number || contact.whatsapp_number || enteredNumber,
+        whatsappNumber:
+          item?.whatsapp_number || contact.whatsapp_number || enteredNumber,
 
-        whatsapp_number: whatsappNumber,
-        whatsappNumber: whatsappNumber,
         phone: enteredNumber,
-
-        userTypeDetails: contact.user_type_details || 'Dialer Contact',
-
         commType: 'WP',
-        showChatBubble: item.user_type_details !== 'Dialer Contact',
-        showEmailIcon: isValidEmail(item.email),
-        showWhatsAppIcon:
-          !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+
+        showChatBubble: item?.user_type_details !== 'Dialer Contact',
+        showEmailIcon: isValidEmail(item?.email),
+        showWhatsAppIcon: !!(
+          item?.whatsapp_number && item.whatsapp_number.trim() !== ''
+        ),
         showPhoneIcon: true,
         showMessageIcon: true,
         useremail: profileInfo.email,
@@ -3159,7 +3168,7 @@ const DashbaordScreen = ({ navigation }) => {
     }
   };
 
-  const handleDialerMessage = async () => {
+  const handleDialerMessage = async (item = null) => {
     const enteredNumber = `${selectedCountry || ''}${phoneNumber}`.replace(
       /[\s()-]/g,
       '',
@@ -3200,18 +3209,18 @@ const DashbaordScreen = ({ navigation }) => {
       navigation.navigate('UserChatPage', {
         senderId: contact.sender_id,
         sender_id: contact.sender_id,
-        userName: contact.user_name || enteredNumber,
-        userImage: contact.sender_profile_picture || '',
-        userType: contact.user_type || 'Users',
-        whatsapp_number: contact.whatsapp_number || enteredNumber,
-        whatsappNumber: contact.whatsapp_number || enteredNumber,
+        userName: item?.user_name || enteredNumber,
+        userImage: item?.sender_profile_picture || '',
+        userType: item?.user_type || 'Users',
+        whatsapp_number: item?.whatsapp_number || enteredNumber,
+        whatsappNumber: item?.whatsapp_number || enteredNumber,
         phone: enteredNumber,
-        userTypeDetails: contact.user_type_details || 'Dialer Contact',
-        commType: 'SMS',
-        showChatBubble: item.user_type_details !== 'Dialer Contact',
-        showEmailIcon: isValidEmail(item.email),
+        userTypeDetails: item?.user_type_details || 'Dialer Contact',
+        commType: 'sms',
+        showChatBubble: item?.user_type_details !== 'Dialer Contact',
+        showEmailIcon: isValidEmail(item?.email),
         showWhatsAppIcon:
-          !!item.whatsapp_number && item.whatsapp_number.trim() !== '',
+          !!item?.whatsapp_number && item?.whatsapp_number.trim() !== '',
         showPhoneIcon: true,
         showMessageIcon: true,
         useremail: profileInfo.email,
@@ -3268,9 +3277,12 @@ const DashbaordScreen = ({ navigation }) => {
           setShowContactFilter(true);
           break;
         case 'whatsapp':
+          setContactModalTab('contacts');
           setShowWhatsAppModal(true);
+
           break;
         case 'message':
+          setContactModalTab('contacts');
           setShowMessageModal(true);
           break;
         case 'dashboard':
@@ -3590,9 +3602,11 @@ const DashbaordScreen = ({ navigation }) => {
               </Text>
 
               {!!item.sender_profile_type_details && (
-                <Text style={styles.senderProfileDetails}>
-                  [{item.sender_profile_type_details}]
-                </Text>
+                <View style={styles.senderProfileChip}>
+                  <Text style={styles.senderProfileChipText}>
+                    {item.sender_profile_type_details}
+                  </Text>
+                </View>
               )}
             </View>
             <Text style={styles.messageTime}>{getTimeAgo(item.dateTime)}</Text>
@@ -4113,41 +4127,80 @@ const DashbaordScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.whatsappContainer}>
-              <View style={styles.whatsappSearchContainer}>
-                <Image
-                  source={require('../../asset/search.png')}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    resizeMode: 'contain',
-                    tintColor: '#999',
-                  }}
-                />
-                <TextInput
-                  style={styles.whatsappSearchInput}
-                  placeholder="Search contacts..."
-                  placeholderTextColor="#999"
-                  value={contactSearch}
-                  onChangeText={setContactSearch}
-                />
-                <TouchableOpacity
-                  style={styles.filterIconBtn}
-                  onPress={() => openModal('contactFilter', type)}
+            <View style={styles.dialTabs}>
+              <TouchableOpacity
+                style={[
+                  styles.dialTab,
+                  contactModalTab === 'number' && styles.dialTabActive,
+                ]}
+                onPress={() => {
+                  setContactModalTab('number');
+                  setPhoneNumber('');
+                }}
+              >
+                <Text
+                  style={[
+                    styles.dialTabText,
+                    contactModalTab === 'number' && styles.dialTabTextActive,
+                  ]}
                 >
+                  Phone Number
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.dialTab,
+                  contactModalTab === 'contacts' && styles.dialTabActive,
+                ]}
+                onPress={() => setContactModalTab('contacts')}
+              >
+                <Text
+                  style={[
+                    styles.dialTabText,
+                    contactModalTab === 'contacts' && styles.dialTabTextActive,
+                  ]}
+                >
+                  Contacts
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {contactModalTab === 'contacts' ? (
+              <View style={styles.whatsappContainer}>
+                <View style={styles.whatsappSearchContainer}>
                   <Image
-                    source={require('../../asset/filter.png')}
+                    source={require('../../asset/search.png')}
                     style={{
                       width: 20,
                       height: 20,
                       resizeMode: 'contain',
-                      tintColor: '#6C63FF',
+                      tintColor: '#999',
                     }}
                   />
-                </TouchableOpacity>
-              </View>
+                  <TextInput
+                    style={styles.whatsappSearchInput}
+                    placeholder="Search contacts..."
+                    placeholderTextColor="#999"
+                    value={contactSearch}
+                    onChangeText={setContactSearch}
+                  />
+                  <TouchableOpacity
+                    style={styles.filterIconBtn}
+                    onPress={() => openModal('contactFilter', type)}
+                  >
+                    <Image
+                      source={require('../../asset/filter.png')}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        resizeMode: 'contain',
+                        tintColor: '#6C63FF',
+                      }}
+                    />
+                  </TouchableOpacity>
+                </View>
 
-              {/* <View style={styles.activeFilters}>
+                {/* <View style={styles.activeFilters}>
                
                 {selectedUserType && (
                   <View style={styles.activeFilterChip}>
@@ -4171,47 +4224,47 @@ const DashbaordScreen = ({ navigation }) => {
                 )}
               </View> */}
 
-              <FlatList
-                data={filteredContacts}
-                keyExtractor={item => item.id}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.userCard,
-                      {
-                        borderLeftColor: '#6C63FF',
-                        borderLeftWidth: 4,
-                        borderColor: '#f1f3f5',
-                        borderWidth: 1,
-                        backgroundColor: '#FFFFFF',
-                      },
-                    ]}
-                    onPress={() =>
-                      navigation.navigate('UserChatPage', {
-                        senderId: item.sender_id,
-                        userName: item.sender_name || item.user_name,
-                        userImage: item.sender_profile_picture,
-                        userType: item.user_type,
-                        userTypeDetails: item.user_type_details,
-                        commType: 'inApp',
-                        showChatBubble:
-                          item.user_type_details !== 'Dialer Contact',
-                        showEmailIcon: isValidEmail(item.email),
-                        showWhatsAppIcon:
-                          !!item.whatsapp_number &&
-                          item.whatsapp_number.trim() !== '',
-                        whatsapp_number: item.whatsapp_number,
-                        whatsappNumber: item.whatsapp_number,
-                        phone: item.mobile_no,
-                        showPhoneIcon: true,
-                        useremail: profileInfo.email,
-                        showMessageIcon: true,
-                      })
-                    }
-                  >
-                    {/* <View style={styles.whatsappContactAvatar}>
+                <FlatList
+                  data={filteredContacts}
+                  keyExtractor={item => item.id}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.userCard,
+                        {
+                          borderLeftColor: '#6C63FF',
+                          borderLeftWidth: 4,
+                          borderColor: '#f1f3f5',
+                          borderWidth: 1,
+                          backgroundColor: '#FFFFFF',
+                        },
+                      ]}
+                      onPress={() =>
+                        navigation.navigate('UserChatPage', {
+                          senderId: item.sender_id,
+                          userName: item.sender_name || item.user_name,
+                          userImage: item.sender_profile_picture,
+                          userType: item.user_type,
+                          userTypeDetails: item.user_type_details,
+                          commType: 'inApp',
+                          showChatBubble:
+                            item.user_type_details !== 'Dialer Contact',
+                          showEmailIcon: isValidEmail(item.email),
+                          showWhatsAppIcon:
+                            !!item.whatsapp_number &&
+                            item.whatsapp_number.trim() !== '',
+                          whatsapp_number: item.whatsapp_number,
+                          whatsappNumber: item.whatsapp_number,
+                          phone: item.mobile_no,
+                          showPhoneIcon: true,
+                          useremail: profileInfo.email,
+                          showMessageIcon: true,
+                        })
+                      }
+                    >
+                      {/* <View style={styles.whatsappContactAvatar}>
                       <Text style={styles.whatsappContactAvatarText}>
                         {item.name?.charAt(0)?.toUpperCase() || '?'}
                       </Text>
@@ -4219,7 +4272,7 @@ const DashbaordScreen = ({ navigation }) => {
                       <View style={styles.whatsappStatusDot} />
                     </View> */}
 
-                    {/* <View style={styles.whatsappContactAvatar}>
+                      {/* <View style={styles.whatsappContactAvatar}>
                       {item.avatar ? (
                         <Image
                           source={item.avatar}
@@ -4232,163 +4285,73 @@ const DashbaordScreen = ({ navigation }) => {
                       )}
                     </View> */}
 
-                    <View style={styles.avatarContainer}>
-                      {item.avatar ? (
-                        <Image source={item.avatar} style={styles.avatar} />
-                      ) : (
-                        <View
-                          style={[
-                            styles.avatar,
-                            {
-                              backgroundColor: '#f0edff',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                            },
-                          ]}
-                        >
-                          <Text style={styles.whatsappContactAvatarText}>
-                            {item.name?.charAt(0)?.toUpperCase() || '?'}
-                          </Text>
-                        </View>
-                      )}
-
-                      {item.unread > 0 && (
-                        <View style={styles.unreadBadge}>
-                          <Text style={styles.unreadBadgeText}>
-                            {item.unread}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.whatsappContactInfo}>
-                      <Text style={styles.whatsappContactName}>
-                        {item.name}
-                      </Text>
-                      <View style={styles.whatsappContactTags}>
-                        <View
-                          style={[
-                            styles.contactTag,
-                            { backgroundColor: '#6C63FF20' },
-                          ]}
-                        >
-                          <Text
+                      <View style={styles.avatarContainer}>
+                        {item.avatar ? (
+                          <Image source={item.avatar} style={styles.avatar} />
+                        ) : (
+                          <View
                             style={[
-                              styles.contactTagText,
-                              { color: '#6C63FF' },
+                              styles.avatar,
+                              {
+                                backgroundColor: '#f0edff',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                              },
                             ]}
                           >
-                            {item.user_type}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.contactTag,
-                            { backgroundColor: iconColor + '20' },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.contactTagText,
-                              { color: iconColor },
-                            ]}
-                          >
-                            {item.user_type_details}
-                          </Text>
-                        </View>
+                            <Text style={styles.whatsappContactAvatarText}>
+                              {item.name?.charAt(0)?.toUpperCase() || '?'}
+                            </Text>
+                          </View>
+                        )}
+
+                        {item.unread > 0 && (
+                          <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadBadgeText}>
+                              {item.unread}
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      <View style={styles.contactIconsRow}>
-                        {item.user_type_details !== 'Dialer Contact' && (
-                          <TouchableOpacity
-                            style={[styles.contactIconSmall]}
-                            onPress={() => {
-                              navigation.navigate('UserChatPage', {
-                                senderId: item.sender_id,
-                                userName: item.sender_name || item.user_name,
-                                userImage: item.sender_profile_picture,
-                                userType: item.user_type,
-                                userTypeDetails: item.user_type_details,
-                                commType: 'inApp',
-                                showChatBubble:
-                                  item.user_type_details !== 'Dialer Contact',
-                                showEmailIcon: isValidEmail(item.email),
-                                showWhatsAppIcon:
-                                  !!item.whatsapp_number &&
-                                  item.whatsapp_number.trim() !== '',
-                                whatsapp_number: item.whatsapp_number,
-                                whatsappNumber: item.whatsapp_number,
-                                phone: item.mobile_no,
-                                showPhoneIcon: true,
-                                useremail: profileInfo.email,
-                                showMessageIcon: true,
-                              });
-                            }}
-                          >
-                            <Image
-                              source={require('../../asset/chat.png')}
-                              style={{
-                                width: 20,
-                                height: 20,
-                                resizeMode: 'contain',
-                              }}
-                            />
-                          </TouchableOpacity>
-                        )}
-                        {isValidEmail(item.email) && (
-                          <TouchableOpacity
-                            style={[styles.contactIconSmall]}
-                            onPress={() => {
-                              navigation.navigate('UserChatPage', {
-                                senderId: item.sender_id,
-                                userName: item.sender_name || item.user_name,
-                                userImage: item.sender_profile_picture,
-                                userType: item.user_type,
-                                userTypeDetails: item.user_type_details,
-                                commType: 'email',
-                                showChatBubble:
-                                  item.user_type_details !== 'Dialer Contact',
-                                showEmailIcon: isValidEmail(item.email),
-                                showWhatsAppIcon:
-                                  !!item.whatsapp_number &&
-                                  item.whatsapp_number.trim() !== '',
-                                whatsapp_number: item.whatsapp_number,
-                                whatsappNumber: item.whatsapp_number,
-                                phone: item.mobile_no,
-                                showPhoneIcon: true,
-                                useremail: profileInfo.email,
-                                showMessageIcon: true,
-                              });
-                            }}
-                          >
-                            <Image
-                              source={require('../../asset/mail.png')}
-                              style={{
-                                width: 20,
-                                height: 20,
-                                resizeMode: 'contain',
-                              }}
-                            />
-                          </TouchableOpacity>
-                        )}
 
-                        <TouchableOpacity
-                          style={[
-                            styles.contactIconSmall,
-                            { backgroundColor: '#4CAF5020' },
-                          ]}
-                          onPress={() => openModal('dial')}
-                        >
-                          <Image
-                            source={require('../../asset/circle-call.png')}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              resizeMode: 'contain',
-                            }}
-                          />
-                        </TouchableOpacity>
-                        {item.whatsapp_number &&
-                          item.whatsapp_number.trim() !== '' && (
+                      <View style={styles.whatsappContactInfo}>
+                        <Text style={styles.whatsappContactName}>
+                          {item.name}
+                        </Text>
+                        <View style={styles.whatsappContactTags}>
+                          <View
+                            style={[
+                              styles.contactTag,
+                              { backgroundColor: '#6C63FF20' },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.contactTagText,
+                                { color: '#6C63FF' },
+                              ]}
+                            >
+                              {item.user_type}
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.contactTag,
+                              { backgroundColor: iconColor + '20' },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.contactTagText,
+                                { color: iconColor },
+                              ]}
+                            >
+                              {item.user_type_details}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.contactIconsRow}>
+                          {item.user_type_details !== 'Dialer Contact' && (
                             <TouchableOpacity
                               style={[styles.contactIconSmall]}
                               onPress={() => {
@@ -4398,7 +4361,7 @@ const DashbaordScreen = ({ navigation }) => {
                                   userImage: item.sender_profile_picture,
                                   userType: item.user_type,
                                   userTypeDetails: item.user_type_details,
-                                  commType: 'WP',
+                                  commType: 'inApp',
                                   showChatBubble:
                                     item.user_type_details !== 'Dialer Contact',
                                   showEmailIcon: isValidEmail(item.email),
@@ -4415,7 +4378,7 @@ const DashbaordScreen = ({ navigation }) => {
                               }}
                             >
                               <Image
-                                source={require('../../asset/whatsapp.png')}
+                                source={require('../../asset/chat.png')}
                                 style={{
                                   width: 20,
                                   height: 20,
@@ -4424,33 +4387,52 @@ const DashbaordScreen = ({ navigation }) => {
                               />
                             </TouchableOpacity>
                           )}
-                        {item.mobile_no && item.mobile_no.trim() !== '' && (
+                          {isValidEmail(item.email) && (
+                            <TouchableOpacity
+                              style={[styles.contactIconSmall]}
+                              onPress={() => {
+                                navigation.navigate('UserChatPage', {
+                                  senderId: item.sender_id,
+                                  userName: item.sender_name || item.user_name,
+                                  userImage: item.sender_profile_picture,
+                                  userType: item.user_type,
+                                  userTypeDetails: item.user_type_details,
+                                  commType: 'email',
+                                  showChatBubble:
+                                    item.user_type_details !== 'Dialer Contact',
+                                  showEmailIcon: isValidEmail(item.email),
+                                  showWhatsAppIcon:
+                                    !!item.whatsapp_number &&
+                                    item.whatsapp_number.trim() !== '',
+                                  whatsapp_number: item.whatsapp_number,
+                                  whatsappNumber: item.whatsapp_number,
+                                  phone: item.mobile_no,
+                                  showPhoneIcon: true,
+                                  useremail: profileInfo.email,
+                                  showMessageIcon: true,
+                                });
+                              }}
+                            >
+                              <Image
+                                source={require('../../asset/mail.png')}
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  resizeMode: 'contain',
+                                }}
+                              />
+                            </TouchableOpacity>
+                          )}
+
                           <TouchableOpacity
-                            style={[styles.contactIconSmall]}
-                            onPress={() => {
-                              navigation.navigate('UserChatPage', {
-                                senderId: item.sender_id,
-                                userName: item.sender_name || item.user_name,
-                                userImage: item.sender_profile_picture,
-                                userType: item.user_type,
-                                commType: 'sms',
-                                showChatBubble:
-                                  item.user_type_details !== 'Dialer Contact',
-                                showEmailIcon: isValidEmail(item.email),
-                                showWhatsAppIcon:
-                                  !!item.whatsapp_number &&
-                                  item.whatsapp_number.trim() !== '',
-                                whatsapp_number: item.whatsapp_number,
-                                whatsappNumber: item.whatsapp_number,
-                                phone: item.mobile_no,
-                                showPhoneIcon: true,
-                                useremail: profileInfo.email,
-                                showMessageIcon: true,
-                              });
-                            }}
+                            style={[
+                              styles.contactIconSmall,
+                              { backgroundColor: '#4CAF5020' },
+                            ]}
+                            onPress={() => openModal('dial')}
                           >
                             <Image
-                              source={require('../../asset/message.png')}
+                              source={require('../../asset/circle-call.png')}
                               style={{
                                 width: 20,
                                 height: 20,
@@ -4458,62 +4440,233 @@ const DashbaordScreen = ({ navigation }) => {
                               }}
                             />
                           </TouchableOpacity>
-                        )}
+                          {item.whatsapp_number &&
+                            item.whatsapp_number.trim() !== '' && (
+                              <TouchableOpacity
+                                style={[styles.contactIconSmall]}
+                                onPress={() => {
+                                  navigation.navigate('UserChatPage', {
+                                    senderId: item.sender_id,
+                                    userName:
+                                      item.sender_name || item.user_name,
+                                    userImage: item.sender_profile_picture,
+                                    userType: item.user_type,
+                                    userTypeDetails: item.user_type_details,
+                                    commType: 'WP',
+                                    showChatBubble:
+                                      item.user_type_details !==
+                                      'Dialer Contact',
+                                    showEmailIcon: isValidEmail(item.email),
+                                    showWhatsAppIcon:
+                                      !!item.whatsapp_number &&
+                                      item.whatsapp_number.trim() !== '',
+                                    whatsapp_number: item.whatsapp_number,
+                                    whatsappNumber: item.whatsapp_number,
+                                    phone: item.mobile_no,
+                                    showPhoneIcon: true,
+                                    useremail: profileInfo.email,
+                                    showMessageIcon: true,
+                                  });
+                                }}
+                              >
+                                <Image
+                                  source={require('../../asset/whatsapp.png')}
+                                  style={{
+                                    width: 20,
+                                    height: 20,
+                                    resizeMode: 'contain',
+                                  }}
+                                />
+                              </TouchableOpacity>
+                            )}
+                          {item.mobile_no && item.mobile_no.trim() !== '' && (
+                            <TouchableOpacity
+                              style={[styles.contactIconSmall]}
+                              onPress={() => {
+                                navigation.navigate('UserChatPage', {
+                                  senderId: item.sender_id,
+                                  userName: item.sender_name || item.user_name,
+                                  userImage: item.sender_profile_picture,
+                                  userType: item.user_type,
+                                  userTypeDetails: item.user_type_details,
+                                  commType: 'sms',
+                                  showChatBubble:
+                                    item.user_type_details !== 'Dialer Contact',
+                                  showEmailIcon: isValidEmail(item.email),
+                                  showWhatsAppIcon:
+                                    !!item.whatsapp_number &&
+                                    item.whatsapp_number.trim() !== '',
+                                  whatsapp_number: item.whatsapp_number,
+                                  whatsappNumber: item.whatsapp_number,
+                                  phone: item.mobile_no,
+                                  showPhoneIcon: true,
+                                  useremail: profileInfo.email,
+                                  showMessageIcon: true,
+                                });
+                              }}
+                            >
+                              <Image
+                                source={require('../../asset/message.png')}
+                                style={{
+                                  width: 20,
+                                  height: 20,
+                                  resizeMode: 'contain',
+                                }}
+                              />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
+                  )}
+                  ListFooterComponent={
+                    hasMorePages ? (
+                      <TouchableOpacity
+                        style={[
+                          styles.loadMoreButton,
+                          isLoadingMoreUsers && {
+                            opacity: 0.6,
+                          },
+                        ]}
+                        onPress={loadMoreUsers}
+                        disabled={isLoadingMoreUsers}
+                      >
+                        {isLoadingMoreUsers ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Text style={styles.loadMoreText}>Load More</Text>
+
+                            <Image
+                              source={require('../../asset/arrow-down.png')}
+                              style={{
+                                width: 20,
+                                height: 20,
+                                resizeMode: 'contain',
+                                tintColor: '#fff',
+                              }}
+                            />
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    ) : null
+                  }
+                  ListEmptyComponent={
+                    isLoadingMoreUsers ? (
+                      <View style={styles.emptyUserContainer}>
+                        <ActivityIndicator size="large" color="#6C63FF" />
+
+                        <Text style={styles.emptyUserText}>
+                          Loading contacts...
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.emptyUserContainer}>
+                        <Text style={styles.emptyUserText}>
+                          No contacts found
+                        </Text>
+                      </View>
+                    )
+                  }
+                />
+              </View>
+            ) : (
+              <View style={styles.dialNumberContainer}>
+                {/* Phone Input */}
+                <View style={styles.phoneInputContainer}>
+                  <TouchableOpacity
+                    style={styles.countrySelector}
+                    onPress={openCountryModal}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.countryCode}>{selectedCountry}</Text>
+
+                    <Image
+                      source={require('../../asset/chevron-down.png')}
+                      style={{
+                        width: 16,
+                        height: 16,
+                        resizeMode: 'contain',
+                        tintColor: '#666',
+                      }}
+                    />
                   </TouchableOpacity>
-                )}
-                ListFooterComponent={
-                  hasMorePages ? (
+
+                  <TextInput
+                    style={styles.phoneInput}
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    placeholder="Enter phone number"
+                    keyboardType="phone-pad"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+
+                {/* Dialpad Numbers */}
+                <View style={styles.dialpadContainer}>
+                  {dialpadNumbers.map((row, idx) => (
+                    <View key={idx} style={styles.dialpadRow}>
+                      {row.map(renderDialpadButton)}
+                    </View>
+                  ))}
+                </View>
+
+                {/* Communication Button */}
+                <View style={styles.callActions}>
+                  {type === 'whatsapp' ? (
                     <TouchableOpacity
                       style={[
-                        styles.loadMoreButton,
-                        isLoadingMoreUsers && {
-                          opacity: 0.6,
-                        },
+                        styles.callActionBtn,
+                        { backgroundColor: '#25D366' },
+                        isWPCalling && { opacity: 0.6 },
                       ]}
-                      onPress={loadMoreUsers}
-                      disabled={isLoadingMoreUsers}
+                      onPress={handleDialerWhatsApp}
+                      disabled={isWPCalling}
+                      activeOpacity={0.8}
                     >
-                      {isLoadingMoreUsers ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      {isWPCalling ? (
+                        <ActivityIndicator color="#FFFFFF" />
                       ) : (
-                        <>
-                          <Text style={styles.loadMoreText}>Load More</Text>
-
-                          <Image
-                            source={require('../../asset/arrow-down.png')}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              resizeMode: 'contain',
-                              tintColor: '#fff',
-                            }}
-                          />
-                        </>
+                        <Image
+                          source={require('../../asset/whatsapps.png')}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            resizeMode: 'contain',
+                            tintColor: '#FFFFFF',
+                          }}
+                        />
                       )}
                     </TouchableOpacity>
-                  ) : null
-                }
-                ListEmptyComponent={
-                  isLoadingMoreUsers ? (
-                    <View style={styles.emptyUserContainer}>
-                      <ActivityIndicator size="large" color="#6C63FF" />
-
-                      <Text style={styles.emptyUserText}>
-                        Loading contacts...
-                      </Text>
-                    </View>
                   ) : (
-                    <View style={styles.emptyUserContainer}>
-                      <Text style={styles.emptyUserText}>
-                        No contacts found
-                      </Text>
-                    </View>
-                  )
-                }
-              />
-            </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.callActionBtn,
+                        { backgroundColor: '#061453' },
+                        isSMSCalling && { opacity: 0.6 },
+                      ]}
+                      onPress={handleDialerMessage}
+                      disabled={isSMSCalling}
+                      activeOpacity={0.8}
+                    >
+                      {isSMSCalling ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <Image
+                          source={require('../../asset/chatbubbles.png')}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            resizeMode: 'contain',
+                            tintColor: '#FFFFFF',
+                          }}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -6486,56 +6639,6 @@ const DashbaordScreen = ({ navigation }) => {
                     />
                   )}
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.callActionBtn,
-                    { backgroundColor: '#3dd417' },
-                    isWPCalling && { opacity: 0.6 },
-                  ]}
-                  onPress={handleDialerWhatsApp}
-                  disabled={isWPCalling}
-                  activeOpacity={0.8}
-                >
-                  {isWPCalling ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Image
-                      source={require('../../asset/whatsapps.png')}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        resizeMode: 'contain',
-                        tintColor: '#fff',
-                      }}
-                    />
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.callActionBtn,
-                    { backgroundColor: '#3dd417' },
-                    isSMSCalling && { opacity: 0.6 },
-                  ]}
-                  onPress={handleDialerMessage}
-                  disabled={isSMSCalling}
-                  activeOpacity={0.8}
-                >
-                  {isSMSCalling ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Image
-                      source={require('../../asset/chatbubbles.png')}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        resizeMode: 'contain',
-                        tintColor: '#fff',
-                      }}
-                    />
-                  )}
-                </TouchableOpacity>
               </View>
             </View>
           ) : (
@@ -7011,16 +7114,21 @@ const DashbaordScreen = ({ navigation }) => {
 
                   <View style={styles.filterModalItemRight}>
                     <View style={styles.countContainer}>
-                      <View
+                      <TouchableOpacity
                         style={[
                           styles.countBadge,
                           { backgroundColor: '#4a08b3fd' },
                         ]}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          setSelectedCategory(cat.name);
+                          handleSubTypePress(cat.name, undefined, true);
+                        }}
                       >
                         <Text style={[styles.countText, { color: '#FFF' }]}>
                           {cat.readCount}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
 
                       <View
                         style={[
@@ -7468,6 +7576,7 @@ const DashbaordScreen = ({ navigation }) => {
             style={styles.sideNavItem}
             onPress={() => {
               setShowSideNav(false);
+              setDialTab('contacts');
               openModal('dial');
             }}
           >
@@ -8313,7 +8422,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
 
@@ -8331,7 +8440,7 @@ const styles = StyleSheet.create({
   topBarLogo: {
     width: 120,
     height: 100,
-    marginTop: 40,
+    marginTop: 90,
   },
   topBarTitle: {
     fontSize: 30,
@@ -11222,6 +11331,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#777777',
     marginLeft: 5,
+  },
+
+  senderProfileChip: {
+    backgroundColor: '#F1EAF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginLeft: 7,
+    borderWidth: 1,
+    borderColor: '#DCCBE8',
+    alignSelf: 'center',
+  },
+
+  senderProfileChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#76577F',
   },
 });
 
