@@ -290,6 +290,10 @@ const UserChatPage = ({ navigation, route }) => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
+  const [showDeleteContactModal, setShowDeleteContactModal] = useState(false);
+  const [deleteContactId, setDeleteContactId] = useState(null);
+  const [isDeletingContact, setIsDeletingContact] = useState(false);
+
   const [contactForm, setContactForm] = useState({
     type: '',
     firstName: '',
@@ -386,6 +390,8 @@ const UserChatPage = ({ navigation, route }) => {
   const whatsappAutoOpenedRef = useRef(false);
   const smsAutoOpenedRef = useRef(false);
   const emailAutoOpenedRef = useRef(false);
+  const previousMessageIdsRef = useRef(null);
+  const pendingIncomingMessageIdRef = useRef(null);
 
   const initialScrollTimerRef = useRef(null);
 
@@ -435,6 +441,9 @@ const UserChatPage = ({ navigation, route }) => {
     let unsubscribe = null;
     initialScrollDoneRef.current = false;
     reactionFocusIdRef.current = null;
+
+    previousMessageIdsRef.current = null;
+    pendingIncomingMessageIdRef.current = null;
 
     if (initialScrollTimerRef.current) {
       clearTimeout(initialScrollTimerRef.current);
@@ -620,14 +629,48 @@ const UserChatPage = ({ navigation, route }) => {
                   phone: '',
                   whatsapp: '',
 
-                  type: route?.params?.userType  || '',
-                  userTypeDetails:
-                    route?.params?.userTypeDetails ||
-                   
-                    '',
+                  type: route?.params?.userType || '',
+                  userTypeDetails: route?.params?.userTypeDetails || '',
                 });
               }
 
+              // setMessages(firebaseMessages);
+
+              // ========================================
+              // DETECT NEW INCOMING MESSAGE
+              // ========================================
+
+              const currentMessageIds = new Set(
+                firebaseMessages.map(item => String(item.id)),
+              );
+
+              // Skip initial Firebase load.
+              // Detect only messages added after initial load.
+              if (previousMessageIdsRef.current !== null) {
+                const newIncomingMessages = firebaseMessages.filter(
+                  item =>
+                    !previousMessageIdsRef.current.has(String(item.id)) &&
+                    item.firebaseSenderId !== MY_USER_ID,
+                );
+
+                if (newIncomingMessages.length > 0) {
+                  // Get the latest newly received message
+                  const latestIncomingMessage =
+                    newIncomingMessages[newIncomingMessages.length - 1];
+
+                  console.log('NEW INCOMING MESSAGE:', latestIncomingMessage);
+
+                  // Store ID until FlatList finishes rendering
+                  pendingIncomingMessageIdRef.current = String(
+                    latestIncomingMessage.id,
+                  );
+                }
+              }
+
+              // Save current IDs for next Firebase update
+              previousMessageIdsRef.current = currentMessageIds;
+
+              // Update chat messages
               setMessages(firebaseMessages);
               // setIsLoadingMessages(false);
 
@@ -832,7 +875,7 @@ const UserChatPage = ({ navigation, route }) => {
     }
 
     // // Find a contact having WhatsApp number
-    const whatsappContact =  whatsapp;
+    const whatsappContact = whatsapp;
 
     if (!whatsappContact) {
       console.log('No WhatsApp number found for this user.');
@@ -864,7 +907,7 @@ const UserChatPage = ({ navigation, route }) => {
       'WhatsApp Compose Modal opened automatically:',
       whatsappContact.whatsapp,
     );
-  }, [ contacts,whatsappTemplates, route?.params?.commType]);
+  }, [contacts, whatsappTemplates, route?.params?.commType]);
 
   useEffect(() => {
     const commType = route?.params?.commType;
@@ -887,7 +930,7 @@ const UserChatPage = ({ navigation, route }) => {
     // Find first contact having a phone number
     // const smsContact = contacts.find(contact => contact?.phoneNumber?.trim());
 
-    const smsNumber =  sender.phone || '';
+    const smsNumber = sender.phone || '';
 
     if (!smsNumber) {
       console.log('No mobile number found for this user.');
@@ -901,7 +944,7 @@ const UserChatPage = ({ navigation, route }) => {
     setSelectedSmsSender({
       id: String(sender.id || ''),
       label: sender.role || 'Contact',
-      number:smsNumber,
+      number: smsNumber,
     });
 
     // Clear previous message
@@ -910,10 +953,7 @@ const UserChatPage = ({ navigation, route }) => {
     // Open SMS Compose Modal
     setShowSmsComposeModal(true);
 
-    console.log(
-      'SMS Compose Modal opened automatically:',
-      smsNumber,
-    );
+    console.log('SMS Compose Modal opened automatically:', smsNumber);
   }, [contacts, route?.params?.commType]);
 
   useEffect(() => {
@@ -1061,38 +1101,30 @@ const UserChatPage = ({ navigation, route }) => {
   };
 
   const getChatPrintHTML = () => {
-  const escapeHtml = value =>
-    String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    const escapeHtml = value =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
-  const messageRows = messages
-    .map((item, index) => {
-      const messageText =
-        item.message ??
-        item.description ??
-        item.text ??
-        item.body ??
-        '';
+    const messageRows = messages
+      .map((item, index) => {
+        const messageText =
+          item.message ?? item.description ?? item.text ?? item.body ?? '';
 
-      const senderName =
-        item.sender_name ??
-        item.senderName ??
-        item.sender_name_full ??
-        sender?.name ??
-        'User';
+        const senderName =
+          item.sender_name ??
+          item.senderName ??
+          item.sender_name_full ??
+          sender?.name ??
+          'User';
 
-      const messageDate =
-        item.dateTime ??
-        item.date_time ??
-        item.date ??
-        item.timestamp ??
-        '';
+        const messageDate =
+          item.dateTime ?? item.date_time ?? item.date ?? item.timestamp ?? '';
 
-      return `
+        return `
         <div class="message">
           <div class="message-header">
             <strong>${escapeHtml(senderName)}</strong>
@@ -1108,10 +1140,10 @@ const UserChatPage = ({ navigation, route }) => {
           }
         </div>
       `;
-    })
-    .join('');
+      })
+      .join('');
 
-  return `
+    return `
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -1312,11 +1344,7 @@ const UserChatPage = ({ navigation, route }) => {
 
           <div class="chat-subtitle">
             ${escapeHtml(sender?.name || 'Chat')}
-            ${
-              sender?.type
-                ? ` &bull; ${escapeHtml(sender.type)}`
-                : ''
-            }
+            ${sender?.type ? ` &bull; ${escapeHtml(sender.type)}` : ''}
           </div>
 
           <div class="summary">
@@ -1331,7 +1359,7 @@ const UserChatPage = ({ navigation, route }) => {
       </body>
     </html>
   `;
-};
+  };
 
   const fetchSignatures = async () => {
     try {
@@ -2942,68 +2970,65 @@ const UserChatPage = ({ navigation, route }) => {
 
   // -------- CONTACTS --------
   const handleDeleteContact = contactId => {
-    Alert.alert(
-      'Delete Contact',
-      'Are you sure you want to delete this contact?',
-      [
+    setDeleteContactId(contactId);
+    setShowDeleteContactModal(true);
+  };
+
+  const confirmDeleteContact = async () => {
+    if (!deleteContactId || isDeletingContact) return;
+
+    try {
+      setIsDeletingContact(true);
+
+      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+
+      const response = await axios.delete(
+        'https://leafcom.us/backend/api/chat-application/deleteUserContact',
         {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token =
-                '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
-
-              const response = await axios.delete(
-                'https://leafcom.us/backend/api/chat-application/deleteUserContact',
-                {
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                  },
-                  data: {
-                    user_id: selectedUserId,
-                    contact_id: contactId,
-                    source: 'staff',
-                  },
-                },
-              );
-
-              console.log('Delete Contact Response:', response.data);
-
-              if (response.data?.success === true) {
-                // Remove from local list only after successful API response
-                setContacts(prev =>
-                  prev.filter(contact => contact.id !== contactId),
-                );
-
-                Alert.alert('Success', 'Contact deleted successfully.');
-              } else {
-                Alert.alert(
-                  'Delete Failed',
-                  response.data?.message || 'Unable to delete contact.',
-                );
-              }
-            } catch (error) {
-              console.log(
-                'Delete Contact API Error:',
-                error?.response?.data || error?.message,
-              );
-
-              Alert.alert(
-                'Error',
-                error?.response?.data?.message ||
-                  'Something went wrong while deleting the contact.',
-              );
-            }
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          data: {
+            user_id: selectedUserId,
+            contact_id: deleteContactId,
+            source: 'staff',
           },
         },
-      ],
-    );
+      );
+
+      console.log('Delete Contact Response:', response.data);
+
+      if (response.data?.success === true) {
+        setContacts(prev =>
+          prev.filter(contact => contact.id !== deleteContactId),
+        );
+
+        setShowDeleteContactModal(false);
+        setDeleteContactId(null);
+
+        setSuccessModalMessage('Contact deleted successfully.');
+        setSuccessModalVisible(true);
+      } else {
+        Alert.alert(
+          'Delete Failed',
+          response.data?.message || 'Unable to delete contact.',
+        );
+      }
+    } catch (error) {
+      console.log(
+        'Delete Contact API Error:',
+        error?.response?.data || error?.message,
+      );
+
+      Alert.alert(
+        'Error',
+        error?.response?.data?.message ||
+          'Something went wrong while deleting the contact.',
+      );
+    } finally {
+      setIsDeletingContact(false);
+    }
   };
 
   const handleOpenAddContact = () => {
@@ -3093,13 +3118,55 @@ const UserChatPage = ({ navigation, route }) => {
 
   const handleSaveContact = async () => {
     try {
+      if (!contactForm.typeId) {
+        Alert.alert('Validation', 'Please select contact type.');
+        return;
+      }
+
       if (!contactForm.firstName?.trim()) {
         Alert.alert('Validation', 'Please enter first name.');
         return;
       }
 
-      if (!contactForm.typeId) {
-        Alert.alert('Validation', 'Please select contact type.');
+      if (!contactForm.lastName?.trim()) {
+        Alert.alert('Validation', 'Please enter last name.');
+        return;
+      }
+
+      if (!contactForm.address?.trim()) {
+        Alert.alert('Validation', 'Please enter address.');
+        return;
+      }
+
+      if (!contactForm.city?.trim()) {
+        Alert.alert('Validation', 'Please enter city.');
+        return;
+      }
+
+      if (!contactForm.stateId) {
+        Alert.alert('Validation', 'Please select state.');
+        return;
+      }
+
+      if (!contactForm.zip?.trim()) {
+        Alert.alert('Validation', 'Please enter ZIP code.');
+        return;
+      }
+
+      if (!contactForm.email?.trim()) {
+        Alert.alert('Validation', 'Please enter email address.');
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!emailRegex.test(contactForm.email.trim())) {
+        Alert.alert('Validation', 'Please enter a valid email address.');
+        return;
+      }
+
+      if (!contactForm.phoneNumber?.trim()) {
+        Alert.alert('Validation', 'Please enter phone number.');
         return;
       }
 
@@ -4835,6 +4902,15 @@ const UserChatPage = ({ navigation, route }) => {
             <View style={styles.composeBlock}>
               <View style={styles.composeBlockHeader}>
                 <Text style={styles.composeBlockLabel}>Signature</Text>
+                <TouchableOpacity
+                  style={styles.addSignatureHeaderButton}
+                  onPress={() => setShowAddSignatureModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.addSignatureHeaderButtonText}>
+                    + Add Signature
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity
@@ -8636,8 +8712,76 @@ const UserChatPage = ({ navigation, route }) => {
               contentContainerStyle={styles.messagesList}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
+              // onContentSizeChange={() => {
+              //   // Keep scrolling to the latest message while initial loading is active.
+              //   if (messages.length > 0 && isLoadingMessages) {
+              //     requestAnimationFrame(() => {
+              //       flatListRef.current?.scrollToEnd({
+              //         animated: false,
+              //       });
+              //     });
+
+              //     // Start the loader timer only once.
+              //     if (!initialScrollDoneRef.current) {
+              //       initialScrollDoneRef.current = true;
+
+              //       if (initialScrollTimerRef.current) {
+              //         clearTimeout(initialScrollTimerRef.current);
+              //       }
+
+              //       initialScrollTimerRef.current = setTimeout(() => {
+              //         setIsLoadingMessages(false);
+              //         initialScrollTimerRef.current = null;
+              //       }, 5000);
+              //     }
+
+              //     return;
+              //   }
+
+              //   // Preserve keyboard scrolling behavior.
+              //   if (isKeyboardVisible && !reactionFocusIdRef.current) {
+              //     requestAnimationFrame(() => {
+              //       flatListRef.current?.scrollToEnd({
+              //         animated: false,
+              //       });
+              //     });
+              //   }
+              // }}
+
               onContentSizeChange={() => {
-                // Keep scrolling to the latest message while initial loading is active.
+                // ========================================
+                // SCROLL TO NEW INCOMING MESSAGE
+                // ========================================
+
+                if (pendingIncomingMessageIdRef.current) {
+                  const targetMessageId = pendingIncomingMessageIdRef.current;
+
+                  const filteredMessages = getFilteredMessages();
+
+                  const messageIndex = filteredMessages.findIndex(
+                    item => String(item.id) === String(targetMessageId),
+                  );
+
+                  if (messageIndex !== -1) {
+                    // Clear pending ID before scrolling
+                    pendingIncomingMessageIdRef.current = null;
+
+                    requestAnimationFrame(() => {
+                      flatListRef.current?.scrollToIndex({
+                        index: messageIndex,
+                        animated: true,
+                        viewPosition: 0.5,
+                      });
+                    });
+
+                    return;
+                  }
+                }
+
+                // ========================================
+                // INITIAL MESSAGE LOADING
+                // ========================================
+
                 if (messages.length > 0 && isLoadingMessages) {
                   requestAnimationFrame(() => {
                     flatListRef.current?.scrollToEnd({
@@ -8645,7 +8789,6 @@ const UserChatPage = ({ navigation, route }) => {
                     });
                   });
 
-                  // Start the loader timer only once.
                   if (!initialScrollDoneRef.current) {
                     initialScrollDoneRef.current = true;
 
@@ -8662,7 +8805,10 @@ const UserChatPage = ({ navigation, route }) => {
                   return;
                 }
 
-                // Preserve keyboard scrolling behavior.
+                // ========================================
+                // KEYBOARD SCROLLING
+                // ========================================
+
                 if (isKeyboardVisible && !reactionFocusIdRef.current) {
                   requestAnimationFrame(() => {
                     flatListRef.current?.scrollToEnd({
@@ -8735,6 +8881,147 @@ const UserChatPage = ({ navigation, route }) => {
       {showTranslateModal && renderTranslateModal()}
       {showSignatureModal && renderSignatureModal()}
       {showAddSignatureModal && renderAddSignatureModal()}
+
+      <Modal
+        visible={showDeleteContactModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {
+          if (!isDeletingContact) {
+            setShowDeleteContactModal(false);
+            setDeleteContactId(null);
+          }
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 25,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              padding: 22,
+              alignItems: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 29,
+                backgroundColor: '#FDECEC',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 15,
+              }}
+            >
+              <Image
+                source={require('../../asset/trash.png')}
+                style={{
+                  width: 25,
+                  height: 25,
+                  resizeMode: 'contain',
+                  tintColor: COLORS.danger,
+                }}
+              />
+            </View>
+
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: '700',
+                color: COLORS.textPrimary,
+                marginBottom: 8,
+              }}
+            >
+              Delete Contact?
+            </Text>
+
+            <Text
+              style={{
+                fontSize: 13,
+                color: COLORS.textSecondary,
+                textAlign: 'center',
+                lineHeight: 20,
+                marginBottom: 24,
+              }}
+            >
+              Are you sure you want to delete this contact? This action cannot
+              be undone.
+            </Text>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                width: '100%',
+                gap: 12,
+              }}
+            >
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 8,
+                  backgroundColor: '#F1F1F1',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+                disabled={isDeletingContact}
+                onPress={() => {
+                  setShowDeleteContactModal(false);
+                  setDeleteContactId(null);
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: COLORS.textPrimary,
+                  }}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 8,
+                  backgroundColor: COLORS.danger,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  opacity: isDeletingContact ? 0.7 : 1,
+                }}
+                disabled={isDeletingContact}
+                onPress={confirmDeleteContact}
+              >
+                {isDeletingContact ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    Delete
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showPrintModal}
@@ -8935,6 +9222,8 @@ const UserChatPage = ({ navigation, route }) => {
             <Text style={styles.successModalTitle}>
               {successModalMessage === 'Contact edit successful.'
                 ? 'Contact Updated!'
+                : successModalMessage === 'Contact deleted successfully.'
+                ? 'Contact Deleted!'
                 : 'Contact Saved!'}
             </Text>
 
@@ -12728,6 +13017,18 @@ const styles = StyleSheet.create({
   printWebView: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  addSignatureHeaderButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#F0EBF8',
+  },
+
+  addSignatureHeaderButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#76577F',
   },
 });
 
