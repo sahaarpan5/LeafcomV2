@@ -25,6 +25,7 @@ import { ref, onValue } from 'firebase/database';
 import { database } from '../../config/firebaseConfig';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Pdf from 'react-native-pdf';
 
 import {
   makeTelnyxCall,
@@ -153,6 +154,7 @@ const DashbaordScreen = ({ navigation }) => {
   // Contact filter states
   const [contactSearch, setContactSearch] = useState('');
   const [selectedUserType, setSelectedUserType] = useState('all');
+  const [countrySearch, setCountrySearch] = useState('');
 
   // Email states
   const [emailTo, setEmailTo] = useState('');
@@ -1899,7 +1901,7 @@ const DashbaordScreen = ({ navigation }) => {
     setTotalUnreadCount(0);
 
     // Call API with new sorting
-    fetchUsers(1, false, selectedType, selectedSubType, sortBy,false);
+    fetchUsers(1, false, selectedType, selectedSubType, sortBy, false);
   };
 
   // const fetchUserTypes = async () => {
@@ -2246,6 +2248,7 @@ const DashbaordScreen = ({ navigation }) => {
     setSelectedCountryName(item.name);
     setSelectedCountryCode(item.country_code);
     setCountryModalVisible(false);
+    setCountrySearch('');
   };
 
   const fetchProfileInfo = async () => {
@@ -2737,6 +2740,10 @@ const DashbaordScreen = ({ navigation }) => {
         group_id: group.group_id,
         name: group.group_name ?? group.name ?? 'Unnamed Group',
         group_name: group.group_name ?? group.name ?? 'Unnamed Group',
+
+        // Pass group members to GroupChat
+        users: Array.isArray(group.users) ? group.users : [],
+
         isChatGroup: true,
       }));
 
@@ -5318,12 +5325,14 @@ const DashbaordScreen = ({ navigation }) => {
         ]}
         activeOpacity={0.7}
         onPress={async () => {
-          // Group conversation: same behavior as renderMessageItem
-          if (
+          const isGroup =
             item.source === 'group' ||
+            item.originalData?.source === 'group' ||
             item.isChatGroup === true ||
-            item.group_id != null
-          ) {
+            !!item.group_id ||
+            !!item.originalData?.group_id;
+
+          if (isGroup) {
             try {
               const groups = await fetchGroupsForMessageNav();
 
@@ -5332,8 +5341,13 @@ const DashbaordScreen = ({ navigation }) => {
                 return;
               }
 
-              const groupId = item.group_id || item.originalData?.group_id;
-              const groupName = item.group_name || item.userName || item.name;
+              const groupId =
+                item.group_id || item.originalData?.group_id || item.senderId;
+
+              const groupName =
+                item.group_name ||
+                item.originalData?.group_name ||
+                item.userName;
 
               const selectedGroup = groups.find(group => {
                 const idMatches =
@@ -5348,22 +5362,22 @@ const DashbaordScreen = ({ navigation }) => {
                 return idMatches || nameMatches;
               });
 
-              if (!selectedGroup) {
-                console.log('Selected group was not found.');
-                return;
-              }
+              // Same fallback behavior as renderMessageSidebar
+              const groupToOpen = selectedGroup || groups[0];
+
+              console.log('OPENING ACTIVITY GROUP:', groupToOpen);
 
               navigation.navigate('GroupChat', {
-                id: selectedGroup.id,
-                senderId: selectedGroup.id,
-                name: selectedGroup.name || selectedGroup.group_name,
-                userName: selectedGroup.name || selectedGroup.group_name,
-                group_id: selectedGroup.group_id,
-                users: selectedGroup.users || [],
+                id: groupToOpen.id,
+                senderId: groupToOpen.id,
+                name: groupToOpen.name || groupToOpen.group_name,
+                userName: groupToOpen.name || groupToOpen.group_name,
+                group_id: groupToOpen.group_id,
+                users: groupToOpen.users || [],
               });
             } catch (error) {
               console.log(
-                'Unable to open group:',
+                'Unable to open activity group:',
                 error.response?.data || error.message,
               );
             }
@@ -5814,7 +5828,17 @@ const DashbaordScreen = ({ navigation }) => {
       activityThread !== 'all' ||
       activityChannel !== 'all' ||
       activityMinUnread !== '0' ||
-      activitySortBy !== 'most_unread';
+      activitySortBy !== 'recent';
+
+    const activeFilterCount = [
+      activityQuickSearch?.trim() !== '',
+      activityReadStatus !== 'all',
+      activityRole !== 'all',
+      activityThread !== 'all',
+      activityChannel !== 'all',
+      activityMinUnread !== '0',
+      activitySortBy !== 'recent',
+    ].filter(Boolean).length;
 
     return (
       <View style={styles.activityContainer}>
@@ -5830,7 +5854,9 @@ const DashbaordScreen = ({ navigation }) => {
           <View style={styles.activityTopRow}>
             {/* Total Activity Count */}
             <Text style={styles.activityTotalCount}>
-              Total: {totalActivities}
+              {hasQuickFilters
+                ? `${filteredActivities.length} out of ${totalActivities} Activities`
+                : `Total: ${totalActivities} Activities`}
             </Text>
 
             {/* Filter Buttons */}
@@ -5851,6 +5877,14 @@ const DashbaordScreen = ({ navigation }) => {
                     tintColor: hasQuickFilters ? '#fff' : '#6C63FF',
                   }}
                 />
+
+                {activeFilterCount > 0 && (
+                  <View style={styles.activityFilterCountBadge}>
+                    <Text style={styles.activityFilterCountText}>
+                      {activeFilterCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -7382,7 +7416,7 @@ const DashbaordScreen = ({ navigation }) => {
                   style={styles.addSignatureHeaderButton}
                   onPress={() => {
                     if (!isLoadingSignatures) {
-                      openModal('signature');
+                      openModal('addSignature');
                     }
                   }}
                   disabled={isLoadingSignatures}
@@ -7697,6 +7731,7 @@ const DashbaordScreen = ({ navigation }) => {
       statusBarTranslucent={false}
     >
       <View style={styles.tutorialModalContainer}>
+        {/* Header */}
         <View style={styles.tutorialHeader}>
           <Text style={styles.tutorialTitle}>Tutorial</Text>
 
@@ -7708,16 +7743,27 @@ const DashbaordScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <WebView
+        {/* PDF Viewer */}
+        <Pdf
           source={{
-            uri: `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(
-              TUTORIAL_PDF_URL,
-            )}`,
+            uri: TUTORIAL_PDF_URL,
+            cache: true,
           }}
-          style={styles.tutorialWebView}
-          startInLoadingState
-          javaScriptEnabled
-          domStorageEnabled
+          style={styles.tutorialPdf}
+          trustAllCerts={false}
+          enablePaging={false}
+          horizontal={false}
+          spacing={8}
+          fitPolicy={0}
+          onLoadComplete={numberOfPages => {
+            console.log('PDF Pages:', numberOfPages);
+          }}
+          onError={error => {
+            console.log('PDF Load Error:', error);
+          }}
+          renderActivityIndicator={() => (
+            <ActivityIndicator size="large" color="#76577F" />
+          )}
         />
       </View>
     </Modal>
@@ -8181,6 +8227,28 @@ const DashbaordScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
+            <View style={styles.countrySearchContainer}>
+              <Image
+                source={require('../../asset/search.png')}
+                style={styles.countrySearchIcon}
+              />
+
+              <TextInput
+                style={styles.countrySearchInput}
+                placeholder="Search country or dial code..."
+                placeholderTextColor="#999"
+                value={countrySearch}
+                onChangeText={setCountrySearch}
+                autoCorrect={false}
+              />
+
+              {countrySearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCountrySearch('')}>
+                  <Text style={styles.countrySearchClear}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             {countryLoading ? (
               <ActivityIndicator
                 size="large"
@@ -8189,7 +8257,19 @@ const DashbaordScreen = ({ navigation }) => {
               />
             ) : (
               <FlatList
-                data={countryCodes}
+                data={countryCodes.filter(item => {
+                  const search = countrySearch.trim().toLowerCase();
+
+                  if (!search) return true;
+
+                  return (
+                    item.name?.toLowerCase().includes(search) ||
+                    item.country_code?.toLowerCase().includes(search) ||
+                    String(item.country_phone_code || '')
+                      .toLowerCase()
+                      .includes(search)
+                  );
+                })}
                 keyExtractor={item => String(item.id)}
                 keyboardShouldPersistTaps="handled"
                 initialNumToRender={15}
@@ -10421,13 +10501,19 @@ const styles = StyleSheet.create({
     fontFamily: 'sans-serif',
   },
   activityTag: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#B39AC7',
+    backgroundColor: '#F3ECF8',
+    alignSelf: 'flex-start',
+    marginTop: 3,
   },
   activityTagText: {
-    fontSize: 8,
-    fontWeight: '600',
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#76577F',
     fontFamily: 'sans-serif',
   },
   activitySystemAdminTag: {
@@ -11348,6 +11434,67 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#76577F',
+  },
+
+  tutorialPdf: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#F5F5F5',
+  },
+  activityFilterCountBadge: {
+    position: 'absolute',
+    top: -7,
+    right: -7,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: '#FF4757',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+
+  activityFilterCountText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  countrySearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: 15,
+    marginTop: 12,
+    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+  },
+
+  countrySearchIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+    tintColor: '#888',
+    marginRight: 10,
+  },
+
+  countrySearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    paddingVertical: 0,
+  },
+
+  countrySearchClear: {
+    fontSize: 17,
+    color: '#888',
+    paddingLeft: 10,
   },
 });
 

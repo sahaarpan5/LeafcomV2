@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Image,
 } from 'react-native';
 
 const FAQ_DATA = [
@@ -398,9 +399,7 @@ const FAQModal = ({ visible, onClose }) => {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <Text style={styles.headerTitle}>
-                 {currentTranslation.title}
-              </Text>
+              <Text style={styles.headerTitle}>{currentTranslation.title}</Text>
 
               <TouchableOpacity
                 onPress={handleClose}
@@ -411,7 +410,7 @@ const FAQModal = ({ visible, onClose }) => {
             </View>
 
             <Text style={styles.headerSubtitle}>
-               {currentTranslation.subtitle}
+              {currentTranslation.subtitle}
             </Text>
           </View>
 
@@ -431,7 +430,11 @@ const FAQModal = ({ visible, onClose }) => {
                 onPress={() => setShowLanguages(!showLanguages)}
               >
                 <Text style={styles.languageText}>{language}</Text>
-                <Text style={styles.arrow}>⌄</Text>
+                <Image
+                  source={require('../asset/chevron-down.png')}
+                  style={styles.arrowImage}
+                  resizeMode="contain"
+                />
               </TouchableOpacity>
 
               {showLanguages && (
@@ -487,7 +490,7 @@ const FAQModal = ({ visible, onClose }) => {
               ) : (
                 <View style={styles.noAnswer}>
                   <Text style={styles.noAnswerText}>
-                     {currentTranslation.selectQuestion}
+                    {currentTranslation.selectQuestion}
                   </Text>
                 </View>
               )}
@@ -497,7 +500,9 @@ const FAQModal = ({ visible, onClose }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <Text style={styles.closeButtonText}>{currentTranslation.close}</Text>
+              <Text style={styles.closeButtonText}>
+                {currentTranslation.close}
+              </Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -757,5 +762,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  arrowImage: {
+    width: 16,
+    height: 16,
+    tintColor: '#172033',
   },
 });
