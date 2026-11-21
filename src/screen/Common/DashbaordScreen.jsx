@@ -26,6 +26,8 @@ import { database } from '../../config/firebaseConfig';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Pdf from 'react-native-pdf';
+import { getAuthToken } from '../../services/SecureTokenStorage';
+
 
 import {
   makeTelnyxCall,
@@ -2254,7 +2256,10 @@ const DashbaordScreen = ({ navigation }) => {
   const fetchProfileInfo = async () => {
     try {
       setIsLoadingCategories(true);
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      //const token = await getAuthToken();
+
+       const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      console.log('Fetched auth token:', token);
 
       if (!token) {
         console.log('Authentication token not found');

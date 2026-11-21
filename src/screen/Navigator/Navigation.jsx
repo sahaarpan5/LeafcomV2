@@ -7,6 +7,7 @@ import WelcomeScreen from '../Common/WelcomeScreen';
 import DashbaordScreen from '../Common/DashbaordScreen';
 import UserChatPage from '../Common/UserChatPage';
 import GroupChat from '../Common/GroupChat';
+import MicrosoftLoginScreen from '../Common/MicrosoftLoginScreen';
 
 
 
@@ -25,13 +26,14 @@ const Navigation = () => {
         <Stack.Screen name="WelcomeScreen">
           {({ navigation }) => (
             <WelcomeScreen
-              onFinish={() => navigation.replace('DashbaordScreen')}
+              onFinish={() => navigation.replace('MicrosoftLoginScreen')}
             />
           )}
         </Stack.Screen>
         <Stack.Screen name="DashbaordScreen" component={DashbaordScreen} />
          <Stack.Screen name="UserChatPage" component={UserChatPage} />
           <Stack.Screen name="GroupChat" component={GroupChat} />
+          <Stack.Screen name="MicrosoftLoginScreen" component={MicrosoftLoginScreen} />
       </Stack.Navigator>
 
     </SafeAreaProvider>
