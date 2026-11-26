@@ -1747,7 +1747,7 @@ const DashbaordScreen = ({ navigation }) => {
     try {
       setDeletingMessageId(item.id);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const payload = {
         type: 2,
@@ -1797,7 +1797,7 @@ const DashbaordScreen = ({ navigation }) => {
     try {
       setClearingMessages(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const payload = {
         type: 1,
@@ -2024,7 +2024,7 @@ const DashbaordScreen = ({ navigation }) => {
     try {
       setIsLoadingCategories(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       if (!token) {
         console.log('Authentication token not found');
@@ -2202,7 +2202,7 @@ const DashbaordScreen = ({ navigation }) => {
       const COUNTRY_CODES_API =
         'https://leafcom.us/backend/api/chat-application/countryCodes';
 
-      const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
+      const token = await getAuthToken();
       setCountryLoading(true);
 
       const response = await axios.get(COUNTRY_CODES_API, {
@@ -2256,9 +2256,9 @@ const DashbaordScreen = ({ navigation }) => {
   const fetchProfileInfo = async () => {
     try {
       setIsLoadingCategories(true);
-      //const token = await getAuthToken();
+      const token = await getAuthToken();
 
-       const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+       
       console.log('Fetched auth token:', token);
 
       if (!token) {
@@ -2299,7 +2299,7 @@ const DashbaordScreen = ({ navigation }) => {
         setIsLoadingUsers(true);
       }
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const payload = {
         type: type || 'All',
@@ -2451,9 +2451,8 @@ const DashbaordScreen = ({ navigation }) => {
     try {
       setIsSavingSignature(true);
 
-      //const token = await AsyncStorage.getItem('token');
-      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
-      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+      
+      const token = await getAuthToken();
 
       if (!token) {
         Alert.alert('Error', 'Authentication token not found.');
@@ -2523,9 +2522,8 @@ const DashbaordScreen = ({ navigation }) => {
     try {
       setIsLoadingSignatures(true);
 
-      //const token = await AsyncStorage.getItem('token');
-      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
-      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+     
+      const token = await getAuthToken();
 
       if (!token) {
         console.log('Authentication token not found');
@@ -2585,9 +2583,7 @@ const DashbaordScreen = ({ navigation }) => {
     try {
       setIsSendingEmail(true);
 
-      //const token = await AsyncStorage.getItem('token');
-      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
-      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+      const token = await getAuthToken();
 
       if (!token) {
         Alert.alert('Error', 'Authentication token not found.');
@@ -2663,7 +2659,7 @@ const DashbaordScreen = ({ navigation }) => {
       setUserList([]);
       setHasMorePages(false);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/listOfChatGroup',
         {
@@ -2711,7 +2707,7 @@ const DashbaordScreen = ({ navigation }) => {
 
   const fetchGroupsForMessageNav = async () => {
     try {
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/listOfChatGroup',
         {
@@ -2774,9 +2770,8 @@ const DashbaordScreen = ({ navigation }) => {
         setIsLoadingCategories(true);
       }
 
-      //const token = await AsyncStorage.getItem('token');
-      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
-      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+     
+      const token = await getAuthToken();
 
       if (!token) {
         console.log('Authentication token not found');
@@ -2935,7 +2930,7 @@ const DashbaordScreen = ({ navigation }) => {
       setIsCalling(true);
 
       // Use the same authentication token retrieval as your existing API calls.
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       if (!token) {
         Alert.alert('Authentication Error', 'Authentication token not found.');
@@ -3097,7 +3092,7 @@ const DashbaordScreen = ({ navigation }) => {
       setIsWPCalling(true);
 
       // Use the same token as your existing handleDialerCall.
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/findOrCreateDialerContact',
@@ -3194,7 +3189,7 @@ const DashbaordScreen = ({ navigation }) => {
     setIsSMSCalling(true);
 
     try {
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/findOrCreateDialerContact',

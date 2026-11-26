@@ -27,6 +27,7 @@ import { database } from '../../config/firebaseConfig';
 import axios from 'axios';
 import EmojiPicker, { tr } from 'rn-emoji-keyboard';
 import Loader from '../../util/Loader';
+import { getAuthToken } from '../../services/SecureTokenStorage';
 
 import {
   makeTelnyxCall,
@@ -974,9 +975,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsSavingSignature(true);
 
-      //const token = await AsyncStorage.getItem('token');
-      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
-      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+    const token = await getAuthToken();
 
       if (!token) {
         Alert.alert('Error', 'Authentication token not found.');
@@ -1046,9 +1045,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsLoadingSignatures(true);
 
-      //const token = await AsyncStorage.getItem('token');
-      // const token = '5822|e7zRcuxQfcbYLe0G3BALDcHkHB45pqHDpFDbLhH4009f29a0';
-      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+      const token = await getAuthToken();
 
       if (!token) {
         console.log('Authentication token not found');
@@ -1093,7 +1090,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsLoadingContacts(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/whatsappTemplates',
@@ -1210,7 +1207,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsLoadingContacts(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/usersContactsList',
@@ -1322,7 +1319,7 @@ const GroupChat = ({ navigation, route }) => {
     }
 
     setStateLoading(true);
-    const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+    const token = await getAuthToken();
 
     try {
       const response = await axios.get(
@@ -1543,7 +1540,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsLoadingContacts(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
       const response = await axios.get(
         'https://leafcom.us/backend/api/chat-application/countryCodes',
         {
@@ -1570,7 +1567,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsLoadingContacts(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const response = await axios.get(
         'https://leafcom.us/backend/api/chat-application/contactInfoTypes',
@@ -1937,9 +1934,7 @@ const GroupChat = ({ navigation, route }) => {
       // TOKEN
       // ============================
       // Recommended:
-      // const token = await AsyncStorage.getItem('token');
-
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       if (!token) {
         Alert.alert('Error', 'Authentication token not found.');
@@ -2061,7 +2056,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsSendingMobileSms(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       if (!token) {
         Alert.alert('Error', 'Authentication token not found.');
@@ -2188,7 +2183,7 @@ const GroupChat = ({ navigation, route }) => {
     // TOKEN
     // ============================
 
-    const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+    const token = await getAuthToken();
 
     if (!token) {
       Alert.alert('Error', 'Authentication token not found.');
@@ -2339,7 +2334,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsSendingSms(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       if (!token) {
         Alert.alert('Error', 'Authentication token not found.');
@@ -2452,7 +2447,7 @@ const GroupChat = ({ navigation, route }) => {
     try {
       setIsFetchingWhatsappContent(true);
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const payload = {
         template_id: Number(selectedWhatsappTemplate.templateId),
@@ -2536,8 +2531,7 @@ const GroupChat = ({ navigation, route }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const token =
-                '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+            const token = await getAuthToken();
 
               const response = await axios.delete(
                 'https://leafcom.us/backend/api/chat-application/deleteUserContact',
@@ -2674,7 +2668,7 @@ const GroupChat = ({ navigation, route }) => {
         return;
       }
 
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const payload = {
         user_id: selectedUserId,
@@ -2781,7 +2775,7 @@ const GroupChat = ({ navigation, route }) => {
 
   const sendMessageReaction = async (firebaseKey, emoji) => {
     try {
-      const token = '6049|yrnb49XQ6JARE3jHs70mXJkPoGM7a1HjFm67KBce9fd94276';
+      const token = await getAuthToken();
 
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/messageReaction',
@@ -2862,7 +2856,7 @@ const GroupChat = ({ navigation, route }) => {
 
     try {
       // Use the same valid bearer token source as your other API calls.
-      const token = '6034|zdH8rQIC3P6mzT63yJZz28TGk80qmEsANM1bUKdsd036805c';
+      const token = await getAuthToken();
 
       const response = await axios.post(
         'https://leafcom.us/backend/api/chat-application/translateMessage',
