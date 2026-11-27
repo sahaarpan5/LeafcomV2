@@ -8,7 +8,6 @@ import {
   Image,
   TextInput,
   FlatList,
-  SafeAreaView,
   StatusBar,
   Animated,
   Dimensions,
@@ -21,6 +20,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ref, onValue } from 'firebase/database';
 import { database } from '../../config/firebaseConfig';
@@ -101,6 +101,9 @@ const TRANSLATIONS = {
 // MAIN COMPONENT
 // ============================================================
 const GroupChat = ({ navigation, route }) => {
+  const insets = useSafeAreaInsets();
+  const topInset =
+    Platform.OS === 'ios' ? insets.top : StatusBar.currentHeight || 24;
   const MY_USER_ID = '2467';
 
   // Selected user ID.
@@ -3300,7 +3303,7 @@ const GroupChat = ({ navigation, route }) => {
       onRequestClose={() => setShowSmsComposeModal(false)}
     >
       <KeyboardAvoidingView
-        style={styles.bottomSheetBackdrop}
+        style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
@@ -3602,7 +3605,7 @@ const GroupChat = ({ navigation, route }) => {
       onRequestClose={() => setShowWhatsappComposeModal(false)}
     >
       <KeyboardAvoidingView
-        style={styles.bottomSheetBackdrop}
+        style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
@@ -4061,7 +4064,7 @@ const GroupChat = ({ navigation, route }) => {
       onRequestClose={() => setShowEmailComposeModal(false)}
     >
       <KeyboardAvoidingView
-        style={styles.bottomSheetBackdrop}
+        style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
@@ -4403,7 +4406,7 @@ const GroupChat = ({ navigation, route }) => {
       animationType="slide"
       onRequestClose={() => setShowSignatureModal(false)}
     >
-      <View style={styles.dialModalContainer}>
+      <View style={[styles.dialModalContainer, { paddingTop: topInset + 12 }]}>
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Select Signature</Text>
@@ -4494,7 +4497,7 @@ const GroupChat = ({ navigation, route }) => {
       animationType="slide"
       onRequestClose={() => setShowAddSignatureModal(false)}
     >
-      <View style={styles.dialModalContainer}>
+      <View style={[styles.dialModalContainer, { paddingTop: topInset + 12 }]}>
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Add Signature</Text>
@@ -4591,7 +4594,7 @@ const GroupChat = ({ navigation, route }) => {
         animationType="none"
         onRequestClose={() => setShowAnalyticsModal(false)}
       >
-        <View style={styles.bottomSheetBackdrop}>
+        <View style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}>
           <Animated.View
             style={[
               styles.analyticsSheetContent,
@@ -5243,7 +5246,7 @@ const GroupChat = ({ navigation, route }) => {
       animationType="none"
       onRequestClose={() => setShowTimeFilterModal(false)}
     >
-      <View style={styles.bottomSheetBackdrop}>
+      <View style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}>
         <TouchableWithoutFeedback onPress={() => setShowTimeFilterModal(false)}>
           <Animated.View
             style={[
@@ -5771,7 +5774,7 @@ const GroupChat = ({ navigation, route }) => {
       onRequestClose={() => setShowAddContactModal(false)}
     >
       <KeyboardAvoidingView
-        style={styles.bottomSheetBackdrop}
+        style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
@@ -6179,7 +6182,7 @@ const GroupChat = ({ navigation, route }) => {
               style={[
                 styles.contactHeader,
                 {
-                  paddingTop: HEADER_TOP_PADDING + 12,
+                  paddingTop: topInset + 12,
                 },
               ]}
             >
@@ -6478,7 +6481,7 @@ const GroupChat = ({ navigation, route }) => {
             <View
               style={[
                 styles.translateHeader,
-                { paddingTop: HEADER_TOP_PADDING + 12 },
+                { paddingTop: topInset + 12 },
               ]}
             >
               <View style={styles.translateHeaderDecor}>
@@ -6633,7 +6636,7 @@ const GroupChat = ({ navigation, route }) => {
   // RENDER: HEADER
   // ============================================================
   const renderHeader = () => (
-    <View style={[styles.header, { paddingTop: HEADER_TOP_PADDING + 25 }]}>
+    <View style={[styles.header, { paddingTop: topInset + 14 }]}>
       <StatusBar
         backgroundColor={COLORS.primaryDark}
         barStyle="light-content"
@@ -7176,7 +7179,7 @@ const GroupChat = ({ navigation, route }) => {
         animationType="none"
         onRequestClose={() => setShowEmailMessageModal(false)}
       >
-        <View style={styles.bottomSheetBackdrop}>
+        <View style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}>
           <TouchableWithoutFeedback
             onPress={() => setShowEmailMessageModal(false)}
           >
@@ -7422,7 +7425,7 @@ const GroupChat = ({ navigation, route }) => {
   // RENDER: INPUT AREA
   // ============================================================
   const renderInputArea = () => (
-    <View style={styles.inputAreaWrapper}>
+    <View style={[styles.inputAreaWrapper, { paddingBottom: insets.bottom }]}>
       <View style={styles.inputArea}>
         <View style={styles.inputBox}>
           <TextInput
@@ -7555,7 +7558,7 @@ const GroupChat = ({ navigation, route }) => {
         animationType="none"
         onRequestClose={() => setShowMessageModal(false)}
       >
-        <View style={styles.bottomSheetBackdrop}>
+        <View style={[styles.bottomSheetBackdrop, { paddingTop: topInset + 12 }]}>
           <TouchableWithoutFeedback onPress={() => setShowMessageModal(false)}>
             <Animated.View
               style={[
@@ -7765,7 +7768,7 @@ const GroupChat = ({ navigation, route }) => {
     );
   }
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -8243,7 +8246,7 @@ const GroupChat = ({ navigation, route }) => {
           setShowCountryDropdown(false);
         },
       })}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -8889,6 +8892,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS.xxl,
     borderTopRightRadius: RADIUS.xxl,
     height: SCREEN_HEIGHT * 0.85,
+    maxHeight: '100%',
     overflow: 'hidden',
   },
   smsComposeHeader: {
@@ -9060,6 +9064,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS.xxl,
     borderTopRightRadius: RADIUS.xxl,
     height: SCREEN_HEIGHT * 0.9,
+    maxHeight: '100%',
     overflow: 'hidden',
   },
   whatsappComposeHeader: {
@@ -9234,6 +9239,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS.xxl,
     borderTopRightRadius: RADIUS.xxl,
     height: SCREEN_HEIGHT * 0.92,
+    maxHeight: '100%',
     overflow: 'hidden',
   },
   composeHeader: {
@@ -9655,6 +9661,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS.xxl,
     borderTopRightRadius: RADIUS.xxl,
     height: SCREEN_HEIGHT * 0.92,
+    maxHeight: '100%',
     overflow: 'hidden',
   },
   addContactHeader: {
@@ -10253,9 +10260,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgSecondary,
     borderTopLeftRadius: RADIUS.xxl,
     borderTopRightRadius: RADIUS.xxl,
-    height: SCREEN_HEIGHT * 0.92,
+    height: SCREEN_HEIGHT * 0.9,
+    maxHeight: '100%',
     overflow: 'hidden',
-    flex: 1,
   },
   analyticsHeader: {
     backgroundColor: COLORS.primaryDark,
@@ -11303,7 +11310,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    maxHeight: SCREEN_HEIGHT * 0.9,
+    maxHeight: '100%',
     paddingBottom: 20,
   },
   dialModalHeader: {
