@@ -2,9 +2,12 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import MSAL
+import PushKit
+import TelnyxVoiceCommons
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate {
   var window: UIWindow?
 
   var reactNativeDelegate: ReactNativeDelegate?
@@ -29,7 +32,40 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       launchOptions: launchOptions
     )
 
+    TelnyxVoipPushHandler.initializeVoipRegistration()
+
     return true
+  }
+
+  func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if MSALPublicClientApplication.handleMSALResponse(
+      url,
+      sourceApplication: options[.sourceApplication] as? String
+    ) {
+      return true
+    }
+    return RCTLinkingManager.application(app, open: url, options: options)
+  }
+
+  func pushRegistry(
+    _ registry: PKPushRegistry,
+    didUpdate pushCredentials: PKPushCredentials,
+    for type: PKPushType
+  ) {
+    TelnyxVoipPushHandler.shared.handleVoipTokenUpdate(pushCredentials, type: type)
+  }
+
+  func pushRegistry(
+    _ registry: PKPushRegistry,
+    didReceiveIncomingPushWith payload: PKPushPayload,
+    for type: PKPushType,
+    completion: @escaping () -> Void
+  ) {
+    TelnyxVoipPushHandler.shared.handleVoipPush(payload, type: type, completion: completion)
   }
 }
 

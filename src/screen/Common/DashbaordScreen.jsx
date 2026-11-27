@@ -9,7 +9,6 @@ import {
   Image,
   TextInput,
   FlatList,
-  SafeAreaView,
   StatusBar,
   Animated,
   Dimensions,
@@ -3337,6 +3336,8 @@ const DashbaordScreen = ({ navigation }) => {
 
   const filteredUsers = getFilteredUsers();
   const insets = useSafeAreaInsets();
+  const topInset =
+    Platform.OS === 'ios' ? insets.top : StatusBar.currentHeight || 20;
 
   // ============================================================
   // RENDER: TOP BAR - TALLER HEIGHT
@@ -3347,7 +3348,7 @@ const DashbaordScreen = ({ navigation }) => {
         style={[
           styles.dashboardHeader,
           {
-            paddingTop: insets.top,
+            paddingTop: Platform.OS === 'ios' ? topInset + 8 : topInset + 10,
           },
         ]}
       >
@@ -3712,7 +3713,14 @@ const DashbaordScreen = ({ navigation }) => {
                 ]}
               >
                 {/* Colorful Header */}
-                <View style={styles.sidebarHeader}>
+                <View
+                  style={[
+                    styles.sidebarHeader,
+                    {
+                      paddingTop: Platform.OS === 'ios' ? topInset + 4 : 12,
+                    },
+                  ]}
+                >
                   <View style={styles.sidebarHeaderBgContainer}>
                     <View
                       style={[styles.sidebarHeaderBg, styles.sidebarHeaderBg1]}
@@ -4080,7 +4088,10 @@ const DashbaordScreen = ({ navigation }) => {
         onRequestClose={() => setVisible(false)}
       >
         <View
-          style={styles.dialModalContainer}
+          style={[
+            styles.dialModalContainer,
+            { paddingTop: topInset + 12 },
+          ]}
           onPress={() =>
             navigation.navigate('UserChatPage', {
               senderId: item.sender_id,
@@ -4687,7 +4698,12 @@ const DashbaordScreen = ({ navigation }) => {
       animationType="slide"
       onRequestClose={() => setShowActivityTimeModal(false)}
     >
-      <View style={styles.dialModalContainer}>
+      <View
+        style={[
+          styles.dialModalContainer,
+          { paddingTop: topInset + 12 },
+        ]}
+      >
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Time Filter</Text>
@@ -4864,8 +4880,22 @@ const DashbaordScreen = ({ navigation }) => {
           setActiveDropdown(null);
         }}
       >
-        <View style={styles.quickFilterModalOverlay}>
-          <View style={styles.quickFilterModalContent}>
+      <View
+        style={[
+          styles.quickFilterModalOverlay,
+          { paddingTop: topInset + 12 },
+        ]}
+      >
+        <View
+          style={[
+            styles.quickFilterModalContent,
+            {
+              height: Math.min(SCREEN_HEIGHT * 0.95, SCREEN_HEIGHT - topInset - 16),
+              maxHeight: SCREEN_HEIGHT - topInset - 16,
+              minHeight: undefined,
+            },
+          ]}
+        >
             <View style={styles.quickFilterModalHeader}>
               <View>
                 <Text style={styles.quickFilterModalTitle}>Quick Filter</Text>
@@ -6079,7 +6109,12 @@ const DashbaordScreen = ({ navigation }) => {
       animationType="slide"
       onRequestClose={() => setShowEmailHistory(false)}
     >
-      <View style={styles.dialModalContainer}>
+      <View
+        style={[
+          styles.dialModalContainer,
+          { paddingTop: topInset + 12 },
+        ]}
+      >
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Email History</Text>
@@ -6158,7 +6193,12 @@ const DashbaordScreen = ({ navigation }) => {
       animationType="slide"
       onRequestClose={() => setShowSignatureModal(false)}
     >
-      <View style={styles.dialModalContainer}>
+      <View
+        style={[
+          styles.dialModalContainer,
+          { paddingTop: topInset + 12 },
+        ]}
+      >
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Select Signature</Text>
@@ -6249,7 +6289,12 @@ const DashbaordScreen = ({ navigation }) => {
       animationType="slide"
       onRequestClose={() => setShowAddSignatureModal(false)}
     >
-      <View style={styles.dialModalContainer}>
+      <View
+        style={[
+          styles.dialModalContainer,
+          { paddingTop: topInset + 12 },
+        ]}
+      >
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Add Signature</Text>
@@ -6337,7 +6382,12 @@ const DashbaordScreen = ({ navigation }) => {
       animationType="slide"
       onRequestClose={() => setShowDashboardModal(false)}
     >
-      <View style={styles.dialModalContainer}>
+      <View
+        style={[
+          styles.dialModalContainer,
+          { paddingTop: topInset + 12 },
+        ]}
+      >
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Dashboard</Text>
@@ -6554,7 +6604,12 @@ const DashbaordScreen = ({ navigation }) => {
         setActiveTab('directory');
       }}
     >
-      <View style={styles.dialModalContainer}>
+      <View
+        style={[
+          styles.dialModalContainer,
+          { paddingTop: topInset + 12 },
+        ]}
+      >
         <View style={styles.dialModalContent}>
           <View style={styles.dialModalHeader}>
             <Text style={styles.dialModalTitle}>Start a new conversation</Text>
@@ -7559,7 +7614,14 @@ const DashbaordScreen = ({ navigation }) => {
         activeOpacity={1}
         onPress={() => setShowSideNav(false)}
       >
-        <View style={styles.sideNavModal}>
+        <View
+          style={[
+            styles.sideNavModal,
+            {
+              paddingTop: Platform.OS === 'ios' ? Math.max(topInset, 20) + 12 : 40,
+            },
+          ]}
+        >
           <View style={styles.sideNavHeader}>
             <Image
               source={
@@ -7730,9 +7792,22 @@ const DashbaordScreen = ({ navigation }) => {
       onRequestClose={() => setShowTutorialModal(false)}
       statusBarTranslucent={false}
     >
-      <View style={styles.tutorialModalContainer}>
+      <View
+        style={[
+          styles.tutorialModalContainer,
+          { paddingBottom: insets.bottom },
+        ]}
+      >
         {/* Header */}
-        <View style={styles.tutorialHeader}>
+        <View
+          style={[
+            styles.tutorialHeader,
+            Platform.OS === 'ios' && {
+              paddingTop: topInset,
+              height: 56 + topInset,
+            },
+          ]}
+        >
           <Text style={styles.tutorialTitle}>Tutorial</Text>
 
           <TouchableOpacity
@@ -7774,7 +7849,12 @@ const DashbaordScreen = ({ navigation }) => {
   // ============================================================
   const renderBottomFixedIcons = () => {
     return (
-      <View style={styles.bottomFixedContainer}>
+      <View
+        style={[
+          styles.bottomFixedContainer,
+          { paddingBottom: Math.max(insets.bottom, 10) },
+        ]}
+      >
         {/* WhatsApp Icon - Left */}
         <TouchableOpacity
           style={styles.bottomFixedIconWrapper}
@@ -8177,7 +8257,7 @@ const DashbaordScreen = ({ navigation }) => {
     );
   }
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {renderTopBar()}
 
       {renderSideNav()}
@@ -8357,7 +8437,7 @@ const DashbaordScreen = ({ navigation }) => {
       </Modal>
 
       <FAQModal visible={faqVisible} onClose={() => setFaqVisible(false)} />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -9589,7 +9669,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    maxHeight: SCREEN_HEIGHT * 0.9,
+    maxHeight: '100%',
     paddingBottom: 20,
   },
   dialModalHeader: {

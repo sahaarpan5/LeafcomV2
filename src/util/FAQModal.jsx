@@ -8,9 +8,10 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Image,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FAQ_DATA = [
   {
@@ -331,6 +332,7 @@ const FAQ_TRANSLATIONS = {
 };
 
 const FAQModal = ({ visible, onClose }) => {
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState('1');
   const [language, setLanguage] = useState('English');
@@ -394,8 +396,16 @@ const FAQModal = ({ visible, onClose }) => {
       statusBarTranslucent
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
-        <SafeAreaView style={styles.modalContainer}>
+      <View
+        style={[
+          styles.overlay,
+          Platform.OS === 'ios' && {
+            paddingTop: Math.max(insets.top, 8) + 8,
+            paddingBottom: Math.max(insets.bottom, 8) + 8,
+          },
+        ]}
+      >
+        <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
@@ -505,7 +515,7 @@ const FAQModal = ({ visible, onClose }) => {
               </Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );

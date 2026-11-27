@@ -31,5 +31,14 @@ target 'Leafcom' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Fix fmt 11.x consteval compilation failure with Xcode 26 Apple Clang under C++20
+    fmt_base_h = File.join(installer.sandbox.root, 'fmt/include/fmt/base.h')
+    if File.exist?(fmt_base_h)
+      File.chmod(0644, fmt_base_h)
+      content = File.read(fmt_base_h)
+      patched = content.gsub(/#(\s*)define FMT_USE_CONSTEVAL 1/, '#\1define FMT_USE_CONSTEVAL 0')
+      File.write(fmt_base_h, patched) if patched != content
+    end
   end
 end

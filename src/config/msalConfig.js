@@ -9,7 +9,7 @@ export const AUTHORITY =
 
 export const REDIRECT_URI = Platform.select({
   android: 'msauth://com.leafcom/SpEuaAHuFwK2oB4svnapEqBLO1I=',
-  ios: 'msauth.com.yourcompany.yourapp://auth',
+  ios: 'msauth.com.leafcom://auth',
 });
 
 export const MSAL_CONFIG = {
@@ -20,9 +20,7 @@ export const MSAL_CONFIG = {
   },
 };
 
-export const LOGIN_SCOPES = [
-  'User.Read',
-  'openid',
-  'profile',
-  'email',
-];
+export const LOGIN_SCOPES = Platform.select({
+  android: ['User.Read', 'openid', 'profile', 'email'],
+  ios: ['User.Read', 'email'],
+});
